@@ -58,8 +58,8 @@ export interface HealthResponse {
 export interface MakeInvoiceRequest {
   /** An optional description (BOLT 11 'description' field). */
   description?: string;
-  /** The preimage hash (32 bytes). */
-  hash?: Uint8Array;
+  /** The preimage hash aka lock (32 bytes). */
+  paymentHash?: Uint8Array;
   /** The invoice amount in milli-satoshis (msat). */
   amountMsat?: bigint;
   /** The hash of the description (32 bytes). */

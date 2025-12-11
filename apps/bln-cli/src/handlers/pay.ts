@@ -13,7 +13,7 @@ export async function handle(env: Env, name: string, options: Options) {
   const clientEnv = env.nodes[name];
   if (typeof clientEnv === "undefined") throw new Error(`Unknown node ${name}`);
   const client = mkClient(clientEnv);
-  const res = await client.pay(options.request || {});
+  const res = await client.pay(options.request);
   const output = options.output || "Default";
   if (output === "Default") {
     console.log(res);

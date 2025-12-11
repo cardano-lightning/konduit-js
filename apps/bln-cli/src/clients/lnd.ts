@@ -57,11 +57,10 @@ class ClientInner {
       ) {
         return {} as T;
       }
-      console.log("BEFORE");
-      const text = await response.text();
-      console.log(text);
+      const text = await response
+        .text()
+        .then((r) => r.trim().split("\n").reverse()[0]);
       return JSON.parse(text);
-      //.then(x => x.trim()).then(tee).then(JSON.parse) as Promise<T>;
     } catch (error) {
       console.error("REST Request Failed:", error);
       throw error;
@@ -118,12 +117,15 @@ export class Client implements base.Client {
   }
 
   public async pay(req: base.PayRequest): Promise<base.PayResponse> {
+    console.log("PAY");
+    console.log(req);
     return await this.client
       .request<SendPaymentResponse>(
         "/v2/router/send",
         "POST",
         toSendPaymentRequest(req),
       )
+      .then((r) => r.result)
       .then(toSendPaymentResponse);
   }
 }
@@ -240,7 +242,7 @@ const toAddInvoiceRequest = (
   r: base.MakeInvoiceRequest,
 ): AddInvoiceRequest => ({
   ...(r.description && { memo: r.description }),
-  ...(r.hash && { hash: base64.encode(r.hash) }),
+  ...(r.paymentHash && { hash: base64.encode(r.paymentHash) }),
   ...(r.amountMsat && { value_msat: String(r.amountMsat) }),
   ...(r.descriptionHash && {
     description_hash: base64.encode(r.descriptionHash),
@@ -383,6 +385,10 @@ interface SendPaymentRequest {
 }
 
 interface SendPaymentResponse {
+  result: SendPaymentResponseInner;
+}
+
+interface SendPaymentResponseInner {
   payment_hash: string;
   value: string;
   creation_date: string;
@@ -402,8 +408,9 @@ interface SendPaymentResponse {
 }
 
 const toSendPaymentRequest = (r: base.PayRequest): SendPaymentRequest => ({
-  ...(r.payee && { dest: base16.encode(r.payee) }),
-  ...(r.paymentHash && { payment_hash: base16.encode(r.paymentHash) }),
+  ...(r.payee && { dest: base64.encode(r.payee) }),
+  ...(r.paymentHash && { payment_hash: base64.encode(r.paymentHash) }),
+  ...(r.paymentSecret && { payment_addr: base64.encode(r.paymentSecret) }),
   ...(r.finalCltvDelta !== undefined && { final_cltv_delta: r.finalCltvDelta }),
   ...(r.paymentRequest && { payment_request: r.paymentRequest }),
   ...(r.timeoutSeconds !== undefined && { timeout_seconds: r.timeoutSeconds }),
@@ -414,7 +421,7 @@ const toSendPaymentRequest = (r: base.PayRequest): SendPaymentRequest => ({
   ...(r.payeeCustomRecords && { dest_custom_records: r.payeeCustomRecords }),
   ...(r.amount && { amt_msat: String(r.amount) }),
   ...(r.feeLimit && { fee_limit_msat: String(r.feeLimit) }),
-  ...(r.lastHopPubkey && { last_hop_pubkey: base16.encode(r.lastHopPubkey) }),
+  ...(r.lastHopPubkey && { last_hop_pubkey: base64.encode(r.lastHopPubkey) }),
   ...(r.allowSelfPayment !== undefined && {
     allow_self_payment: r.allowSelfPayment,
   }),
@@ -426,7 +433,6 @@ const toSendPaymentRequest = (r: base.PayRequest): SendPaymentRequest => ({
   ...(r.outgoingChannelIds && {
     outgoing_chan_ids: r.outgoingChannelIds.map(String),
   }),
-  ...(r.paymentSecret && { payment_addr: base16.encode(r.paymentSecret) }),
   ...(r.maxShardSizeMsat && {
     max_shard_size_msat: String(r.maxShardSizeMsat),
   }),
@@ -438,12 +444,14 @@ const toSendPaymentRequest = (r: base.PayRequest): SendPaymentRequest => ({
   }),
 });
 
-const toSendPaymentResponse = (r: SendPaymentResponse): base.PayResponse => ({
-  rHash: base16.decode(r.payment_hash),
+const toSendPaymentResponse = (
+  r: SendPaymentResponseInner,
+): base.PayResponse => ({
+  rHash: base16.decode(r.payment_hash.toUpperCase()),
   valueSat: BigInt(r.value_sat || r.value || "0"),
   creationDate: BigInt(r.creation_date),
   feeSat: BigInt(r.fee_sat || r.fee || "0"),
-  rPreimage: base16.decode(r.payment_preimage),
+  rPreimage: base16.decode(r.payment_preimage.toUpperCase()),
   valueMsat: BigInt(r.value_msat),
   paymentRequest: r.payment_request,
   status: r.status,
@@ -455,7 +463,8 @@ const toSendPaymentResponse = (r: SendPaymentResponse): base.PayResponse => ({
   firstHopCustomRecords: r.first_hop_custom_records,
 });
 
+/// USEFUL FOR DEBUGGING!
 function tee<T>(value: T): T {
-  console.log("Tee", value);
+  console.log("TEE", value);
   return value;
 }

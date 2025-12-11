@@ -2445,7 +2445,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/qrcode@npm:^1":
+"@types/qrcode@npm:^1.5.6":
   version: 1.5.6
   resolution: "@types/qrcode@npm:1.5.6"
   dependencies:
@@ -3316,7 +3316,7 @@ __metadata:
     "@konduit/bln": "workspace:^"
     "@scure/base": "npm:^2.0.0"
     "@types/node": "npm:^24.6.2"
-    "@types/qrcode": "npm:^1"
+    "@types/qrcode": "npm:^1.5.6"
     commander: "npm:^14.0.2"
     qrcode: "npm:^1.5.4"
     tsc-alias: "npm:^1.8.16"

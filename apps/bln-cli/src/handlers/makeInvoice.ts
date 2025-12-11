@@ -1,14 +1,12 @@
-import * as qr from "qrcode";
-
 import { type Env } from "../env.ts";
 import { mkClient } from "../clients.ts";
 import { type MakeInvoiceRequest } from "../clients/interface.ts";
 
-export const Output = ["Default", "PayRequest", "Qr"];
+export const output = ["Default", "PayRequest"];
 
 type Options = {
   request: MakeInvoiceRequest;
-  output: (typeof Output)[number];
+  output: (typeof output)[number];
 };
 
 export async function handle(env: Env, name: string, options: Options) {
@@ -21,8 +19,6 @@ export async function handle(env: Env, name: string, options: Options) {
     console.log(res);
   } else if (output === "PayRequest") {
     console.log(res.paymentRequest);
-  } else if (output === "Qr") {
-    qr.toString(res.paymentRequest, { type: "utf8" }).then(console.log);
   } else {
     console.warn(`Unknown output option ${output}`);
     console.log(res);

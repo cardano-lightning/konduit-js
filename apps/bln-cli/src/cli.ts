@@ -3,17 +3,16 @@ import { Command } from "commander";
 import * as bln from "@konduit/bln";
 
 import { type Env } from "./env.ts";
-import * as handlers from "./handlers.ts";
+import * as h from "./handlers.ts";
 import { type PayRequest } from "./clients/interface.ts";
 
-interface Handlers {
-  showEnv: typeof handlers.showEnv;
-  health: typeof handlers.health;
-  getInvoices: typeof handlers.getInvoices;
-  makeInvoice: typeof handlers.makeInvoice;
-  pay: typeof handlers.pay;
-}
+// @ts-ignore: Monkey patch stringify bigint
+BigInt.prototype.toJSON = function () {
+  // @ts-ignore: Monkey patch stringify bigint
+  return JSON.rawJSON(this.toString());
+};
 
+type Handlers = typeof h.handlers;
 /**
  * Sets up the commands and options on the Commander program instance.
  * @param program The Commander program instance.
@@ -95,7 +94,7 @@ export const cli = (program: Command, handlers: Handlers, env: Env) => {
       BigInt(val),
     )
     .option(
-      "--hash <base64>",
+      "--payment-hash <base64>",
       "The preimage hash (32 bytes). Accepts Base64 or 64-char Hex.",
       parseBytes32,
     )
@@ -110,9 +109,13 @@ export const cli = (program: Command, handlers: Handlers, env: Env) => {
     )
     // .option('--route-hints <json>', 'Custom routing hints as a JSON array string.', JSON.parse)
     .option("--private", "Include private routing hints (isPrivate=true).")
-    .option("--output <output>", "Output format", "Default")
+    .option(
+      "--output <output>",
+      `Output format : ${h.makeInvoice.output}`,
+      "Default",
+    )
     .action((node, raw) => {
-      const allowedOutputs = ["Default", "PayRequest", "Qr"];
+      const allowedOutputs = h.makeInvoice.output;
       const parseOutput = (value: string) => {
         if (!allowedOutputs.includes(value))
           throw new Error(
@@ -123,7 +126,7 @@ export const cli = (program: Command, handlers: Handlers, env: Env) => {
       handlers.makeInvoice(env, node, {
         request: {
           description: raw.description,
-          hash: raw.hash,
+          paymentHash: raw.paymentHash,
           amountMsat: raw.amount,
           descriptionHash: raw.descriptionHash,
           expiry: raw.expiry,
@@ -151,13 +154,13 @@ export const cli = (program: Command, handlers: Handlers, env: Env) => {
       BigInt(val),
     )
     .option(
-      "--hash <hash>",
+      "--payment-hash <hash>",
       "Payment hash (R-Hash). Accepts Hex or Base64.",
-      parseBytes33,
+      parseBytes32,
     )
     .option(
-      "--secret <secret>",
-      "Payment secret (preimage hash). Accepts Hex or Base64.",
+      "--payment-secret <secret>",
+      "Payment secret (not the preimage). Accepts Hex or Base64.",
       parseBytes32,
     )
     .option("--fee-limit <msat>", "Maximum fee in msat (feeLimit).", (val) =>
@@ -217,13 +220,12 @@ export const cli = (program: Command, handlers: Handlers, env: Env) => {
       JSON.parse(val),
     )
     .action((node, raw) => {
-      console.log("RAW", raw);
       const request: PayRequest = {
         ...(raw.request && { paymentRequest: raw.request }),
         ...(raw.payee && { payee: raw.payee }),
         ...(raw.amount && { amount: raw.amount }),
-        ...(raw.hash && { paymentHash: raw.hash }),
-        ...(raw.secret && { paymentSecret: raw.secret }),
+        ...(raw.paymentHash && { paymentHash: raw.paymentHash }),
+        ...(raw.paymentSecret && { paymentSecret: raw.paymentSecret }),
         ...(raw.feeLimit && { feeLimit: raw.feeLimit }),
         ...(raw.feeSat && { feeLimitSat: raw.feeSat }),
         ...(raw.finalCltvDelta !== undefined && {
@@ -276,14 +278,14 @@ const parseTimeMs = (value: string): bigint => {
 
 const parseBytes32 = (value: string): Uint8Array => {
   if (value.length === 64) {
-    return base16.decode(value);
+    return base16.decode(value.toUpperCase());
   }
   return base64.decode(value);
 };
 
 const parseBytes33 = (value: string): Uint8Array => {
   if (value.length === 66) {
-    return base16.decode(value);
+    return base16.decode(value.toUpperCase());
   }
   return base64.decode(value);
 };
