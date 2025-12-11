@@ -52,7 +52,16 @@
             ''
               #!/usr/bin/env bash
               # This expects @vue/language-server to be installed via yarn or otherwise
-              node node_modules/@vue/language-server/index.js $@
+              root=$(git rev-parse --show-toplevel)
+              node $root/node_modules/@vue/language-server/index.js $@
+            '';
+          vtsls =
+            pkgs.writeShellScriptBin "vtsls"
+            ''
+              #!/usr/bin/env bash
+              # This expects @vtsls/language-server to be installed via yarn or otherwise
+              root=$(git rev-parse --show-toplevel)
+              node $root/node_modules/@vtsls/language-server/bin/vtsls.js $@
             '';
         in
           pkgs.mkShell
@@ -70,6 +79,7 @@
               pkgs.nodePackages_latest.nodejs
               pkgs.typescript-language-server
               vue-language-server
+              vtsls
             ];
           };
       };

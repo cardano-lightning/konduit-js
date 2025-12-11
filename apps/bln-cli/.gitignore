@@ -1,5 +1,5 @@
-.envrc
-result
+.env
+
 # Logs
 logs
 *.log
@@ -10,12 +10,10 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-.yarn
 dist
 dist-ssr
 dev-dist
 *.local
-*.tsbuildinfo
 
 # Editor directories and files
 .vscode/*
@@ -27,4 +25,3 @@ dev-dist
 *.njsproj
 *.sln
 *.sw?
-.direnv/

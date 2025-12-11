@@ -1,0 +1,26 @@
+{
+  "name": "bln-cli",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "yarn build && yarn start",
+    "check": "tsc",
+    "start": "node --env-file .env dist/index.es.js",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@konduit/bln": "workspace:^",
+    "@scure/base": "^2.0.0",
+    "commander": "^14.0.2",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.2",
+    "@types/qrcode": "^1",
+    "tsc-alias": "^1.8.16",
+    "typescript": "~5.9.3",
+    "vite": "^7.1.9",
+    "vite-tsconfig-paths": "^5.1.4"
+  }
+}

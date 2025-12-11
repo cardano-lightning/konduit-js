@@ -4,5 +4,10 @@
   "workspaces": [
     "packages/*",
     "apps/*"
-  ]
+  ],
+  "devDependencies": {
+    "@vtsls/language-server": "^0.2.9",
+    "@vue/language-server": "^3.1.5",
+    "typescript": "~5.9.3"
+  }
 }

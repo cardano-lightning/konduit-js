@@ -2,8 +2,8 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
-    "outDir": "./dist",
-    "composite": true
+    "outDir": "./dist"
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["./src/**/*", "vite.config.ts"],
+  "references": [{ "path": "../../packages/bln" }]
 }
