@@ -38,8 +38,6 @@ Its not entirely clear why vite ought to be in a lib that is not itself the app
 
 Regardless, for now we have vite in the libs.
 
-##### Libraries vs apps
-
 #### Cross-package references
 
 Cross-referencing packages in a monorepo:
