@@ -1,17 +1,8 @@
 {
-  "name": "@konduit/bln",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "main": "dist/index.js",
-  "module": "dist/index.es.js",
-  "files": [
-    "dist"
-  ],
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "test": "vitest"
+  "dependencies": {
+    "@noble/hashes": "^2.0.1",
+    "@noble/secp256k1": "^3.0.0",
+    "@scure/base": "^2.0.0"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
@@ -23,12 +14,24 @@
     "vite-plugin-dts": "^4.5.4",
     "vitest": "^4.0.14"
   },
-  "dependencies": {
-    "@noble/hashes": "^2.0.1",
-    "@noble/secp256k1": "^3.0.0",
-    "@scure/base": "^2.0.0"
-  },
   "exports": {
-    ".": "./dist/index.es.js"
-  }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "main": "dist/index.js",
+  "module": "dist/index.es.js",
+  "name": "@konduit/bln",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --build",
+    "test": "vitest"
+  },
+  "type": "module",
+  "version": "0.0.0"
 }

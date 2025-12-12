@@ -1,8 +1,8 @@
-import * as showEnv from "./handlers/showEnv.ts";
-import * as health from "./handlers/health.ts";
-import * as getInvoices from "./handlers/getInvoices.ts";
-import * as makeInvoice from "./handlers/makeInvoice.ts";
-import * as pay from "./handlers/pay.ts";
+import * as showEnv from "./handlers/showEnv";
+import * as health from "./handlers/health";
+import * as getInvoices from "./handlers/getInvoices";
+import * as makeInvoice from "./handlers/makeInvoice";
+import * as pay from "./handlers/pay";
 
 export { showEnv, health, getInvoices, makeInvoice, pay };
 

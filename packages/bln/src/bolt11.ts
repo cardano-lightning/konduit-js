@@ -1,8 +1,8 @@
 import { bech32, utf8 } from "@scure/base";
-import { SHORT_LOOKUP, type Network, type Short } from "./network.ts";
-import { convert, type WordParser } from "./words.ts";
-import * as uint8Array from "./uint8Array.ts";
-import { recoverPubkey } from "./secp.ts";
+import { SHORT_LOOKUP, type Network, type Short } from "./network";
+import { convert, type WordParser } from "./words";
+import * as uint8Array from "./uint8Array";
+import { recoverPubkey } from "./secp";
 
 /** Defines the structure for a single tag definition in the TAGGED_DATA map. */
 export interface TagParser<T> {

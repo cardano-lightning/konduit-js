@@ -1,20 +1,20 @@
 {
-  "extends": "@vue/tsconfig/tsconfig.dom.json",
   "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-    "types": ["vite/client"],
-
+    "composite": true,
+    "declaration": true,
     "baseUrl": ".",
-    "paths": {
-      "@konduit/bln": ["../../packages/bln/src/index.ts"]
-    },
-
-    "strict": true,
+    "erasableSyntaxOnly": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "plugins": [{ "name": "@vue/typescript-plugin" }],
+    "strict": true,
+    "tsBuildInfoFile": "./tsconfig.app.tsbuildinfo",
+    "types": ["vite/client", "vite-plugin-pwa/client" ]
   },
+  "extends": "@vue/tsconfig/tsconfig.dom.json",
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"]
 }

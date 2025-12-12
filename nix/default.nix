@@ -14,7 +14,6 @@ stdenv.mkDerivation (finalAttrs: {
   version = "0.1.0";
 
   src = lib.sourceByRegex ../. [
-    "^eslint.config.js$"
     "^index.html$"
     "^package.json$"
     "^postcss.config.mjs$"

@@ -1,4 +1,4 @@
-import { type NodeEnv, type Env } from "../env.ts";
+import { type NodeEnv, type Env } from "../env";
 
 export interface Options {
   json?: boolean;
@@ -29,8 +29,9 @@ export function handle(env: Env, names: string[], options?: Options) {
   }
 }
 
-const truncate = (n: number) => (s: string) =>
+const _truncate = (n: number) => (s: string) =>
   s.length > n ? s.substring(0, n - 3) + "..." : s;
+
 const mTruncate = (n: number) => (s: any) =>
   typeof s === "string"
     ? s.length > n

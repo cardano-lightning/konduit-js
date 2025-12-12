@@ -1,6 +1,6 @@
 import { base16, base64 } from "@scure/base";
 
-import * as base from "./interface.ts";
+import * as base from "./interface";
 
 interface LndConfig {
   baseUrl: string;
@@ -13,12 +13,12 @@ class ClientInner {
   // Credentials is the macaroon
   private readonly credentials: string | null;
   // FIXME :: do something with this
-  private readonly tlsCertificate: string | null;
+  private readonly _tlsCertificate: string | null;
 
   constructor(config: LndConfig) {
     this.baseUrl = config.baseUrl;
     this.credentials = config.credentials ? config.credentials : null;
-    this.tlsCertificate = config.tlsCertificate ? config.tlsCertificate : null;
+    this._tlsCertificate = config.tlsCertificate ? config.tlsCertificate : null;
   }
 
   public async request<T>(
@@ -464,7 +464,7 @@ const toSendPaymentResponse = (
 });
 
 /// USEFUL FOR DEBUGGING!
-function tee<T>(value: T): T {
+function _tee<T>(value: T): T {
   console.log("TEE", value);
   return value;
 }
