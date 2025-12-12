@@ -16,26 +16,39 @@ The repo is organized a monorepo with yarn workspaces:
 └── packages
 ```
 
+We are forced to use `vue-tsc` extension as a project level compiler because `tsc` was not able to handle `vue` file compilation.
+
+## Devel
+
+At the root level of the repo:
+
+- `yarn install` to install dependencies
+- `yarn build` to build all packages and apps
+- `yarn dev` currently servers only the app in `apps/konduit-app` through vite.
+
+
 ## Learnings
 
-### Vite stuff
+### TS stuff
+
+#### Vite stuff
 
 Its not entirely clear why vite ought to be in a lib that is not itself the app
 (and so doesn't need bundling ...?)
 
 Regardless, for now we have vite in the libs.
 
-### TS stuff
+##### Libraries vs apps
 
-TS configs are a known dark art.
+#### Cross-package references
 
-Afaiu, ts cannot work out where workspace deps are coming from. The `paths` must
-be explicitly declared.
+Cross-referencing packages in a monorepo:
 
-Again afaiu, it is not possible to "merge" to tsconfig.json: extending leads to
-overwriting. Partly as a consequence, it is not deemed advisable to try to be
-too clever in inheriting from multiple configs.
+* `composite: true` and `declaration: true` are required for libraries used by other packages.
 
-A suggestion is to instead use
-https://devblogs.microsoft.com/typescript/announcing-typescript-5-4/#auto-import-support-for-subpath-imports
-I haven't looked into this further
+* `references` must be used to point to other packages in the monorepo on the tsconfig.json. This may seem redundant to packages.json dependencies, but is required for `tsc` to work out the build order.
+
+* Modules which are exposed by a given library should be listed in the `exports` field of the package.json so the importing package can find them.
+
+* We import cross-package only using the package name, not relative paths.
+

@@ -1,7 +1,5 @@
 {
   "compilerOptions": {
-    "composite": true,
-    "declaration": true,
     "baseUrl": ".",
     "erasableSyntaxOnly": true,
     "outDir": "./dist",
