@@ -2,46 +2,67 @@
   repoRoot,
   lib,
   stdenv,
-  fetchFromGitHub,
-  fetchYarnDeps,
-  yarnConfigHook,
-  yarnBuildHook,
-  yarnInstallHook,
+  yarn-berry_4,
   nodejs,
 }:
-stdenv.mkDerivation (finalAttrs: {
-  pname = "konduit-app";
-  version = "0.1.0";
+let
+  yarn-berry = yarn-berry_4;
+in
+  stdenv.mkDerivation (finalAttrs: {
+    pname = "konduit-app";
+    version = "0.1.0";
 
-  src = lib.sourceByRegex ../. [
-    "^index.html$"
-    "^package.json$"
-    "^postcss.config.mjs$"
-    "^public.*"
-    "^pwa-assets.config.js$"
-    "^src.*"
-    "^tsconfig.json$"
-    "^vite.config.js$"
-    "^yarn.lock$"
-  ];
+    src = lib.sourceByRegex ../. [
+      "^index.html$"
+      "^package.json$"
+      "^postcss.config.mjs$"
+      "^public.*"
+      "^pwa-assets.config.js$"
+      "^src.*"
+      "^tsconfig.json$"
+      "^vite.config.js$"
+      "^yarn.lock$"
+      "^packages.*"
+      "^apps.*"
+    ];
 
-  yarnOfflineCache = fetchYarnDeps {
-    yarnLock = finalAttrs.src + "/yarn.lock";
-    # Please uncomment the line fake hash line below and run `nix build .#app`
-    # to get the new hash. Please also leave this comment and that line in place :-P
-    hash = "sha256-ejG38iKBDWIJksj9akG9g8R68NrSJYUCR8MsPa4WVOI=";
-    # hash = lib.fakeHash;
-  };
+    missingHashes = ./missing-hashes.json;
 
-  nativeBuildInputs = [
-    yarnConfigHook
-    yarnBuildHook
-    yarnInstallHook
-    # Needed for executing package.json scripts
-    nodejs
-  ];
+    yarnOfflineCache = yarn-berry.fetchYarnBerryDeps {
+      inherit (finalAttrs) src missingHashes;
+      yarnLock = finalAttrs.src + "/yarn.lock";
+      # In order to update the hash you should run in the root dir:
+      # * `$ fetch-yarn-berry-deps prefetch yarn.lock ./nix/missing-hashes.json`
+      # * Then copy the new hash from the output and paste it below.
+      #
+      # If the above command fails because of some missing hashes you should update the missing-hashes.json file:
+      # * `$ fetch-yarn-berry-deps missing-hashes yarn.lock > ./nix/missing-hashes.json`
+      # * Then re-run the prefetch command.
+      hash = "sha256-CxxJkEJazx8Slw7Un1oxTN8MoVzzUSvBcrRPVBDC/2c=";
 
-  meta = {
-    description = "Konduit App. A PWA for the konduit - a Cardano to Bitcoin Lightning Network pipe.";
-  };
-})
+    };
+
+    nativeBuildInputs = [
+      # Needed for executing package.json scripts
+      nodejs
+      yarn-berry.yarnBerryConfigHook
+    ];
+
+    buildInputs = [
+      yarn-berry
+    ];
+
+    buildPhase = ''
+      yarn exec vue-tsc --build
+      yarn exec vite build apps/konduit-app
+    '';
+
+    installPhase = ''
+      mkdir -p $out
+      cp -r apps/konduit-app/dist/* $out/
+    '';
+
+    meta = {
+      description = "Konduit App. A PWA for the konduit - a Cardano to Bitcoin Lightning Network pipe.";
+    };
+  })

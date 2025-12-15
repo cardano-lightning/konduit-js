@@ -76,6 +76,7 @@
             name = "konduit-js-shell";
             packages = [
               pkgs.yarn-berry
+              pkgs.yarn-berry_4.yarn-berry-fetcher
               pkgs.yarn-bash-completion
               pkgs.nodePackages_latest.nodejs
               pkgs.typescript-language-server
