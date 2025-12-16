@@ -1,6 +1,6 @@
-import { type Env } from "../env.ts";
-import { mkClient } from "../clients.ts";
-import { type GetInvoicesRequest } from "../clients/interface.ts";
+import { type Env } from "../env";
+import { mkClient } from "../clients";
+import { type GetInvoicesRequest } from "../clients/interface";
 
 type Options = GetInvoicesRequest;
 

@@ -1,9 +1,10 @@
 {
-  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
-    "outDir": "./dist"
+    "noEmit": false,
+    "outDir": "./dist",
+    "rootDir": "./src"
   },
-  "include": ["./src/**/*", "vite.config.ts"],
-  "references": [{ "path": "../../packages/bln" }]
+  "extends": "../../tsconfig.json",
+  "include": ["./src/**/*"],
+  "references": [{ "path": "../../packages/bln/tsconfig.json" }]
 }

@@ -1,7 +1,7 @@
 import { describe, it, expect, test } from "vitest";
-import { bolt11 } from "../src/index.ts";
+import { bolt11 } from "../src/index";
 import { base58, hex } from "@scure/base";
-import { FallbackAddress } from "../src/bolt11.ts";
+import { FallbackAddress } from "../src/bolt11";
 import * as bitcoinjs from "bitcoinjs-lib";
 
 const PAYMENT_SECRET = hex.decode(

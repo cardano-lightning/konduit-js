@@ -1,13 +1,19 @@
 {
   "name": "konduit-js",
-  "packageManager": "yarn@4.12.0",
+  "packageManager": "yarn-berry",
   "workspaces": [
     "packages/*",
     "apps/*"
   ],
+  "scripts": {
+    "build": "vue-tsc --build && vite build apps/konduit-app",
+    "dev": "vite dev konduit-app"
+  },
   "devDependencies": {
     "@vtsls/language-server": "^0.2.9",
     "@vue/language-server": "^3.1.5",
-    "typescript": "~5.9.3"
+    "typescript": "^5.9.3",
+    "vite": "^7.3.0",
+    "vue-tsc": "^3.1.8"
   }
 }

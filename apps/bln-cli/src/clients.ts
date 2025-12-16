@@ -1,7 +1,7 @@
-import { type NodeEnv } from "./env.ts";
+import { type NodeEnv } from "./env";
 
-import { Client as Lnd } from "./clients/lnd.ts";
-import { type Client } from "./clients/interface.ts";
+import { Client as Lnd } from "./clients/lnd";
+import { type Client } from "./clients/interface";
 
 export function mkClient(env: NodeEnv): Client {
   if (env.type == "LND") {

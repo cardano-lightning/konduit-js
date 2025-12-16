@@ -2,9 +2,9 @@ import { base16, base64 } from "@scure/base";
 import { Command } from "commander";
 import * as bln from "@konduit/bln";
 
-import { type Env } from "./env.ts";
-import * as h from "./handlers.ts";
-import { type PayRequest } from "./clients/interface.ts";
+import { type Env } from "./env";
+import * as h from "./handlers";
+import { type PayRequest } from "./clients/interface";
 
 // @ts-ignore: Monkey patch stringify bigint
 BigInt.prototype.toJSON = function () {
@@ -32,7 +32,7 @@ export const cli = (program: Command, handlers: Handlers, env: Env) => {
     .command("show-invoice invoice")
     .description("Pretty invoice")
     .action((invoice) => {
-      const replacer = (k: any, x: any) =>
+      const replacer = (_k: any, x: any) =>
         x instanceof Uint8Array ? base16.encode(x).toLowerCase() : x;
       console.table(JSON.stringify(bln.bolt11.parse(invoice), replacer, 2));
     });

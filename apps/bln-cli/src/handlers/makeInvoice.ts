@@ -1,6 +1,6 @@
-import { type Env } from "../env.ts";
-import { mkClient } from "../clients.ts";
-import { type MakeInvoiceRequest } from "../clients/interface.ts";
+import { type Env } from "../env";
+import { mkClient } from "../clients";
+import { type MakeInvoiceRequest } from "../clients/interface";
 
 export const output = ["Default", "PayRequest"];
 
