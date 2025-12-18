@@ -96,6 +96,7 @@
               vitest
               vtsls
               vue-language-server
+              vue-tsc
               vtsls
               vue-tsc
             ];

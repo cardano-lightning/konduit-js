@@ -2016,6 +2016,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@noble/ed25519@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "@noble/ed25519@npm:3.0.0"
+  checksum: 10c0/6355aed04523d063d3e9a9952926af4a0eaa722e08133f558d44963a3048bf6dae02cae9032d42238d1fcb2a93ef27658f2baf4cf07939457717a4337a89dc26
+  languageName: node
+  linkType: hard
+
 "@noble/hashes@npm:^1.2.0":
   version: 1.8.0
   resolution: "@noble/hashes@npm:1.8.0"
@@ -2857,6 +2864,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@vue/devtools-api@npm:^6.6.4":
+  version: 6.6.4
+  resolution: "@vue/devtools-api@npm:6.6.4"
+  checksum: 10c0/0a993ae23618166e1bee5a7c14cebd8312752b93c143cbdd48fb2d0f7ade070d0e6baf757cd920d4681fef8f9acf29515162160f38cc7410f9a684d2df21b6de
+  languageName: node
+  linkType: hard
+
 "@vue/language-core@npm:2.2.0":
   version: 2.2.0
   resolution: "@vue/language-core@npm:2.2.0"
@@ -2898,7 +2912,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vue/language-server@npm:^3.1.5":
+"@vue/language-server@npm:^3.1.5, @vue/language-server@npm:^3.1.8":
   version: 3.1.8
   resolution: "@vue/language-server@npm:3.1.8"
   dependencies:
@@ -4752,6 +4766,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"idb@npm:^8.0.3":
+  version: 8.0.3
+  resolution: "idb@npm:8.0.3"
+  checksum: 10c0/421cd9a3281b7564528857031cc33fd9e95753f8191e483054cb25d1ceea7303a0d1462f4f69f5b41606f0f066156999e067478abf2460dfcf9cab80dae2a2b2
+  languageName: node
+  linkType: hard
+
 "ignore@npm:^5.2.0":
   version: 5.3.2
   resolution: "ignore@npm:5.3.2"
@@ -5243,18 +5264,26 @@ __metadata:
   resolution: "konduit-app@workspace:apps/konduit-app"
   dependencies:
     "@konduit/bln": "workspace:^"
+    "@noble/ed25519": "npm:^3.0.0"
+    "@noble/hashes": "npm:^2.0.1"
     "@scure/base": "npm:^2.0.0"
     "@types/node": "npm:^24.6.2"
     "@vite-pwa/assets-generator": "npm:^1.0.2"
     "@vitejs/plugin-vue": "npm:^6.0.1"
+    "@vue/language-server": "npm:^3.1.8"
     "@vue/tsconfig": "npm:^0.8.1"
     "@vue/typescript-plugin": "npm:^3.1.8"
+    idb: "npm:^8.0.3"
+    normalize.css: "npm:^8.0.1"
     typescript: "npm:~5.9.3"
     vite: "npm:^7.2.7"
     vite-plugin-pwa: "npm:^1.1.0"
     vue: "npm:^3.5.22"
-    vue-tsc: "npm:^3.1.0"
+    vue-router: "npm:^4.6.4"
+    vue-toastification: "npm:^2.0.0-rc.5"
+    vue-tsc: "npm:^3.1.8"
     workbox-window: "npm:^7.4.0"
+    zod: "npm:^4.2.1"
   languageName: unknown
   linkType: soft
 
@@ -5664,6 +5693,13 @@ __metadata:
   version: 3.0.0
   resolution: "normalize-path@npm:3.0.0"
   checksum: 10c0/e008c8142bcc335b5e38cf0d63cfd39d6cf2d97480af9abdbe9a439221fd4d749763bab492a8ee708ce7a194bb00c9da6d0a115018672310850489137b3da046
+  languageName: node
+  linkType: hard
+
+"normalize.css@npm:^8.0.1":
+  version: 8.0.1
+  resolution: "normalize.css@npm:8.0.1"
+  checksum: 10c0/4ddf56d1af5ca755fa5e692e718316d8758ecb792aa96e1ad206824b5810a043763d681d6f7697d46573515f5e9690038b4c91a95c1997567128815545fb8cd7
   languageName: node
   linkType: hard
 
@@ -7799,7 +7835,27 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vue-tsc@npm:^3.1.0, vue-tsc@npm:^3.1.8":
+"vue-router@npm:^4.6.4":
+  version: 4.6.4
+  resolution: "vue-router@npm:4.6.4"
+  dependencies:
+    "@vue/devtools-api": "npm:^6.6.4"
+  peerDependencies:
+    vue: ^3.5.0
+  checksum: 10c0/9dcbe1124f1f444ae263ca37914829eea1ebff3feaa182559efee611dfd4436bbebe0ebffdcb60e37fecfb2fbdc691346df00996eeba708485e9ea9b8a7dd193
+  languageName: node
+  linkType: hard
+
+"vue-toastification@npm:^2.0.0-rc.5":
+  version: 2.0.0-rc.5
+  resolution: "vue-toastification@npm:2.0.0-rc.5"
+  peerDependencies:
+    vue: ^3.0.2
+  checksum: 10c0/f8ae4c850cf74cf4f8c84edecb82a20733834d19d6d2664cffa06c5e998964331bfd346afc8fc154c78a10fb667f4824f842ea8160b3b35659e982ad9277334a
+  languageName: node
+  linkType: hard
+
+"vue-tsc@npm:^3.1.8":
   version: 3.1.8
   resolution: "vue-tsc@npm:3.1.8"
   dependencies:
@@ -8174,5 +8230,12 @@ __metadata:
   version: 5.0.0
   resolution: "yallist@npm:5.0.0"
   checksum: 10c0/a499c81ce6d4a1d260d4ea0f6d49ab4da09681e32c3f0472dee16667ed69d01dae63a3b81745a24bd78476ec4fcf856114cb4896ace738e01da34b2c42235416
+  languageName: node
+  linkType: hard
+
+"zod@npm:^4.2.1":
+  version: 4.2.1
+  resolution: "zod@npm:4.2.1"
+  checksum: 10c0/ecb5219bddf76a42d092a843fb98ad4cb78f1e1077082772b03ef032ee5cbc80790a4051836b962d26fb4af854323bc784d628bd1b8d9898149eba7af21c5560
   languageName: node
   linkType: hard
