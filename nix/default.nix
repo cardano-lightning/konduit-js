@@ -32,13 +32,13 @@ in
       inherit (finalAttrs) src missingHashes;
       yarnLock = finalAttrs.src + "/yarn.lock";
       # In order to update the hash you should run in the root dir:
-      # * `$ fetch-yarn-berry-deps prefetch yarn.lock ./nix/missing-hashes.json`
+      # * `$ yarn-berry-fetcher prefetch yarn.lock ./nix/missing-hashes.json`
       # * Then copy the new hash from the output and paste it below.
       #
       # If the above command fails because of some missing hashes you should update the missing-hashes.json file:
-      # * `$ fetch-yarn-berry-deps missing-hashes yarn.lock > ./nix/missing-hashes.json`
+      # * `$ yarn-berry-fetcher missing-hashes yarn.lock > ./nix/missing-hashes.json`
       # * Then re-run the prefetch command.
-      hash = "sha256-p0GenwAujBWGneRPyina1BAS05jvW2GxjgWDR5muCj8=";
+      hash = "sha256-FiMDYV+HGNMwYEe+4no7/aCM8v52YxjdkmHwG2nhy+0=";
     };
 
     nativeBuildInputs = [

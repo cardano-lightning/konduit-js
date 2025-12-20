@@ -33,10 +33,9 @@ At the root level of the repo:
 - `yarn install` to install dependencies
 - `yarn build` to build all packages and apps
 
-#### Running the app
+#### konduit-app
 
-- `cd apps/konduit-app` to enter the app directory
-- `yarn dev` currently servers only the app in `apps/konduit-app` through vite.
+Please check ./apps/konduit-app/README.md for more details about the devel cycle of the app.
 
 ### Nix build
 

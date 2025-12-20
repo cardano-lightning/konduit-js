@@ -2,9 +2,9 @@
 import { useRouter, type RouteLocationRaw } from "vue-router";
 
 // Either a route name, a route object, or a navigation function
-type Action = RouteLocationRaw | (() => void);
+export type Action = RouteLocationRaw | (() => void);
 
-type Props = {
+export type Props = {
   label?: string;
   action: Action;
   primary?: boolean;

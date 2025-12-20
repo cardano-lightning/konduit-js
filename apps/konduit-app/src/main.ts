@@ -4,7 +4,7 @@ import router from "./router";
 import App from "./App.vue";
 import "vue-toastification/dist/index.css";
 import Toastification from "vue-toastification";
-import { Notifications } from "./notifications";
+import { Notifications } from "./composables/notifications";
 
 // Application level styles are defined in the `App.vue` file
 createApp(App)

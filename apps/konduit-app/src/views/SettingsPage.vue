@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { exportSettings, forget } from "../store";
 import { writeJson } from "../utils/dom";
-import { useNotifications } from "../notifications";
+import { useNotifications } from "../composables/notifications";
 import Button from "../components/Button.vue";
 import TheHeader from "../components/TheHeader.vue";
 import NavBar from "../components/NavBar.vue";

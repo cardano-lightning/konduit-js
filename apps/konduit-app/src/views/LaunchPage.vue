@@ -3,7 +3,7 @@ import { importSettings, signingKey } from "../store";
 import Button from "../components/Button.vue";
 import { loadJson } from "../utils/dom";
 import * as keys from "../cardano/keys";
-import { useNotifications } from "../notifications";
+import { useNotifications } from "../composables/notifications";
 
 const notifications = useNotifications();
 

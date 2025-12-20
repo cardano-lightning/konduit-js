@@ -5,8 +5,15 @@ import * as store from "./store";
 import CreatePage from "./views/CreatePage.vue";
 import HomePage from "./views/HomePage.vue";
 import LaunchPage from "./views/LaunchPage.vue";
+import PayPage from "./views/PayPage.vue";
 
 const routes = [
+  {
+    name: "create",
+    path: "/create",
+    component: CreatePage,
+    meta: { title: "Create" },
+  },
   {
     name: "home",
     path: "/",
@@ -20,10 +27,10 @@ const routes = [
     meta: { title: "Launch" },
   },
   {
-    name: "create",
-    path: "/create",
-    component: CreatePage,
-    meta: { title: "Create" },
+    name: "pay",
+    path: "/pay",
+    component: PayPage,
+    meta: { title: "Pay" },
   },
   {
     name: "settings",
