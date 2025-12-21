@@ -2,7 +2,8 @@
   "dependencies": {
     "@noble/hashes": "^2.0.1",
     "@noble/secp256k1": "^3.0.0",
-    "@scure/base": "^2.0.0"
+    "@scure/base": "^2.0.0",
+    "neverthrow": "^8.2.0"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
