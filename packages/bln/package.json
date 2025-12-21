@@ -3,6 +3,7 @@
     "@noble/hashes": "^2.0.1",
     "@noble/secp256k1": "^3.0.0",
     "@scure/base": "^2.0.0",
+    "bip21": "^3.0.0",
     "neverthrow": "^8.2.0"
   },
   "devDependencies": {
@@ -23,6 +24,10 @@
     "./bolt11": {
       "types": "./dist/bolt11.d.ts",
       "default": "./dist/bolt11.js"
+    },
+    "./bip21": {
+      "types": "./dist/bip21.d.ts",
+      "default": "./dist/bip21.js"
     }
   },
   "files": [

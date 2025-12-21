@@ -16,6 +16,7 @@ declare global {
 })();
 
 (async () => {
+  console.log('QR Scan Worker initialized');
   if(!self.BarcodeDetector) return;
   const detector = new self.BarcodeDetector({ formats: ['qr_code'] })
   // Listen for messages from JS main thread containing raw image data

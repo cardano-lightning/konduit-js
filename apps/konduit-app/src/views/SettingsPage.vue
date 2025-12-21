@@ -2,7 +2,8 @@
 import { exportSettings, forget } from "../store";
 import { writeJson } from "../utils/dom";
 import { useNotifications } from "../composables/notifications";
-import Button from "../components/Button.vue";
+import { type Props as ButtonProps } from "../components/Button.vue";
+import ButtonGroup from "../components/ButtonGroup.vue";
 import TheHeader from "../components/TheHeader.vue";
 import NavBar from "../components/NavBar.vue";
 
@@ -21,31 +22,27 @@ const forgetReload = () => {
 const writeSettings = () => {
   writeJson(exportSettings(), "konduit.json");
 };
+
+const buttons: ButtonProps[] = [
+  {
+    label: "Export",
+    action: writeSettings,
+    primary: true,
+  },
+  {
+    label: "Forget Me",
+    action: forgetReload,
+    primary: true,
+  },
+];
 </script>
 
 <template>
-  <div id="container">
-    <TheHeader />
-    <div class="button-group">
-      <Button
-        label="Export"
-        :primary="true"
-        :action="writeSettings"
-      />
-      <Button
-        label="Forget Me"
-        :primary="true"
-        :action="forgetReload"
-      />
-    </div>
-  </div>
+  <TheHeader />
+  <ButtonGroup
+    :buttons="buttons"
+    :style="{ padding: '10vh 0 10vh' }"
+  />
   <NavBar />
 </template>
 
-<style scoped>
-.button-group {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-around;
-}
-</style>

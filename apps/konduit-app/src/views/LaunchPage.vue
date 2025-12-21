@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { importSettings, signingKey } from "../store";
-import Button from "../components/Button.vue";
+import { type Props as ButtonProps } from "../components/Button.vue";
+import ButtonGroup from "../components/ButtonGroup.vue";
 import { loadJson } from "../utils/dom";
 import * as keys from "../cardano/keys";
 import { useNotifications } from "../composables/notifications";
@@ -35,24 +36,25 @@ const createSkey = () => {
   );
 };
 
+const buttons: ButtonProps[] = [
+  {
+    label: "Import",
+    action: loadSettings,
+    primary: false,
+  },
+  {
+    label: "Create",
+    action: createSkey,
+    primary: true,
+  },
+];
 </script>
 
 <template>
   <div id="container">
     <img id="logo" src="../assets/logo.svg" alt="Konduit logo" />
     <p>A Cardano to Bitcoin Lightning Pipe</p>
-    <div class="button-group">
-      <Button
-        label="Import"
-        :primary="false"
-        :action="loadSettings"
-      />
-      <Button
-        label="Create"
-        :primary="true"
-        :action="createSkey"
-      />
-    </div>
+    <ButtonGroup :buttons="buttons" />
     <div class="link">
       <a href="https://cardano-lightning.org">Cardano-Lightning</a>
     </div>

@@ -1,14 +1,22 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import { type Props as ButtonProps } from "./Button.vue";
 import Button from "./Button.vue";
 
-export type Props = { buttons: ButtonProps[] };
+export type Props = {
+  buttons: ButtonProps[]
+  style?: Record<string, string> | null | undefined
+};
 
 const props = defineProps<Props>();
+
+const style = computed(() => {
+  return props.style ?? {};
+});
 </script>
 
 <template>
-  <div class="button-group">
+  <div class="button-group" :style="style">
     <Button
       v-for="(button, index) in props.buttons"
       :key="index"

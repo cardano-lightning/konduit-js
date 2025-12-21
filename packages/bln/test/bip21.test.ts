@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import * as bip21 from "../src/invoice/bip21";
+import * as bip21 from "../src/bip21";
 
 describe("bip21 spec", () => {
   it("example 1", () => {

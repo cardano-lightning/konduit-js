@@ -5,7 +5,7 @@ import * as uint8Array from "./uint8Array";
 import { recoverPubkey } from "./secp";
 import { Result, ok, err } from "neverthrow";
 
-interface RouteHint {
+export type RouteHint = {
   pubkey: Uint8Array;
   shortChannelId: Uint8Array; // Hex string
   feeBaseMsat: number;
@@ -13,13 +13,13 @@ interface RouteHint {
   cltvExpiryDelta: number;
 }
 
-interface ExtraBits {
+export type ExtraBits = {
   start_bit: number;
   bits: boolean[];
   has_required: boolean;
 }
 
-interface FeatureBits {
+export type FeatureBits = {
   [key: string]: "required" | "supported" | "unsupported" | ExtraBits;
 }
 
@@ -28,7 +28,7 @@ interface FeatureBits {
 /**
  * The tagged data part
  */
-export interface TaggedData {
+export type TaggedData = {
   /** The SHA256 hash of the payment preimage */
   paymentHash: Uint8Array;
   /** A free-form textual description of the payment. */
@@ -56,7 +56,7 @@ export interface TaggedData {
 /**
  * Represents a decoded Lightning Network BOLT11 Invoice.
  */
-export interface DecodedInvoice {
+export type DecodedInvoice = {
   /** The original invoice (raw string). */
   raw: string;
   /** The coin network (e.g., 'btc', 'tb') derived from the 'coin_network' section. */
@@ -113,7 +113,7 @@ function parseFixed(n: number): WordParser<Uint8Array> {
   };
 }
 
-export interface FallbackAddress {
+export type FallbackAddress = {
   version: number;
   bytes: Uint8Array;
 }

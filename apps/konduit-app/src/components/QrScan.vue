@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, type Ref } from "vue";
-import Worker from "../utils/qrScanWorker?worker";
+import Worker from "../utils/qrScanWorker.js?worker";
 
 const emit = defineEmits(["payload"]);
 
@@ -72,7 +72,7 @@ const initializeCamera = async () => {
       const videoTrack = stream.getVideoTracks()[0];
       if (videoTrack) {
         const settings = videoTrack.getSettings();
-        isFrontCamera.value = settings.facingMode === "user";
+        isFrontCamera.value = settings.facingMode === "user" || settings.facingMode === undefined;
       }
       videoRef.value.srcObject = stream;
     } catch (error) {
@@ -100,8 +100,10 @@ const stopScanner = () => {
 // --- LIFECYCLE HOOKS ---
 
 onMounted(() => {
+  console.log("Starting QR scanner worker...");
   qrWorker.value = new Worker();
   qrWorker.value.onmessage = (event) => {
+    console.log("Received message from worker:", event.data);
     if (event.data && event.data.length > 0) {
       emit("payload", event.data[0].rawValue);
       stopScanner();
@@ -159,7 +161,6 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
-
     <!-- Hidden canvas for capturing snapshots -->
     <canvas ref="snapshotCanvasRef" class="hidden-canvas" />
   </div>

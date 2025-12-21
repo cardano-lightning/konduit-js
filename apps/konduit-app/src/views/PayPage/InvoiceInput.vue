@@ -1,40 +1,73 @@
 <script setup lang="ts">
-import { onMounted, ref, type Ref } from "vue";
+import { type DecodedInvoice } from "@konduit/bln/bolt11";
+import { computed, onMounted, ref, watch, type ComputedRef, type Ref } from "vue";
 import { type Props as ButtonProps } from "../../components/Button.vue";
 import ButtonGroup from "../../components/ButtonGroup.vue";
 import QrScan from "../../components/QrScan.vue";
-// import { parsePayRequest } from "../bln/payRequest.js";
+import * as bolt11 from "@konduit/bln/bolt11";
+import * as bip21 from "@konduit/bln/bip21";
 
-const emit = defineEmits(["invoice"]);
+import { err, ok, Result } from "neverthrow";
 
-const useQrScan: Ref<boolean> = ref(false);
+const emit: ((event: "invoice", value: [string, DecodedInvoice]) => void) = defineEmits(["invoice"]);
 
-const toggleInputMode = () => {
-  useQrScan.value = !useQrScan.value;
+const useQrScan: Ref<boolean> = ref(true);
+
+// Both QR scan and manual input use the same decodedInvoice ref to emit results
+const decodedInvoice: Ref<[string, DecodedInvoice] | null> = ref(null);
+watch(decodedInvoice, (newVal) => {
+  if (newVal !== null) {
+    emit("invoice", newVal);
+  }
+});
+
+const validateInvoiceString = (
+  raw: string,
+  resultRef: Ref<Result<[string, DecodedInvoice], InvoiceError> | null>
+) => {
+  let val = raw.trim();
+  if (val === "") {
+    resultRef.value = null;
+    return;
+  }
+  try {
+    resultRef.value = bolt11.parse(val).match(
+      (invoice) => ok([val, invoice]),
+      (_error) => {
+        return bip21.parse(val).match(
+          ({ options }) => {
+            if (!options.lightning) {
+              return err({ message: "No invoice found in BIP21 string" });
+            }
+            return ok([val, options.lightning]);
+          },
+          (e: bip21.ParseError) => err(e as InvoiceError)
+        );
+      }
+    );
+  } catch (e) {
+    console.error("Failed to parse request:", e);
+    // TODO: This should be reported to the server and presented as application error, not user error
+    resultRef.value = err({ message: (e as Error).message || "Unknown error" });
+  }
 };
 
-const invoiceRaw: Ref<string | null> = ref(null);
-// const error = ref(null);
 
-const onQrScan = (payload: string) => {
-  emit("invoice", payload);
-};
-
-// // Called by the "Next" button in manual mode
-const handleManualNext = () => {
-  console.log("Manual invoice entered:", invoiceRaw.value);
-  // handleParse(invoiceRaw.value);
-};
+// Debounce function (reusable utility)
+const debounce = (callback: (val: string) => void, delay: number) => {
+  let timeoutId: number | null = null;
+  return function(val: string) {
+    if(timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      callback(val);
+    }, delay);
+  };
+}
 
 const qrButtons: ButtonProps[] = [
   {
-    label: "Cancel",
-    action: toggleInputMode,
-    primary: false,
-  },
-  {
     label: "Enter Manually",
-    action: toggleInputMode,
+    action: () => useQrScan.value = false,
     primary: false,
   },
 ];
@@ -42,14 +75,9 @@ const qrButtons: ButtonProps[] = [
 const manualButtons: ButtonProps[] = [
   {
     label: "Use QR Scanner",
-    action: toggleInputMode,
+    action: () => useQrScan.value = true,
     primary: false,
-  },
-  {
-    label: "Next",
-    action: handleManualNext,
-    primary: true,
-  },
+  }
 ];
 
 const textAreaRef: Ref<HTMLElement | null> = ref(null);
@@ -71,40 +99,100 @@ onMounted(() => {
   }
 });
 
+type InvoiceError = bip21.ParseError | { message: string };
 
-// // The core parsing logic
-// const handleParse = (rawInvoice) => {
-//   error.value = null;
-//   if (!rawInvoice || rawInvoice.trim() === "") {
-//     error.value = "Invoice string cannot be empty.";
-//     return;
-//   }
-//   try {
-//     console.log("Parsed request:", parsePayRequest(rawInvoice));
-//     emit("invoice", parsePayRequest(rawInvoice));
-//   } catch (e) {
-//     console.error("Failed to parse request:", e);
-//     error.value = `Invalid Input: ${e.message || "Unknown error"}`;
-//   }
-// };
-// @click="invoiceRaw = 'lntb123450n1p5sh2fspp57pqutvc6q9d30kh6qyxvpx07qrqrrut8czk45wvut8trluqxnpqsdqdfahhqumfv5sjzcqzzsxqr3jssp5qpntdg40qcxeh3xy43us0zk3djqh5v2peldrtdp70gd7vpcy6wes9qxpqysgqa54uah5f9sw065t9unereh0vm0jjqwq6tulnd42pnxa6yl8e92xpkpgz5tpw0fx7v05lfkl93qumr80dk4xrnakkgh57xxk53e3kccqp5kwles'">
+const invoiceInputContent: Ref<string | null> = ref(null);
+const invoiceInputValidationResult: Ref<Result<[string, DecodedInvoice], InvoiceError> | null> = ref(null);
+watch(invoiceInputValidationResult, (newVal) => {
+  newVal?.match(
+    (invoiceInfo) => {
+      // Valid invoice
+      decodedInvoice.value = invoiceInfo;
+    },
+    (_err) => {
+      // Invalid invoice
+      decodedInvoice.value = null;
+    }
+  );
+});
 
+const invoiceInputValidationError: ComputedRef<InvoiceError | null> = computed(() => {
+  if(invoiceInputValidationResult.value === null) return null;
+  return invoiceInputValidationResult.value.match(
+    () => null,
+    (error) => error
+  );
+});
+
+// Debounce relies on the closure to keep the timeoutId
+// between calls so we define it outside the watcher.
+const validateInvoiceInputContent = debounce(
+  (str) => validateInvoiceString(str, invoiceInputValidationResult),
+  500
+);
+
+watch(invoiceInputContent, (val) => {
+  if (val === null || val === "") {
+    invoiceInputValidationResult.value = null;
+    return;
+  }
+  validateInvoiceInputContent(val);
+});
+
+const qrPayloadValidationResult: Ref<Result<[string, DecodedInvoice], InvoiceError> | null> = ref(null);
+
+const qrPayloadValidationError: ComputedRef<InvoiceError | null> = computed(() => {
+  if(qrPayloadValidationResult.value === null) return null;
+  return qrPayloadValidationResult.value.match(
+    () => null,
+    (error) => error
+  );
+});
+
+watch(qrPayloadValidationResult, (newVal) => {
+  newVal?.match(
+    (invoiceInfo) => {
+      // Valid invoice
+      decodedInvoice.value = invoiceInfo;
+    },
+    (_err) => {
+      // Invalid invoice
+      decodedInvoice.value = null;
+    }
+  );
+});
+
+const onQrScan = (payload: string) => {
+  console.log("Scanned QR payload:", payload);
+  validateInvoiceString(payload, qrPayloadValidationResult);
+};
 </script>
 
 
 <template>
   <div id="container">
+      <div v-if="qrPayloadValidationError" style="color: red; margin-bottom: 0.5rem;">
+        {{ qrPayloadValidationError.message || 'Invalid invoice format.' }}
+      </div>
     <div v-if="useQrScan">
       <QrScan @payload="onQrScan" />
       <ButtonGroup :buttons="qrButtons" />
     </div>
     <div v-else>
-      <form @submit.prevent="handleManualNext">
+      <div style="margin-bottom: 1rem; word-break: break-all;">
+        Sample Invoice:
+        <br />
+      lightning:LNTB5U1P5503JXPP5RMCN6ACJEFVUWRZGGNY5UVC0NN0VT09335DWS3YG4U6SAJD9C2YQDQQCQZZSXQRRSSSP5957GWTRVHFUMS5P6MD2JSN2DVZF4XE2NFPFGP0AK2RJ23ACQFD6Q9QXPQYSGQM27VJFEZ46TGJ4KAVV7X8W78L0TX3ZQTWHUF8CW6XZRDQS2UUPAZGERVZK9NMYMTGTVPCPLC9JC39WPXF9WKVFGHM94FYREHM4Y9E2QPNEXYU9
+      </div>
+      <div v-if="invoiceInputValidationError" style="color: red; margin-bottom: 0.5rem;">
+        {{ invoiceInputValidationError.message || 'Invalid invoice format.' }}
+      </div>
+      <form> <!-- @submit.prevent="handleManualNext"> -->
         <textarea
           ref="textAreaRef"
           class="text-input"
           id="invoice"
-          v-model="invoiceRaw"
+          v-model="invoiceInputContent"
           style="width: {{ textAreaSize.width }}px; height: {{ textAreaSize.height }}px;"
           placeholder="lnb..."
           />
@@ -112,25 +200,6 @@ onMounted(() => {
       <ButtonGroup :buttons="manualButtons" />
     </div>
   </div>
-
-  <!--
-    <div class="input">
-      <QrScan v-if="invoiceRaw == null" @payload="onQrScan" />
-      <form v-else @submit.prevent="handleManualNext">
-        <textarea id="invoice" v-model="invoiceRaw" placeholder="lnb..." />
-      </form>
-    </div>
-    <div v-if="error" class="error-message">
-      {{ error }}
-    </div>
-    <div class="buttons">
-      <button v-if="invoiceRaw == null" @click="invoiceRaw = 'lntb123450n1p5sh2fspp57pqutvc6q9d30kh6qyxvpx07qrqrrut8czk45wvut8trluqxnpqsdqdfahhqumfv5sjzcqzzsxqr3jssp5qpntdg40qcxeh3xy43us0zk3djqh5v2peldrtdp70gd7vpcy6wes9qxpqysgqa54uah5f9sw065t9unereh0vm0jjqwq6tulnd42pnxa6yl8e92xpkpgz5tpw0fx7v05lfkl93qumr80dk4xrnakkgh57xxk53e3kccqp5kwles'">
-        Enter Manually
-      </button>
-      <button v-else @click="handleManualNext">Next</button>
-    </div>
-  </div>
-  -->
 </template>
 
 <style scoped>
