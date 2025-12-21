@@ -47,6 +47,19 @@
           treefmt.enable = true;
         };
         devShells.default = let
+          vitest = pkgs.writeShellScriptBin "vitest"
+            ''
+              #!/usr/bin/env bash
+              root=$(git rev-parse --show-toplevel)
+              node $root/node_modules/vitest/vitest.mjs $@
+          vue-language-server =
+            pkgs.writeShellScriptBin "vue-language-server"
+            ''
+              #!/usr/bin/env bash
+              # This expects @vue/language-server to be installed via yarn or otherwise
+              root=$(git rev-parse --show-toplevel)
+              node $root/node_modules/@vue/language-server/index.js $@
+            '';
           vtsls =
             pkgs.writeShellScriptBin "vtsls"
             ''
@@ -59,16 +72,9 @@
             pkgs.writeShellScriptBin "vue-tsc"
             ''
               #!/usr/bin/env bash
+              # This expects vue-tsc to be installed via yarn or otherwise
               root=$(git rev-parse --show-toplevel)
               node $root/node_modules/vue-tsc/bin/vue-tsc.js $@
-            '';
-          vue-language-server =
-            pkgs.writeShellScriptBin "vue-language-server"
-            ''
-              #!/usr/bin/env bash
-              # This expects @vue/language-server to be installed via yarn or otherwise
-              root=$(git rev-parse --show-toplevel)
-              node $root/node_modules/@vue/language-server/index.js $@
             '';
         in
           pkgs.mkShell
@@ -87,8 +93,10 @@
               pkgs.yarn-bash-completion
               pkgs.nodePackages_latest.nodejs
               pkgs.typescript-language-server
+              vitest
               vtsls
               vue-language-server
+              vtsls
               vue-tsc
             ];
           };
