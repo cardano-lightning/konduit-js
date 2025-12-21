@@ -63,6 +63,14 @@
               root=$(git rev-parse --show-toplevel)
               node $root/node_modules/@vtsls/language-server/bin/vtsls.js $@
             '';
+          vue-tsc =
+            pkgs.writeShellScriptBin "vue-tsc"
+            ''
+              #!/usr/bin/env bash
+              # This expects vue-tsc to be installed via yarn or otherwise
+              root=$(git rev-parse --show-toplevel)
+              node $root/node_modules/vue-tsc/bin/vue-tsc.js $@
+            '';
         in
           pkgs.mkShell
           {
@@ -82,6 +90,7 @@
               pkgs.typescript-language-server
               vue-language-server
               vtsls
+              vue-tsc
             ];
           };
       };

@@ -14,5 +14,8 @@
     "types": ["vite/client", "vite-plugin-pwa/client" ]
   },
   "extends": "@vue/tsconfig/tsconfig.dom.json",
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"],
+  "references": [
+    { "path": "../../packages/bln" }
+  ]
 }
