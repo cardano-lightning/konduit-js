@@ -38,8 +38,7 @@ in
       # If the above command fails because of some missing hashes you should update the missing-hashes.json file:
       # * `$ fetch-yarn-berry-deps missing-hashes yarn.lock > ./nix/missing-hashes.json`
       # * Then re-run the prefetch command.
-      hash = "sha256-CxxJkEJazx8Slw7Un1oxTN8MoVzzUSvBcrRPVBDC/2c=";
-
+      hash = "sha256-p0GenwAujBWGneRPyina1BAS05jvW2GxjgWDR5muCj8=";
     };
 
     nativeBuildInputs = [
