@@ -68,13 +68,15 @@ const handleParse = () => {
     return;
   }
   isLoading.value = true;
-  try {
-    parsedData.value = bln.bolt11.parse(invoiceInput.value);
-  } catch (err: any) {
-    error.value = err.message || "An unknown error occurred during parsing.";
-  } finally {
-    isLoading.value = false;
-  }
+  bln.bolt11.parse(invoiceInput.value).match(
+    (result) => {
+      parsedData.value = result;
+    },
+    (err) => {
+      error.value = err.message || "An unknown error occurred during parsing.";
+    }
+  );
+  isLoading.value = false;
 };
 
 watch(invoiceInput, () => {
@@ -140,6 +142,7 @@ watch(invoiceInput, () => {
       <div v-if="parsedData" class="results-card">
         <h2 class="results-header">Parsed Invoice Details</h2>
         <div class="data-list">
+
           <div
             v-for="([key, value], index) in Object.entries(parsedData)"
             :key="index"

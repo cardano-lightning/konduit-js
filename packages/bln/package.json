@@ -19,7 +19,12 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./bolt11": {
+      "types": "./dist/bolt11.d.ts",
+      "default": "./dist/bolt11.js"
+    } 
+
   },
   "files": [
     "dist"

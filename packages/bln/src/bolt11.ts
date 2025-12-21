@@ -271,7 +271,7 @@ export type ParseError =
       details?: string; // Any additional recovery error info
     };
 
-type ParseResult<a> = Result<a, ParseError>;
+export type ParseResult<a> = Result<a, ParseError>;
 
 function parseAmount(s: string): ParseResult<bigint> {
   const trailingChar = s.slice(-1)[0];
