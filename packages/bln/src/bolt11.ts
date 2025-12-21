@@ -3,21 +3,7 @@ import { SHORT_LOOKUP, type Network, type Short } from "./network";
 import { convert, type WordParser } from "./words";
 import * as uint8Array from "./uint8Array";
 import { recoverPubkey } from "./secp";
-
-/** Defines the structure for a single tag definition in the TAGGED_DATA map. */
-export interface TagParser<T> {
-  tag: number;
-  parser: WordParser<T>;
-  multi?: boolean;
-}
-
-/** Defines the structure for a single entry in the inverted TAGGED_PARSERS map. */
-interface NameParser<T> {
-  // Narrowed to strictly use keys from the final interface
-  name: keyof TaggedData;
-  parser: WordParser<T>;
-  multi?: boolean;
-}
+import { Result, ok, err } from "neverthrow";
 
 interface RouteHint {
   pubkey: Uint8Array;
@@ -109,6 +95,7 @@ export interface DecodedInvoice {
  * ParseBigEndian
  * */
 
+const parseId: WordParser<number[]> = (words: number[]) => words;
 const parseBytes: WordParser<Uint8Array> = (words: number[]) =>
   bech32.fromWords(words);
 const parseStr: WordParser<string> = (words: number[]) =>
@@ -118,7 +105,7 @@ const parseBe: WordParser<number> = (words: number[]) =>
 const intBe = (bytes: Uint8Array) =>
   bytes.reduce((acc: number, curr: number) => acc * 256 + curr, 0);
 
-function parseFixed(n: number) {
+function parseFixed(n: number): WordParser<Uint8Array> {
   return (words: number[]) => {
     if (words.length != n)
       throw new Error(`Expected ${n} words. Got ${words.length}`);
@@ -136,29 +123,6 @@ const parseFallbackAddress: WordParser<FallbackAddress> = (words: number[]) => {
   const bytes = new Uint8Array(convert(words.slice(1), 5, 8, true));
   return { version, bytes };
 };
-
-const TAGGED_DATA: Record<keyof TaggedData, TagParser<any>> = {
-  paymentHash: { tag: 1, parser: parseFixed(52) },
-  paymentSecret: { tag: 16, parser: parseFixed(52) },
-  description: { tag: 13, parser: parseStr },
-  payee: { tag: 19, parser: parseFixed(53) },
-  descriptionHash: { tag: 23, parser: parseFixed(52) },
-  expiry: { tag: 6, parser: parseBe },
-  minFinalCltvExpiry: { tag: 24, parser: parseBe },
-  fallbackAddress: { tag: 9, parser: parseFallbackAddress },
-  routeHint: { tag: 3, parser: parseRouteHint, multi: true },
-  features: { tag: 5, parser: featuresParser },
-  metadata: { tag: 27, parser: parseBytes },
-};
-
-const TAGGED_PARSERS = (() =>
-  Object.entries(TAGGED_DATA).reduce(
-    (acc, [name, { tag, parser, multi }]) => {
-      acc[tag] = { name: name as keyof TaggedData, parser, multi };
-      return acc;
-    },
-    {} as { [key: number]: NameParser<any> },
-  ))();
 
 function parseRouteHint(words: number[]): RouteHint[] {
   const routes: RouteHint[] = [];
@@ -251,90 +215,278 @@ const MULTIPLIER: { [key: string]: (n: bigint) => bigint } = {
 
 const MAX_AMOUNT: bigint = BigInt("2100000000000000000");
 
-function parseAmount(s: string): bigint {
+export type ParseError =
+  | {
+      type: "InvalidPrefix";
+      message: string;
+      prefix: string; // Semantic: the invalid prefix provided
+    }
+  | {
+      type: "UnknownNetwork";
+      message: string;
+      short: string; // Semantic: the unknown network short code
+    }
+  | {
+      type: "InvalidAmount";
+      message: string;
+      amountStr: string; // Semantic: the invalid amount string
+      details?: string; // Additional info, e.g., "non-digits" or "too large"
+    }
+  | {
+      type: "AmountTooLarge";
+      message: string;
+      amountMsat: bigint; // Semantic: the amount in msat that was too large
+    }
+  | {
+      type: "InvalidTagData";
+      message: string;
+      input: number[]; // Semantic: the raw tagged data input
+    }
+  | {
+      type: "InvalidTaggedData";
+      message: string;
+      tag: number; // Semantic: the tag that failed
+      details?: string; // e.g., "length mismatch"
+    }
+  | {
+      type: "InconsistentPayee";
+      message: string;
+      expectedPayee: Uint8Array; // Semantic: recovered payee
+      providedPayee: Uint8Array; // Semantic: payee from tagged data
+    }
+  | {
+      type: "InvalidDataLength";
+      message: string;
+      expectedLength: number; // Semantic: expected word count
+      actualLength: number; // Semantic: actual word count
+    }
+  | {
+      type: "InvalidBech32";
+      message: string;
+      details: string; // Semantic: error from bech32.decode
+    }
+  | {
+      type: "InvalidSignatureRecovery";
+      message: string;
+      details?: string; // Any additional recovery error info
+    };
+
+export type ParseResult<a> = Result<a, ParseError>;
+
+function parseAmount(s: string): ParseResult<bigint> {
   const trailingChar = s.slice(-1)[0];
+  const mkInvalidErr = (msg: string): ParseResult<bigint> => {
+    return err({
+      type: "InvalidAmount",
+      message: msg,
+      amountStr: s,
+    });
+  };
   if (typeof trailingChar === "undefined")
-    throw new Error("Expected non-empty string");
+    return mkInvalidErr("Expected non-empty string for amount");
   const hasSuffix = trailingChar.match(/^[munp]$/);
   const valueString = hasSuffix ? s.slice(0, -1) : s;
-  if (!valueString.match(/^\d+$/)) throw new Error(`Expected only digits`);
+  if (!valueString.match(/^\d+$/))
+    return mkInvalidErr("Expected only digits in amount value");
   const key = (hasSuffix ? trailingChar : "_") as keyof typeof MULTIPLIER;
   const multiplier = MULTIPLIER[key] as (n: bigint) => bigint;
   const amountMsat = multiplier(BigInt(valueString));
-  if (amountMsat > MAX_AMOUNT) throw new Error(`Amount greater than allowed`);
-  return amountMsat;
+  if (amountMsat > MAX_AMOUNT)
+    return err({
+      type: "AmountTooLarge",
+      message: "Amount exceeds maximum allowed value",
+      amountMsat,
+    });
+  return ok(amountMsat);
 }
 
-export function parsePrefix(prefix: string) {
-  if (prefix.slice(0, 2) !== "ln") throw new Error("Expect `ln` prefix");
+export function parsePrefix(prefix: string): ParseResult<{ network: Network; amount?: bigint }> {
+  if (prefix.slice(0, 2) !== "ln")
+    return err({
+      type: "InvalidPrefix",
+      message: "Prefix must start with 'ln'",
+      prefix,
+    });
   prefix = prefix.slice(2);
   const digitAt = prefix.search(/\d/);
   const short = digitAt < 0 ? prefix : prefix.slice(0, digitAt);
   const network = SHORT_LOOKUP[short as Short];
   if (typeof network === "undefined")
-    throw new Error(`Unknown network short ${short}`);
-  const amount = digitAt < 0 ? undefined : parseAmount(prefix.slice(digitAt));
-  return { network, ...(typeof amount === "bigint" && { amount }) };
+    return err({
+      type: "UnknownNetwork",
+      message: `Unknown network short code: ${short}`,
+      short,
+    });
+  if(digitAt === -1) {
+    return ok({ network });
+  }
+  return parseAmount(prefix.slice(digitAt)).andThen((amount) => {
+    return ok({ network, amount });
+  });
 }
 
-export function parseData(s: number[]) {
-  const timestamp = parseBe(s.slice(0, 7));
-  const taggedData = parseTaggedData(s.slice(7));
-  return { timestamp, taggedData };
+const runTagParser = <result>(tag: number, name: string, data: number[], parser: WordParser<result>): ParseResult<result> => {
+  try {
+    const parsed = parser(data);
+    return ok(parsed);
+  } catch (e) {
+    return err({
+      type: "InvalidTaggedData",
+      message: `Failed to parse tag ${tag} for required field ${name}: ${(e as Error).message}`,
+      tag,
+      details: (e as Error).message,
+    });
+  }
 }
 
-export function parseTaggedData(s: number[]): TaggedData {
-  const partial: Partial<TaggedData> = {};
+export function parseTaggedData(s: number[]): ParseResult<TaggedData> {
+  const tag2data: Record<number, number[]> = {};
+  // The only multi tag is route hint (3)
+  const routeHintTag = 3;
+  let routeHintData: number[][] = [];
   while (s.length > 0) {
     let [tag, len1, len0] = s;
-    if (typeof tag !== "number") throw new Error("Expected more bytes");
-    if (typeof len1 !== "number") throw new Error("Expected more bytes");
-    if (typeof len0 !== "number") throw new Error("Expected more bytes");
-    const nameParser = TAGGED_PARSERS[tag];
-    const { name, parser, multi } = nameParser
-      ? nameParser
-      : { name: `UnknownTag${tag}`, parser: (x: number[]) => x };
+    if (tag === undefined || len1 === undefined || len0 === undefined)
+      return err({
+        type: "InvalidTagData",
+        message: "Tagged data is incomplete - expecting at least 3 bytes for tag and length",
+        input: s,
+      });
     let offset = 3 + 32 * len1 + len0;
     const data = s.slice(3, offset);
-    s = s.slice(offset);
-    if (multi) {
-      // @ts-ignore : FIXME
-      partial[name] = [...(partial[name] || []), parser(data)];
+    if (tag !== routeHintTag) {
+      if (tag in tag2data) {
+        return err({
+          type: "InvalidTaggedData",
+          message: `Duplicate tag encountered: ${tag}`,
+          tag,
+        });
+      }
+      tag2data[tag] = data;
     } else {
-      // @ts-ignore : FIXME
-      partial[name] = parser(data);
+      routeHintData.push(data);
     }
+    s = s.slice(offset);
   }
-  return partial as TaggedData;
+  const parseRequired = <res>(tag: number, name: string, parser: WordParser<res>): ParseResult<res> => {
+    const data = tag2data[tag];
+    if (!data)
+      return err({
+        type: "InvalidTaggedData",
+        message: `Missing required tag ${tag} for: ${name}`,
+        tag,
+      });
+    return runTagParser(tag, name, data, parser);
+  }
+  const parseOptional = <res>(tag: number, name: string, parser: WordParser<res>): ParseResult<res | undefined> => {
+    const data = tag2data[tag];
+    if (!data) return ok(undefined);
+    return runTagParser(tag, name, data, parser);
+  }
+
+  return Result.combine([
+    parseRequired<Uint8Array>(1, "paymentHash", parseFixed(52)),
+    Result.combine(routeHintData.map((data) => {
+      return runTagParser(3, "routeHint", data, parseRouteHint);
+    })).andThen((nestedHints) => {
+      const hints: RouteHint[] = [];
+      for (const hintList of nestedHints) {
+        hints.push(...hintList);
+      }
+      return ok(hints ?? undefined);
+    }),
+    parseOptional<FeatureBits>(5, "features", featuresParser),
+    parseOptional<number>(6, "expiry", parseBe),
+    parseOptional<FallbackAddress>(9, "fallbackAddress", parseFallbackAddress),
+    parseOptional<string>(13, "description", parseStr),
+    parseOptional<Uint8Array>(16, "paymentSecret", parseFixed(52)),
+    parseOptional<Uint8Array>(19, "payee", parseFixed(53)),
+    parseOptional<Uint8Array>(23, "descriptionHash", parseFixed(52)),
+    parseOptional<number>(24, "minFinalCltvExpiry", parseBe),
+    parseOptional<number[]>(27, "metadata", parseId),
+  ]).andThen(([
+    paymentHash,
+    routeHint,
+    features,
+    expiry,
+    fallbackAddress,
+    description,
+    paymentSecret,
+    payee,
+    descriptionHash,
+    minFinalCltvExpiry,
+    metadata,
+  ]) => {
+    const result: TaggedData = {
+      paymentHash,
+      description,
+      descriptionHash,
+      minFinalCltvExpiry,
+      expiry,
+      paymentSecret,
+      features,
+      routeHint,
+      payee,
+      fallbackAddress,
+      metadata,
+    };
+    return ok(result);
+  });
+}
+
+export function parseData(s: number[]): ParseResult<{ timestamp: number; taggedData: TaggedData }> {
+  return Result.combine([
+    runTagParser(0, "timestamp", s.slice(0, 7), parseBe),
+    parseTaggedData(s.slice(7)),
+  ]).andThen(([timestamp, taggedData]) => {
+    return ok({ timestamp, taggedData });
+  });
+}
+
+function parseBech32(s: string): ParseResult<{ prefix: string; words: number[] }> {
+  try {
+    const { prefix, words } = bech32.decode(s as `${string}1${string}`, false);
+    return ok({ prefix, words });
+  } catch (e) {
+    return err({
+      type: "InvalidBech32",
+      message: "Failed to decode Bech32 string",
+      details: (e as Error).message,
+    });
+  }
 }
 
 /**
  * Parse a BOLT11 Lightning Payment Request into a structured object.
  */
-export function parse(s: string): DecodedInvoice {
-  const { prefix, words } = bech32.decode(s as `${string}1${string}`, false);
-  const hrp = parsePrefix(prefix);
-  const dataWords = words.slice(0, -104);
-  const { timestamp, taggedData } = parseData(dataWords);
-  const sigWords = words.slice(-104);
-  const signature = bech32.fromWords(sigWords) as Uint8Array;
-
-  const payee = recoverPayee(prefix, dataWords, signature);
-  if (taggedData.payee) {
-    if (!uint8Array.equals(taggedData.payee, payee))
-      throw new Error("Inconsistent payee");
-  }
-
-  const result = {
-    raw: s,
-    ...hrp,
-    timestamp,
-    ...taggedData,
-    payee,
-    signature,
-  };
-
-  return result;
+export function parse(s: string): ParseResult<DecodedInvoice> {
+  return parseBech32(s).andThen(({ prefix, words }) => {
+    return Result.combine([
+      parsePrefix(prefix),
+      parseData(words.slice(0, -104)),
+    ]).andThen(([{ network, amount }, { timestamp, taggedData }]) => {
+      const sigWords = words.slice(-104);
+      const signature = bech32.fromWords(sigWords) as Uint8Array;
+      const payee = recoverPayee(prefix, words.slice(0, -104), signature);
+      if (taggedData.payee && !uint8Array.equals(taggedData.payee, payee))
+        return err({
+          type: "InconsistentPayee",
+          message: "Inconsistent payee between tagged data and recovered payee",
+          expectedPayee: payee,
+          providedPayee: taggedData.payee,
+        } as ParseError);
+      const result: DecodedInvoice = {
+        raw: s,
+        network,
+        amount,
+        timestamp,
+        ...taggedData,
+        payee,
+        signature,
+      };
+      return ok(result);
+    });
+  });
 }
 
 function recoverPayee(
