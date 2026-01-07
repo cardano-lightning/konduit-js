@@ -4,6 +4,7 @@ import * as bolt11 from "./bolt11";
 import * as bip21 from "bip21";
 
 // A slightly modified version of the bip21 options to support decoded lighting invoices
+// Bip21 URI can contain a lightning invoice as an option in the "lightning" query parameter.
 export type Bip21Options<invoice> = {
   amount?: number;
   label?: string;

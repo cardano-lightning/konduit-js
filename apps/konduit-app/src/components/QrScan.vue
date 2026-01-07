@@ -100,7 +100,6 @@ const stopScanner = () => {
 // --- LIFECYCLE HOOKS ---
 
 onMounted(() => {
-  console.log("Starting QR scanner worker...");
   qrWorker.value = new Worker();
   qrWorker.value.onmessage = (event) => {
     console.log("Received message from worker:", event.data);
@@ -156,9 +155,7 @@ onUnmounted(() => {
             height: `${containerSize.height}px`,
           }"
         />
-        <div class="overlay">
-          <div class="crosshair" />
-        </div>
+        <div class="overlay"><div class="crosshair" /></div>
       </div>
     </div>
     <!-- Hidden canvas for capturing snapshots -->
@@ -193,10 +190,15 @@ onUnmounted(() => {
   aspect-ratio: 1 / 1;
   overflow: hidden;
   border: 2px solid #d1d5db;
-  background-color: #111827;
+  /* I'm not sure if I understand the source of the possible gap between
+     the video feed and the border, but we can have such a gap.
+     As a workaround we use the same background color as the border so it
+     blends in seamlessly. */
+  background-color: #d1d5db;
 }
 
 .video-feed {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;

@@ -460,6 +460,23 @@ function parseBech32(s: string): ParseResult<{ prefix: string; words: number[] }
  * Parse a BOLT11 Lightning Payment Request into a structured object.
  */
 export function parse(s: string): ParseResult<DecodedInvoice> {
+
+  function recoverPayee(
+    prefix: string,
+    data: number[],
+    signature: Uint8Array,
+  ): Uint8Array {
+    const sig = new Uint8Array([
+      ...signature.slice(-1),
+      ...signature.slice(0, 64),
+    ]);
+    const message = new Uint8Array([
+      ...utf8.decode(prefix),
+      ...convert(data, 5, 8, true),
+    ]);
+    return recoverPubkey(message, sig);
+  }
+
   return parseBech32(s).andThen(({ prefix, words }) => {
     return Result.combine([
       parsePrefix(prefix),
@@ -489,18 +506,27 @@ export function parse(s: string): ParseResult<DecodedInvoice> {
   });
 }
 
-function recoverPayee(
-  prefix: string,
-  data: number[],
-  signature: Uint8Array,
-): Uint8Array {
-  const sig = new Uint8Array([
-    ...signature.slice(-1),
-    ...signature.slice(0, 64),
-  ]);
-  const message = new Uint8Array([
-    ...utf8.decode(prefix),
-    ...convert(data, 5, 8, true),
-  ]);
-  return recoverPubkey(message, sig);
+export type ParseURIError =
+  ParseError
+  | { type: "InvalidScheme"; message: string; expectedScheme: "lightning"; actualScheme: string };
+
+// bolt-11 specifies simple URIs scheme:
+// > If a URI scheme is desired, the current recommendation is to either
+// > use 'lightning:' as a prefix before the BOLT-11 encoding
+export function parseURI(uri: string): Result<DecodedInvoice, ParseURIError> {
+  const urnScheme = 'lightning';
+  const urnSchemeActual = uri.slice(0, urnScheme.length).toLowerCase();
+  if (urnSchemeActual !== urnScheme ||
+    uri.charAt(urnScheme.length) !== ':'
+  ) {
+    return err({
+      type: "InvalidScheme",
+      message: `Invalid URI scheme: expected '${urnScheme}', got '${urnSchemeActual}'`,
+      expectedScheme: "lightning",
+      actualScheme: urnSchemeActual,
+    });
+  }
+  const invoiceStr = uri.slice(urnScheme.length + 1);
+  return parse(invoiceStr).mapErr((e) => e as ParseURIError);
 }
+

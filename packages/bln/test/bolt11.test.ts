@@ -33,6 +33,19 @@ function runParse(s: string): DecodedInvoice {
   );
 }
 
+function runParseURI(s: string): DecodedInvoice {
+  const result = bolt11.parseURI(s);
+  return result.match(
+    (res) => {
+      expect(res).toBeDefined();
+      return res;
+    },
+    (err) => {
+      throw err;
+    }
+  );
+}
+
 describe("bolt 11 spec", () => {
   it("example 1", () => {
     const my = runParse(
@@ -143,6 +156,37 @@ describe("bolt 11 spec", () => {
   it("example 6", () => {
     const my = runParse(
       "lnbc20m1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqhp58yjmdan79s6qqdhdzgynm4zwqd5d7xmw5fk98klysy043l2ahrqsfpp3qjmp7lwpagxun9pygexvgpjdc4jdj85fr9yq20q82gphp2nflc7jtzrcazrra7wwgzxqc8u7754cdlpfrmccae92qgzqvzq2ps8pqqqqqqpqqqqq9qqqvpeuqafqxu92d8lr6fvg0r5gv0heeeqgcrqlnm6jhphu9y00rrhy4grqszsvpcgpy9qqqqqqgqqqqq7qqzq9qrsgqdfjcdk6w3ak5pca9hwfwfh63zrrz06wwfya0ydlzpgzxkn5xagsqz7x9j4jwe7yj7vaf2k9lqsdk45kts2fd0fkr28am0u4w95tt2nsq76cqw0",
+    );
+    const their = {
+      network: "Bitcoin",
+      amount: BigInt("2000000000"),
+      timestamp: 1496314658,
+      paymentSecret: PAYMENT_SECRET,
+      paymentHash: hex.decode(
+        "0001020304050607080900010203040506070809000102030405060708090102",
+      ),
+      descriptionHash: hex.decode(
+        "3925b6f67e2c340036ed12093dd44e0368df1b6ea26c53dbe4811f58fd5db8c1",
+      ),
+      fallbackAddress: parseAddress("1RustyRX2oai4EYYDpQGWvEL62BBGqN9T"),
+      payee: hex.decode(
+        "03e7156ae33b0a208d0744199163177e909e80176e55d97a2f221ede0f934dd9ad",
+      ),
+    };
+    expect(my.network).toStrictEqual(their.network);
+    expect(my.amount).toStrictEqual(their.amount);
+    expect(my.timestamp).toStrictEqual(their.timestamp);
+    expect(my.paymentSecret).toStrictEqual(their.paymentSecret);
+    expect(my.paymentHash).toStrictEqual(their.paymentHash);
+    expect(my.descriptionHash).toStrictEqual(their.descriptionHash);
+    expect(my.fallbackAddress?.bytes).toStrictEqual(
+      their.fallbackAddress?.bytes,
+    );
+    expect(my.payee).toStrictEqual(their.payee);
+  });
+  it("example 6 capitlized and as bolt11 URI", () => {
+    const my = runParseURI(
+      "lightning:LNBC20M1PVJLUEZSP5ZYG3ZYG3ZYG3ZYG3ZYG3ZYG3ZYG3ZYG3ZYG3ZYG3ZYG3ZYG3ZYGSPP5QQQSYQCYQ5RQWZQFQQQSYQCYQ5RQWZQFQQQSYQCYQ5RQWZQFQYPQHP58YJMDAN79S6QQDHDZGYNM4ZWQD5D7XMW5FK98KLYSY043L2AHRQSFPP3QJMP7LWPAGXUN9PYGEXVGPJDC4JDJ85FR9YQ20Q82GPHP2NFLC7JTZRCAZRRA7WWGZXQC8U7754CDLPFRMCCAE92QGZQVZQ2PS8PQQQQQQPQQQQQ9QQQVPEUQAFQXU92D8LR6FVG0R5GV0HEEEQGCRQLNM6JHPHU9Y00RRHY4GRQSZSVPCGPY9QQQQQQGQQQQQ7QQZQ9QRSGQDFJCDK6W3AK5PCA9HWFWFH63ZRRZ06WWFYA0YDLZPGZXKN5XAGSQZ7X9J4JWE7YJ7VAF2K9LQSDK45KTS2FD0FKR28AM0U4W95TT2NSQ76CQW0",
     );
     const their = {
       network: "Bitcoin",

@@ -17,8 +17,9 @@ import Zap from "./icons/Zap.vue";
 <style scoped>
 #navbar {
   align-items: center;
-  background: #162456;
+  background: var(--primary-color);
   border-top: 1px solid #ccc;
+  color: var(--primary-background-color);
   bottom: 0;
   display: flex;
   flex-direction: row;
@@ -45,6 +46,6 @@ import Zap from "./icons/Zap.vue";
 }
 
 #navbar .content a {
-  color: #fff1f2;
+  color: var(--primary-background-color);
 }
 </style>

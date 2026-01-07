@@ -36,13 +36,14 @@ function handleClick() {
 
 <style scoped>
 button {
-  border: 2px solid #444;
+  border: 2px solid var(--button-border-color);
   border-radius: 0;
   padding: 0.6em 1.5em;
   font-size: 1em;
   font-weight: 500;
-  color: #fff1f2;
-  background-color: #162456;
+  /* Primary button should contrast against the background */
+  color: var(--primary-background-color);
+  background-color: var(--primary-color);
   cursor: pointer;
   transition: border-color 0.25s;
   font-family: inherit;
@@ -59,8 +60,9 @@ button:focus-visible {
 
 button.secondary {
   border: 1px solid;
-  color: #162456;
-  background-color: #fff1f2;
+  /* Secondary button should blend in with the background */
+  color: var(--primary-color);
+  background-color: var(--primary-background-color);
 }
 </style>
 

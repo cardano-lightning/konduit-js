@@ -1130,6 +1130,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@coingecko/cryptoformat@git+https://github.com/paluh/cryptoformat.git":
+  version: 0.8.2
+  resolution: "@coingecko/cryptoformat@https://github.com/paluh/cryptoformat.git#commit=c48f9f8b15ddcb15b3c2c10a4e1982e012517f27"
+  checksum: 10c0/de104befd2202ed35addef84da56ec5c20c807f8db021726921e777574bc8300ea34975e49647c8669851dc81fa87e81a6e11d0b5208dcf45287f4e26a0cf3a7
+  languageName: node
+  linkType: hard
+
 "@emmetio/abbreviation@npm:^2.3.3":
   version: 2.3.3
   resolution: "@emmetio/abbreviation@npm:2.3.3"
@@ -1376,6 +1383,48 @@ __metadata:
   version: 0.27.1
   resolution: "@esbuild/win32-x64@npm:0.27.1"
   conditions: os=win32 & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@formatjs/ecma402-abstract@npm:3.0.8":
+  version: 3.0.8
+  resolution: "@formatjs/ecma402-abstract@npm:3.0.8"
+  dependencies:
+    "@formatjs/fast-memoize": "npm:3.0.3"
+    "@formatjs/intl-localematcher": "npm:0.7.5"
+    decimal.js: "npm:^10.4.3"
+    tslib: "npm:^2.8.0"
+  checksum: 10c0/b40211b9e9d684097260fb6c335c079994a695ef8eb3ba79966cbe2bed5788fb1edd94f139f270b022cc10707bd294b258913e93b49aa356939e25ab0f3ea262
+  languageName: node
+  linkType: hard
+
+"@formatjs/fast-memoize@npm:3.0.3":
+  version: 3.0.3
+  resolution: "@formatjs/fast-memoize@npm:3.0.3"
+  dependencies:
+    tslib: "npm:^2.8.0"
+  checksum: 10c0/074b7d85b0ad1d6c6b3eba9a56b6ba30eb3c9de4fb6e33f1ca70a77a42ba7df4129f11dd912556c9a15d20ab4c2e6674cc6a340718ced33130fc71c640543fa1
+  languageName: node
+  linkType: hard
+
+"@formatjs/intl-durationformat@npm:^0.9.2":
+  version: 0.9.2
+  resolution: "@formatjs/intl-durationformat@npm:0.9.2"
+  dependencies:
+    "@formatjs/ecma402-abstract": "npm:3.0.8"
+    "@formatjs/intl-localematcher": "npm:0.7.5"
+    tslib: "npm:^2.8.0"
+  checksum: 10c0/53c8a668cea2fa10f4063d1f9e15637756657165a7b2de4ef25a0576950bd8d0cc6243006503b649345d05cee931062c5fbe6bb0fbca848f94c1b19b6ba90ce4
+  languageName: node
+  linkType: hard
+
+"@formatjs/intl-localematcher@npm:0.7.5":
+  version: 0.7.5
+  resolution: "@formatjs/intl-localematcher@npm:0.7.5"
+  dependencies:
+    "@formatjs/fast-memoize": "npm:3.0.3"
+    tslib: "npm:^2.8.0"
+  checksum: 10c0/b5c1837165c357c7f26e537c8ad261b387b06be8c8e189cfa4f252567e6de0b69c67efbf027ce9621eaa6d1020449c6fd574406c63ead3022a2c78d1f4f51b57
   languageName: node
   linkType: hard
 
@@ -1901,65 +1950,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@konduit/cardano-keys@workspace:^, @konduit/cardano-keys@workspace:packages/cardano-keys":
+"@konduit/currency-format@workspace:^, @konduit/currency-format@workspace:packages/currency-format":
   version: 0.0.0-use.local
-  resolution: "@konduit/cardano-keys@workspace:packages/cardano-keys"
+  resolution: "@konduit/currency-format@workspace:packages/currency-format"
   dependencies:
-    "@noble/ciphers": "npm:^2.1.1"
-    "@noble/hashes": "npm:^2.0.1"
-    "@scure/bip39": "npm:^2.0.1"
     "@types/node": "npm:^24.10.1"
-    libsodium-wrappers-sumo: "npm:^0.8.1"
+    decimal.js: "npm:^10.6.0"
     neverthrow: "npm:^8.2.0"
-    type-fest: "npm:^5.4.1"
-    typescript: "npm:~5.9.3"
-    vite: "npm:^7.2.4"
-    vite-plugin-dts: "npm:^4.5.4"
-    vitest: "npm:^4.0.17"
-  languageName: unknown
-  linkType: soft
-
-"@konduit/codec@workspace:^, @konduit/codec@workspace:packages/codec":
-  version: 0.0.0-use.local
-  resolution: "@konduit/codec@workspace:packages/codec"
-  dependencies:
-    "@types/json-bigint": "npm:^1"
-    "@types/node": "npm:^24.10.1"
-    json-bigint: "npm:^1.0.0"
-    neverthrow: "npm:^8.2.0"
-    typescript: "npm:~5.9.3"
-    vite: "npm:^7.2.4"
-    vite-plugin-dts: "npm:^4.5.4"
-    vitest: "npm:^4.0.17"
-  languageName: unknown
-  linkType: soft
-
-"@konduit/konduit-consumer@workspace:packages/konduit-consumer":
-  version: 0.0.0-use.local
-  resolution: "@konduit/konduit-consumer@workspace:packages/konduit-consumer"
-  dependencies:
-    "@konduit/cardano-keys": "workspace:^"
-    "@konduit/codec": "workspace:^"
-    "@scure/base": "npm:^2.0.0"
-    "@types/node": "npm:^24.10.1"
     typescript: "npm:~5.9.3"
     vite: "npm:^7.2.4"
     vite-plugin-dts: "npm:^4.5.4"
     vitest: "npm:^4.0.16"
-  languageName: unknown
-  linkType: soft
-
-"@konduit/wallet@workspace:packages/wallet":
-  version: 0.0.0-use.local
-  resolution: "@konduit/wallet@workspace:packages/wallet"
-  dependencies:
-    "@types/node": "npm:^24.10.1"
-    neverthrow: "npm:^8.2.0"
-    type-fest: "npm:^5.4.1"
-    typescript: "npm:~5.9.3"
-    vite: "npm:^7.2.4"
-    vite-plugin-dts: "npm:^4.5.4"
-    vitest: "npm:^4.0.14"
   languageName: unknown
   linkType: soft
 
@@ -2606,6 +2607,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@vitest/expect@npm:4.0.16":
+  version: 4.0.16
+  resolution: "@vitest/expect@npm:4.0.16"
+  dependencies:
+    "@standard-schema/spec": "npm:^1.0.0"
+    "@types/chai": "npm:^5.2.2"
+    "@vitest/spy": "npm:4.0.16"
+    "@vitest/utils": "npm:4.0.16"
+    chai: "npm:^6.2.1"
+    tinyrainbow: "npm:^3.0.3"
+  checksum: 10c0/add4dde3548b6f65b6d7d364607713f9db258642add248a23805fa1172e48d76a7822080249efb882120b408772684569b2e78581ed3d5f282e215d7f21be183
+  languageName: node
+  linkType: hard
+
 "@vitest/mocker@npm:4.0.15":
   version: 4.0.15
   resolution: "@vitest/mocker@npm:4.0.15"
@@ -2625,12 +2640,40 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@vitest/mocker@npm:4.0.16":
+  version: 4.0.16
+  resolution: "@vitest/mocker@npm:4.0.16"
+  dependencies:
+    "@vitest/spy": "npm:4.0.16"
+    estree-walker: "npm:^3.0.3"
+    magic-string: "npm:^0.30.21"
+  peerDependencies:
+    msw: ^2.4.9
+    vite: ^6.0.0 || ^7.0.0-0
+  peerDependenciesMeta:
+    msw:
+      optional: true
+    vite:
+      optional: true
+  checksum: 10c0/cf4469a4745e3cdd46e8ee4e20aa04369e7f985d40175d974d3a6f6d331bf9d8610f9638c5a18f7ff59a30ff04b19f4b823457b4c79142186fe463fa4cee80c5
+  languageName: node
+  linkType: hard
+
 "@vitest/pretty-format@npm:4.0.15":
   version: 4.0.15
   resolution: "@vitest/pretty-format@npm:4.0.15"
   dependencies:
     tinyrainbow: "npm:^3.0.3"
   checksum: 10c0/d863f3818627b198f9c66515f8faa200e76a1c30c7f2b25ac805e253204ae51abbfa6b6211c58b2d75e1a273a2e6925e3a8fa480ebfa9c479d75a19815e1cbea
+  languageName: node
+  linkType: hard
+
+"@vitest/pretty-format@npm:4.0.16":
+  version: 4.0.16
+  resolution: "@vitest/pretty-format@npm:4.0.16"
+  dependencies:
+    tinyrainbow: "npm:^3.0.3"
+  checksum: 10c0/11243e9c2d2d011ae23825c6b7464a4385a4a4efc4ceb28b7854bb9d73491f440b89d12f62c5c9737d26375cf9585b11bc20183d4dea4e983e79d5e162407eb9
   languageName: node
   linkType: hard
 
@@ -2641,6 +2684,16 @@ __metadata:
     "@vitest/utils": "npm:4.0.15"
     pathe: "npm:^2.0.3"
   checksum: 10c0/0b0f23b8fed1a98bb85d71a7fc105726e0fae68667b090c40b636011126fef548a5f853eab40aaf47314913ab6480eefe2aa5bd6bcefc4116e034fdc1ac0f7d0
+  languageName: node
+  linkType: hard
+
+"@vitest/runner@npm:4.0.16":
+  version: 4.0.16
+  resolution: "@vitest/runner@npm:4.0.16"
+  dependencies:
+    "@vitest/utils": "npm:4.0.16"
+    pathe: "npm:^2.0.3"
+  checksum: 10c0/7f4614a9fe5e9f3683d30fb82d1489796c669df45fbc0beb22d39539e4b12ebef462062705545ca04391a0406af62088cbf1d613a812ecc9ea753a0edbfd5d26
   languageName: node
   linkType: hard
 
@@ -2655,10 +2708,28 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@vitest/snapshot@npm:4.0.16":
+  version: 4.0.16
+  resolution: "@vitest/snapshot@npm:4.0.16"
+  dependencies:
+    "@vitest/pretty-format": "npm:4.0.16"
+    magic-string: "npm:^0.30.21"
+    pathe: "npm:^2.0.3"
+  checksum: 10c0/4fa63ffa4f30c909078210a1edcb059dbfa3ec3deaebb8f93637f65a7efae9a2d7714129bae0cf615512a683e925cf31f281fc4cb02f1fdc4c72f68ce21ca11f
+  languageName: node
+  linkType: hard
+
 "@vitest/spy@npm:4.0.15":
   version: 4.0.15
   resolution: "@vitest/spy@npm:4.0.15"
   checksum: 10c0/22319cead44964882d9e7bd197a9cd317c945ff75a4a9baefe06c32c5719d4cb887e86b4560d79716765f288a93a6c76e78e3eeab0000f24b2236dab678b7c34
+  languageName: node
+  linkType: hard
+
+"@vitest/spy@npm:4.0.16":
+  version: 4.0.16
+  resolution: "@vitest/spy@npm:4.0.16"
+  checksum: 10c0/2502918e703d60ef64854d0fa83ebf94da64b80e81b80c319568feee3d86069fd46e24880a768edba06c8caba13801e44005e17a0f16d9b389486f24d539f0bf
   languageName: node
   linkType: hard
 
@@ -2669,6 +2740,16 @@ __metadata:
     "@vitest/pretty-format": "npm:4.0.15"
     tinyrainbow: "npm:^3.0.3"
   checksum: 10c0/2ef661c2c2359ae956087f0b728b6a0f7555cd10524a7def27909f320f6b8ba00560ee1bd856bf68d4debc01020cea21b200203a5d2af36c44e94528c5587aee
+  languageName: node
+  linkType: hard
+
+"@vitest/utils@npm:4.0.16":
+  version: 4.0.16
+  resolution: "@vitest/utils@npm:4.0.16"
+  dependencies:
+    "@vitest/pretty-format": "npm:4.0.16"
+    tinyrainbow: "npm:^3.0.3"
+  checksum: 10c0/bba35b4e102be03e106ced227809437573aa5c5f64d512301ca8de127dcb91cbedc11a2e823305f8ba82528c909c10510ec8c7e3d92b3d6d1c1aec33e143572a
   languageName: node
   linkType: hard
 
@@ -3871,6 +3952,22 @@ __metadata:
     supports-color:
       optional: true
   checksum: 10c0/d79136ec6c83ecbefd0f6a5593da6a9c91ec4d7ddc4b54c883d6e71ec9accb5f67a1a5e96d00a328196b5b5c86d365e98d8a3a70856aaf16b4e7b1985e67f5a6
+  languageName: node
+  linkType: hard
+
+"decimal.js-i18n@npm:^0.3.1":
+  version: 0.3.1
+  resolution: "decimal.js-i18n@npm:0.3.1"
+  peerDependencies:
+    decimal.js: ">=7"
+  checksum: 10c0/ecb9fe0831f17d4a2dd2831b4d01b8ca454684aac15b520b83a23439edf1d53709c8748c0e4bb1528cfddbcae94034c7e12879e1f5b1fe097c9416cca1da5c9c
+  languageName: node
+  linkType: hard
+
+"decimal.js@npm:^10.4.3, decimal.js@npm:^10.6.0":
+  version: 10.6.0
+  resolution: "decimal.js@npm:10.6.0"
+  checksum: 10c0/07d69fbcc54167a340d2d97de95f546f9ff1f69d2b45a02fd7a5292412df3cd9eb7e23065e532a318f5474a2e1bccf8392fdf0443ef467f97f3bf8cb0477e5aa
   languageName: node
   linkType: hard
 
@@ -5312,7 +5409,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "konduit-app@workspace:apps/konduit-app"
   dependencies:
+    "@coingecko/cryptoformat": "git+https://github.com/paluh/cryptoformat.git"
+    "@formatjs/intl-durationformat": "npm:^0.9.2"
     "@konduit/bln": "workspace:^"
+    "@konduit/currency-format": "workspace:^"
     "@noble/ed25519": "npm:^3.0.0"
     "@noble/hashes": "npm:^2.0.1"
     "@scure/base": "npm:^2.0.0"
@@ -5324,9 +5424,11 @@ __metadata:
     "@vue/tsconfig": "npm:^0.8.1"
     "@vue/typescript-plugin": "npm:^3.1.8"
     bip21: "npm:^3.0.0"
+    decimal.js-i18n: "npm:^0.3.1"
     idb: "npm:^8.0.3"
     neverthrow: "npm:^8.2.0"
     normalize.css: "npm:^8.0.1"
+    type-fest: "npm:^5.3.1"
     typescript: "npm:~5.9.3"
     vite: "npm:^7.2.7"
     vite-plugin-pwa: "npm:^1.1.0"
@@ -7037,6 +7139,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"tagged-tag@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "tagged-tag@npm:1.0.0"
+  checksum: 10c0/91d25c9ffb86a91f20522cefb2cbec9b64caa1febe27ad0df52f08993ff60888022d771e868e6416cf2e72dab68449d2139e8709ba009b74c6c7ecd4000048d1
+  languageName: node
+  linkType: hard
+
 "tar@npm:^7.5.2":
   version: 7.5.2
   resolution: "tar@npm:7.5.2"
@@ -7188,7 +7297,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tslib@npm:^2.4.0":
+"tslib@npm:^2.4.0, tslib@npm:^2.8.0":
   version: 2.8.1
   resolution: "tslib@npm:2.8.1"
   checksum: 10c0/9c4759110a19c53f992d9aae23aac5ced636e99887b51b9e61def52611732872ff7668757d4e4c61f19691e36f4da981cd9485e869b4a7408d689f6bf1f14e62
@@ -7199,6 +7308,15 @@ __metadata:
   version: 0.16.0
   resolution: "type-fest@npm:0.16.0"
   checksum: 10c0/6b4d846534e7bcb49a6160b068ffaed2b62570d989d909ac3f29df5ef1e993859f890a4242eebe023c9e923f96adbcb3b3e88a198c35a1ee9a731e147a6839c3
+  languageName: node
+  linkType: hard
+
+"type-fest@npm:^5.3.1":
+  version: 5.3.1
+  resolution: "type-fest@npm:5.3.1"
+  dependencies:
+    tagged-tag: "npm:^1.0.0"
+  checksum: 10c0/3282cf11f5e8708321c109b5a72967702cf4c3b928b4d77f5819600b23915dc6a6b8f16cde4182cfbad308973ed3eeea544825cafe9657634ac1f331dc940315
   languageName: node
   linkType: hard
 
@@ -7697,6 +7815,65 @@ __metadata:
   bin:
     vitest: vitest.mjs
   checksum: 10c0/fd57913dbcba81b67ca67bae37f0920f2785a60939a9029a82ebb843253f7a67f93f2c959cb90bb23a57055c0256ec0a6059ec9a10c129e8912c09b6e407242b
+  languageName: node
+  linkType: hard
+
+"vitest@npm:^4.0.16":
+  version: 4.0.16
+  resolution: "vitest@npm:4.0.16"
+  dependencies:
+    "@vitest/expect": "npm:4.0.16"
+    "@vitest/mocker": "npm:4.0.16"
+    "@vitest/pretty-format": "npm:4.0.16"
+    "@vitest/runner": "npm:4.0.16"
+    "@vitest/snapshot": "npm:4.0.16"
+    "@vitest/spy": "npm:4.0.16"
+    "@vitest/utils": "npm:4.0.16"
+    es-module-lexer: "npm:^1.7.0"
+    expect-type: "npm:^1.2.2"
+    magic-string: "npm:^0.30.21"
+    obug: "npm:^2.1.1"
+    pathe: "npm:^2.0.3"
+    picomatch: "npm:^4.0.3"
+    std-env: "npm:^3.10.0"
+    tinybench: "npm:^2.9.0"
+    tinyexec: "npm:^1.0.2"
+    tinyglobby: "npm:^0.2.15"
+    tinyrainbow: "npm:^3.0.3"
+    vite: "npm:^6.0.0 || ^7.0.0"
+    why-is-node-running: "npm:^2.3.0"
+  peerDependencies:
+    "@edge-runtime/vm": "*"
+    "@opentelemetry/api": ^1.9.0
+    "@types/node": ^20.0.0 || ^22.0.0 || >=24.0.0
+    "@vitest/browser-playwright": 4.0.16
+    "@vitest/browser-preview": 4.0.16
+    "@vitest/browser-webdriverio": 4.0.16
+    "@vitest/ui": 4.0.16
+    happy-dom: "*"
+    jsdom: "*"
+  peerDependenciesMeta:
+    "@edge-runtime/vm":
+      optional: true
+    "@opentelemetry/api":
+      optional: true
+    "@types/node":
+      optional: true
+    "@vitest/browser-playwright":
+      optional: true
+    "@vitest/browser-preview":
+      optional: true
+    "@vitest/browser-webdriverio":
+      optional: true
+    "@vitest/ui":
+      optional: true
+    happy-dom:
+      optional: true
+    jsdom:
+      optional: true
+  bin:
+    vitest: vitest.mjs
+  checksum: 10c0/b195c272198f7957c11186eb70ee78e2ec0f4524b4b5306ca8f05e41b3d84c6a4a15d02fca58d82f2b32ba61f610ae8a2a23d463a8336d7323e4832db5eef223
   languageName: node
   linkType: hard
 

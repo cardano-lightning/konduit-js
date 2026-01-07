@@ -16,6 +16,7 @@
   "extends": "@vue/tsconfig/tsconfig.dom.json",
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"],
   "references": [
-    { "path": "../../packages/bln" }
+    { "path": "../../packages/bln" },
+    { "path": "../../packages/currency-format" }
   ]
 }

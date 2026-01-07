@@ -5,6 +5,11 @@ import { useRoute, useRouter } from "vue-router";
 // Import the new, separate icon components
 import KonduitLogo from "./KonduitLogo.vue";
 
+// Define props
+const props = defineProps<{
+  subsection?: string;
+}>();
+
 // Get the current route and router instances
 const route = useRoute();
 const router = useRouter();
@@ -17,10 +22,16 @@ const currentPageName = computed(() => {
 <template>
   <header>
     <div v-if="isIndex">
-      <h2><KonduitLogo /> {{ currentPageName }}</h2>
+      <h2>
+        <KonduitLogo /> {{ currentPageName }}
+        <template v-if="subsection"> | {{ subsection }}</template>
+      </h2>
     </div>
     <div v-else class="back" aria-label="Go back" @click="router.back()">
-      <h2>⟨ {{ currentPageName }}</h2>
+      <h2>
+        ⟨ {{ currentPageName }}
+        <template v-if="subsection"> | {{ subsection }}</template>
+      </h2>
     </div>
   </header>
 </template>

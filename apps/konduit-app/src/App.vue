@@ -1,32 +1,67 @@
 <script setup lang="ts">
-import { RouterView } from 'vue-router'
+import { RouterView } from 'vue-router';
+// Side effecting import to polyfill missing Intl API
+import '@formatjs/intl-durationformat/polyfill-force.js';
 </script>
 
 <template>
   <RouterView />
 </template>
 
-// We do not use any external CSS files beside the library normalize.css.
+// We keep all the css embedded in JS for simplicity.
+// The only external CSS is normalize.css loaded in main.ts.
 <style>
 :root {
   font-family: monospace, Lucida Console, Courier New;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+
+  color-scheme: light dark;
+
+  --primary-background-color: #162456;
+  --primary-color: #fff1f2;
+
+  --error-background-color: #ffe2e2;
+  --error-color: #e57373;
+
+  background-color: var(--primary-background-color);
+  color: var(--primary-color);
+
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Theming with CSS variables */
+  /* To use them just reference `attribute: var(--variable-name) */
+  /* Color constants */
+
+  /*
+  --secondary-color: #6c757d;
+  --success-color: #28a745;
+  --error-color: #dc3545;
+  --warning-color: #ffc107;
+  --info-color: #17a2b8;
+
+  /* Spacing constants (if needed)
+  --spacing-small: 0.5rem;
+  --spacing-medium: 1rem;
+  --spacing-large: 1.5rem;
+  */
+  /* Typography constants
+  --font-family: ...
+  --font-size-base: ...
+  --font-size-small: ...
+  --font-size-large: ...
+  */
+  /* Other theme bits (e.g., borders, shadows)
+  --border-radius: 4px;
+  --box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  */
 }
 
 @media (prefers-color-scheme: light) {
   :root {
-    color: #162456;
-    background-color: #fff1f2;
+    --primary-background-color: #fff1f2;
+    --primary-color: #162456;
   }
 }
 
