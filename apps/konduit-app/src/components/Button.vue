@@ -5,8 +5,9 @@ import { useRouter, type RouteLocationRaw } from "vue-router";
 export type Action = RouteLocationRaw | (() => void);
 
 export type Props = {
-  label?: string;
   action: Action;
+  disabled?: boolean;
+  label?: string;
   primary?: boolean;
 };
 
@@ -21,15 +22,15 @@ function handleClick() {
     router.push(props.action);
   }
 }
-
 </script>
 
 <template>
   <button
-    :class="primary ? 'primary' : 'secondary'"
+    :class="props.primary ? 'primary' : 'secondary'"
+    :disabled="props.disabled"
     @click="handleClick"
   >
-    {{ label }}
+  {{ label }}
   </button>
 </template>
 
@@ -47,6 +48,11 @@ button {
   cursor: pointer;
   transition: border-color 0.25s;
   font-family: inherit;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 button:hover {

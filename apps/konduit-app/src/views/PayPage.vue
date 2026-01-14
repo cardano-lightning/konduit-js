@@ -5,7 +5,7 @@ import InvoiceInput from "./PayPage/InvoiceInput.vue";
 import TheHeader from "../components/TheHeader.vue";
 import NavBar from "../components/NavBar.vue";
 import * as l10n from "../composables/l10n";
-import { hexAbbrivate } from "../utils/formatters";
+import { abbreviateHex } from "../utils/formatters";
 
 // Use title as subsection in TheHeader
 type Step
@@ -52,7 +52,9 @@ const formattedExpiresAt = computed((): string => {
     <div v-if="currentStep.index === 'invoice-details'">
       <dl id="invoice-details">
         <dt>Amount</dt>
-        <dd class="detail-value amount">{{ formatters.btc(currentStep.decodedInvoice.amount) }}</dd>
+        <dd class="detail-value amount">
+          {{ formatters.btc(currentStep?.decodedInvoice?.amount) }}
+        </dd>
 
         <dt>Description</dt>
         <dd class="detail-value description">
@@ -66,12 +68,12 @@ const formattedExpiresAt = computed((): string => {
 
         <dt>Destination</dt>
         <dd class="detail-value mono">
-          {{ hexAbbrivate(invoice?.payee) }}
+          {{ abbreviateHex(invoice?.payee) }}
         </dd>
 
         <dt>Payment hash</dt>
         <dd class="detail-value mono">
-          {{ hexAbbrivate(invoice.paymentHash) }}
+          {{ abbreviateHex(invoice?.paymentHash) }}
         </dd>
       </dl>
     </div>

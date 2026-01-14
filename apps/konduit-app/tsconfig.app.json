@@ -17,6 +17,7 @@
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"],
   "references": [
     { "path": "../../packages/bln" },
+    { "path": "../../packages/konduit-consumer" },
     { "path": "../../packages/currency-format" }
   ]
 }

@@ -2,17 +2,32 @@ import { createRouter, createWebHistory } from "vue-router";
 
 import * as store from "./store";
 
+import AddChannelPage from "./views/AddChannelPage.vue";
 import CreatePage from "./views/CreatePage.vue";
+import EditCardanoConnectorURLPage from "./views/EditCardanoConnectorURLPage.vue";
 import HomePage from "./views/HomePage.vue";
 import LaunchPage from "./views/LaunchPage.vue";
 import PayPage from "./views/PayPage.vue";
+import SettingsPage from "./views/SettingsPage.vue";
+import WalletPage from "./views/WalletPage.vue";
 
 const routes = [
+  { name: "add-channel",
+    path: "/add-channel",
+    component: () => AddChannelPage,
+    meta: { title: "Add Channel" },
+  },
   {
     name: "create",
     path: "/create",
     component: CreatePage,
     meta: { title: "Create" },
+  },
+  {
+    name: "edit-cardano-connector-url",
+    path: "/settings/edit/cardano-connector-url",
+    component: EditCardanoConnectorURLPage,
+    meta: { title: "Cardano Connector" },
   },
   {
     name: "home",
@@ -35,9 +50,15 @@ const routes = [
   {
     name: "settings",
     path: "/settings",
-    component: () => import("./views/SettingsPage.vue"),
+    component: SettingsPage,
     meta: { title: "Settings" },
   },
+  {
+    name: "wallet",
+    path: "/wallet",
+    component: WalletPage,
+    meta: { title: "Wallet" },
+  }
 ];
 
 const router = createRouter({

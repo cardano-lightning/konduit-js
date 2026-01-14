@@ -7,7 +7,7 @@ import Zap from "./icons/Zap.vue";
 <template>
   <nav id="navbar">
     <div class="content">
-      <router-link :to="{ name: 'settings' }"><WalletMinimal /></router-link>
+      <router-link :to="{ name: 'wallet' }"><WalletMinimal /></router-link>
       <router-link :to="{ name: 'pay' }"><Zap /></router-link>
       <router-link :to="{ name: 'settings' }"><Sliders /></router-link>
     </div>

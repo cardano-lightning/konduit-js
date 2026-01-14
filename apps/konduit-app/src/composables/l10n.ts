@@ -48,15 +48,22 @@ export function useDurationFormatter(options: Intl.RelativeTimeFormatOptions = {
   });
 }
 
-function mkSafeFormatter<Args extends any[], R = string>(
-  formatter: ((...args: Args) => R) | null | undefined
-): (...args: Args) => R | string {
-  return (...args: Args) => {
-    if (args[0] == null || formatter == null) {
+function mkSafeFn1Formatter<T>(formatter: (((a: T) => string))): (value: T | null | undefined) => string {
+  return (value: T | null | undefined) => {
+    if (value == null || value === undefined) {
       return "N/A";
     }
-    return formatter(...args);
-  };
+    return formatter(value);
+  }
+}
+
+function mkSafeFn2Formatter<T1, T2>(formatter: ((a: T1, b: T2) => string)): (value1: T1 | null | undefined, value2: T2) => string {
+  return (value1: T1 | null | undefined, value2: T2) => {
+    if (value1 == null || value1 === undefined) {
+      return "N/A";
+    }
+    return formatter(value1, value2);
+  }
 }
 
 // You can use the returned value directly passing it a `value | null | undefined`.
@@ -76,9 +83,9 @@ export function useDefaultFormatters() {
   const durationFormatter = useDurationFormatter();
 
   return {
-    ada: mkSafeFormatter(adaFormatter.value),
-    btc: mkSafeFormatter(btcFormatter.value),
-    duration: mkSafeFormatter(durationFormatter.value),
-    shortDate: mkSafeFormatter(shortDateFormatter.value),
+    ada: mkSafeFn1Formatter(adaFormatter.value),
+    btc: mkSafeFn1Formatter(btcFormatter.value),
+    duration: mkSafeFn2Formatter(durationFormatter.value),
+    shortDate: mkSafeFn1Formatter(shortDateFormatter.value),
   };
 }
