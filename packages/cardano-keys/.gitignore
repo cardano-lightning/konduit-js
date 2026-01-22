@@ -1,3 +1,4 @@
 node_modules
 dist
+test/readme-example.ts
 

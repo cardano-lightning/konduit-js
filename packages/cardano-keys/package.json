@@ -4,7 +4,8 @@
     "@noble/hashes": "^2.0.1",
     "@scure/bip39": "^2.0.1",
     "libsodium-wrappers-sumo": "^0.8.1",
-    "neverthrow": "^8.2.0"
+    "neverthrow": "^8.2.0",
+    "type-fest": "^5.4.1"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
@@ -29,7 +30,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --build",
-    "test": "vitest"
+    "extract-readme": "node scripts/extract-readme-example.js",
+    "test": "yarn extract-readme && vitest run",
+    "test:watch": "yarn extract-readme && vitest"
   },
   "type": "module",
   "version": "0.0.0"

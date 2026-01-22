@@ -1,11 +1,10 @@
 import type { Tagged } from "type-fest";
-import sodium from 'libsodium-wrappers-sumo';
 import { pbkdf2 } from "@noble/hashes/pbkdf2.js";
 import { sha512 } from "@noble/hashes/sha2.js";
 import * as english from "@scure/bip39/wordlists/english.js";
 import * as bip39 from "@scure/bip39"; // Assuming you"re using bip39 for mnemonicToEntropy
-import * as uint8Array from "./uint8Array";
 import { mkEd25519XPrv, type Ed25519XPrv } from "./bip32Ed25519";
+import { err, ok, type Result } from "neverthrow";
 
 export type MnemonicStrength = "12-words" | "15-words" | "18-words" | "21-words" | "24-words";
 type MnemomicStrengthInBits = 128 | 160 | 192 | 224 | 256;
@@ -27,21 +26,25 @@ function strengthWordsToBits(strength: MnemonicStrength = "24-words"): MnemomicS
 // We can not really avoid using string here (which is impossible to wipe out from memory on demand)
 // because the bip39 library works with strings only.
 export type Mnemonic = Tagged<string, "Mnemonic">;
+export namespace Mnemonic {
+  export function fromString(mnemonic: string): Result<Mnemonic, string> {
+    return bip39.validateMnemonic(mnemonic, english.wordlist)
+      ? ok(mnemonic as Mnemonic)
+      : err("Invalid mnemonic");
+  }
+}
 
 export function generateMnemonic(strength: MnemonicStrength = "24-words", wordlist: string[] = english.wordlist): Mnemonic {
   const strengthInBits = strengthWordsToBits(strength);
   return bip39.generateMnemonic(wordlist, strengthInBits) as Mnemonic;
 }
 
-// The "25th word" - password used in BIP39 PBKDF2
-// Use TextEncoder to convert string to Uint8Array if needed. Wipe out after use.
-type Password = Uint8Array;
-
 const subtle = globalThis.crypto?.subtle;
 
+// Uint8Array is easier to wipe out after use that is why we use it as password/25th word type.
 export const deriveEd25519XPrv = async (
   mnemonic: Mnemonic,
-  password: Password = new Uint8Array(), // Default to empty passphrase
+  password: Uint8Array = new Uint8Array(),
   wordlist: string[] = english.wordlist,
   // Used for testing purposes only
   _enforceWebcrypto: boolean = false,

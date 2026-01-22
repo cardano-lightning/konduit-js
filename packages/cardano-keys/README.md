@@ -20,24 +20,27 @@ This implementation is intentionally **not** extremely minimalistic:
 import assert from 'assert';
 import { generateMnemonic, deriveEd25519XPrv, RootPrivateKey, VKey, SKey, KeyRole, WalletIndex, KeyIndex } from '../src/index'
 
-const mnemonic = generateMnemonic("24-words");
-const password = new TextEncoder().encode("optional password");
-const rootKey = new RootPrivateKey(await deriveEd25519XPrv(mnemonic, password));
+// This example is executed as part of our test suite so we wrap it in a function ;-)
+export const readmeExample = async () => {
+  const mnemonic = generateMnemonic("24-words");
+  const password = new TextEncoder().encode("optional password");
+  const rootKey = await RootPrivateKey.fromMnemonic(mnemonic, password);
 
-// Keys are derive using wallet index, role and key index.
-const walletIdx = WalletIndex.fromSmallInt(0);
-const keyIdx = KeyIndex.fromSmallInt(0);
-// "External" role is used for receiving addresses by convention.
-// "Internal" role is used for change addresses.
-const paymentIdx = KeyRole.External;
+  // Keys are derive using wallet index, role and key index.
+  const walletIdx = WalletIndex.fromSmallInt(0);
+  const keyIdx = KeyIndex.fromSmallInt(0);
+  // "External" role is used for receiving addresses by convention.
+  // "Internal" role is used for change addresses.
+  const paymentIdx = KeyRole.External;
 
-const sKey = rootKey.deriveSKey(walletIdx, paymentIdx, keyIdx);
-const vKey = sKey.toVKey();
+  const sKey = rootKey.deriveSKey(walletIdx, paymentIdx, keyIdx);
+  const vKey = sKey.toVKey();
 
-const message = new Uint8Array([0,1,2,3,4,5,6,7,8,9]);
-const signature = sKey.sign(message);
-const isValid = vKey.verify(message, signature);
+  const message = new Uint8Array([0,1,2,3,4,5,6,7,8,9]);
+  const signature = sKey.sign(message);
+  const isValid = vKey.verify(message, signature);
 
-assert(isValid);
+  assert(isValid);
+}
 ```
 

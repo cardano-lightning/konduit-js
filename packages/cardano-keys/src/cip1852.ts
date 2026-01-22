@@ -2,11 +2,12 @@ import type { Tagged } from "type-fest";
 import sodium from "libsodium-wrappers-sumo";
 import * as uint8Array from "./uint8Array";
 import { err, ok, type Result } from "neverthrow";
-import { derivePrivate, derivePublic, extractPrv, HardenedDerivationIndex, NonHardenedDerivationIndex, type DerivationIndex, type Ed25519Prv, type Ed25519Pub, type Ed25519XPrv, type Ed25519XPub, type SmallInt } from "./bip32Ed25519";
+import { derivePrivate, derivePublic, extractPrv, HardenedIdx, NonHardenedIdx, type DerivationIdx, type Ed25519Prv, type Ed25519Pub, type Ed25519XPrv, type Ed25519XPub, type SmallInt } from "./bip32Ed25519";
+import { deriveEd25519XPrv, type Mnemonic, type Password } from "./cip3";
 
 export function derivePrivatePath(
   parent: Ed25519XPrv,
-  path: DerivationIndex[]
+  path: DerivationIdx[]
 ): Ed25519XPrv {
   let currKey = parent;
   for(let idx of path) {
@@ -17,7 +18,7 @@ export function derivePrivatePath(
 
 export function derivePublicPath(
   parent: Ed25519XPub,
-  path: NonHardenedDerivationIndex[]
+  path: NonHardenedIdx[]
 ): Ed25519XPub {
   let currKey: Ed25519XPub = parent;
   for(let idx of path) {
@@ -29,10 +30,10 @@ export function derivePublicPath(
 export type WalletIndex = Tagged<number, "WalletIndex">;
 export namespace WalletIndex {
   export const fromSmallInt = (n: SmallInt): WalletIndex => {
-    return HardenedDerivationIndex.fromSmallInt(n) as any as WalletIndex;
+    return HardenedIdx.fromSmallInt(n) as any as WalletIndex;
   };
   export const fromNumber = (n: number): Result<WalletIndex, string> =>
-    HardenedDerivationIndex.fromNumber(n).match(
+    HardenedIdx.fromNumber(n).match(
       (h) => ok(h as any as WalletIndex),
       (e) => err(e)
     );
@@ -48,10 +49,10 @@ export enum KeyRole {
 export type KeyIndex = Tagged<number, "KeyIndex">;
 export namespace KeyIndex {
   export const fromSmallInt = (n: SmallInt): KeyIndex => {
-    return NonHardenedDerivationIndex.fromSmallInt(n) as any as KeyIndex;
+    return NonHardenedIdx.fromSmallInt(n) as any as KeyIndex;
   };
   export const fromNumber = (n: number): Result<KeyIndex, string> =>
-    NonHardenedDerivationIndex.fromNumber(n).match(
+    NonHardenedIdx.fromNumber(n).match(
       (_) => ok(n as KeyIndex),
       (e) => err(e)
     );
@@ -64,8 +65,8 @@ export const unsafeUnwrap = <T, E>(res: Result<T, E>): T => {
   );
 }
 
-const unsafeHarden = (n: number): HardenedDerivationIndex => {
-  return unsafeUnwrap(HardenedDerivationIndex.fromNumber(n));
+const unsafeHarden = (n: number): HardenedIdx => {
+  return unsafeUnwrap(HardenedIdx.fromNumber(n));
 }
 
 export class RootPrivateKey {
@@ -75,6 +76,11 @@ export class RootPrivateKey {
 
   constructor(root: Ed25519XPrv) {
     this.root = root;
+  }
+
+  static async fromMnemonic(mnemonic: Mnemonic, password: Uint8Array = new Uint8Array()): Promise<RootPrivateKey> {
+    const root = await deriveEd25519XPrv(mnemonic, password)
+    return new RootPrivateKey(root);
   }
 
   // m / 1852' / 1815' / x' / 0, 1, or 2 / n
@@ -89,9 +95,9 @@ export class RootPrivateKey {
       this._1852,
       this._1815,
       // We can safely unwrap here as we validated when creating WalletIndex
-      walletIndex as any as HardenedDerivationIndex,
-      role as NonHardenedDerivationIndex,
-      keyIndex as any as NonHardenedDerivationIndex,
+      walletIndex as any as HardenedIdx,
+      role as NonHardenedIdx,
+      keyIndex as any as NonHardenedIdx,
     ]);
     const rawSigningKey = extractPrv(extendedPrvKey);
     return new SKey(rawSigningKey);

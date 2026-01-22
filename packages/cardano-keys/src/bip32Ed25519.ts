@@ -50,42 +50,42 @@ export const HARDENING_OFFSET = 0x80000000;
 
 export type SmallInt = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30 | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 | 40 | 41 | 42 | 43 | 44 | 45 | 46 | 47 | 48 | 49 | 50;
 
-export type HardenedDerivationIndex = Tagged<number, "HardenedDerivationIndex">;
+export type HardenedIdx = Tagged<number, "HardenedIdx">;
 
-export namespace HardenedDerivationIndex {
-  export const fromSmallInt = (n: SmallInt): HardenedDerivationIndex => {
-    return (n + HARDENING_OFFSET) as HardenedDerivationIndex;
+export namespace HardenedIdx {
+  export const fromSmallInt = (n: SmallInt): HardenedIdx => {
+    return (n + HARDENING_OFFSET) as HardenedIdx;
   };
-  export const fromNumber = (n: number): Result<HardenedDerivationIndex, string> => {
+  export const fromNumber = (n: number): Result<HardenedIdx, string> => {
     if (!Number.isInteger(n) || n < 0) {
       return err("Index must be integer ≥ 0");
     }
     if (n > 2**31 - 1) {
       return err("Index too large to harden");
     }
-    return ok((n + HARDENING_OFFSET) as HardenedDerivationIndex);
+    return ok((n + HARDENING_OFFSET) as HardenedIdx);
   };
 };
 
 /* number in [0, 2^31 - 1] */
-export type NonHardenedDerivationIndex = Tagged<number, "NonHardenedDerivationIndex">;
+export type NonHardenedIdx = Tagged<number, "NonHardenedIdx">;
 
-export namespace NonHardenedDerivationIndex {
-  export const fromSmallInt = (n: SmallInt): NonHardenedDerivationIndex => {
-    return n as NonHardenedDerivationIndex;
+export namespace NonHardenedIdx {
+  export const fromSmallInt = (n: SmallInt): NonHardenedIdx => {
+    return n as NonHardenedIdx;
   }
-  export const fromNumber = (n: number): Result<NonHardenedDerivationIndex, string> => {
+  export const fromNumber = (n: number): Result<NonHardenedIdx, string> => {
     if (!Number.isInteger(n) || n < 0) {
       return err("Index must be integer 0 ≤ n < 2³¹");
     }
     if (n >= HARDENING_OFFSET) {
       return err("Index too large to be non-hardened");
     }
-    return ok(n as NonHardenedDerivationIndex);
+    return ok(n as NonHardenedIdx);
   }
 }
 
-export type DerivationIndex = NonHardenedDerivationIndex | HardenedDerivationIndex;
+export type DerivationIdx = NonHardenedIdx | HardenedIdx;
 
 export function mkEd25519XPrv(raw: Uint8Array): Result<Ed25519XPrv, string> {
   if (raw.length !== 96) return err(`Expected 96 bytes, got ${raw.length}`);
@@ -264,7 +264,7 @@ export const derivePrivate = (key: Ed25519XPrv, index: number): Ed25519XPrv => {
  * @param index The derivation index.
  * @returns The child BIP32 key.
  */
-export const derivePublic = (key: Ed25519XPub, index: NonHardenedDerivationIndex): Ed25519XPub => {
+export const derivePublic = (key: Ed25519XPub, index: NonHardenedIdx): Ed25519XPub => {
   const pk = key.subarray(0, 32);
   const cc = key.subarray(32, 64);
 

@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { deriveEd25519XPrv, type Mnemonic, RootPrivateKey, KeyRole, WalletIndex, KeyIndex, Ed25519Pub, Signature, Ed25519XPrv, Ed25519XPub, HardenedDerivationIndex } from '../src/index'
+import { deriveEd25519XPrv, type Mnemonic, RootPrivateKey, KeyRole, WalletIndex, KeyIndex, Ed25519Pub, Signature, Ed25519XPrv, Ed25519XPub, HardenedIdx } from '../src/index'
 import testVectors from './test-vectors.json';
 import { SKey, unsafeUnwrap } from '../src/cip1852';
-import { DerivationIndex, extractPrv, NonHardenedDerivationIndex } from '../src/bip32Ed25519';
+import { DerivationIdx, extractPrv, NonHardenedIdx } from '../src/bip32Ed25519';
+import { readmeExample } from './readme-example';
 
-type DerivationPath = { type: "custom", indices: DerivationIndex[] } | { type: "cip1852", walletIdx: WalletIndex, role: KeyRole, keyIdx: KeyIndex };
+type DerivationPath = { type: "custom", indices: DerivationIdx[] } | { type: "cip1852", walletIdx: WalletIndex, role: KeyRole, keyIdx: KeyIndex };
 
 type TestVector = {
   mnemonic: Mnemonic,
@@ -43,11 +44,11 @@ const serialiseUint8Array = (arr: Uint8Array): String => {
 // "derivationPath": { "indices": [1, 2], "hardened": false },
 const deserialiseDerivationPath = (obj: any): DerivationPath => {
   if ('indices' in obj) {
-    const indices: DerivationIndex[] = obj.indices.map((idx: number) => {
+    const indices: DerivationIdx[] = obj.indices.map((idx: number) => {
       if (obj.hardened) {
-        return unsafeUnwrap(HardenedDerivationIndex.fromNumber(idx));
+        return unsafeUnwrap(HardenedIdx.fromNumber(idx));
       } else {
-        return unsafeUnwrap(NonHardenedDerivationIndex.fromNumber(idx));
+        return unsafeUnwrap(NonHardenedIdx.fromNumber(idx));
       }
     });
     return { type: "custom", indices };
@@ -98,9 +99,7 @@ describe('Cardano key derivation', () => {
       const sKey: SKey = (() => {
         // if (derivationPath.type === "custom") {
         //   // Custom derivation path
-        //   console.log("Deriving custom path: ", derivationPath.indices.map(i => i.toString()).join("/"));
         //   const key = derivePrivatePath(rootKeyBytes, derivationPath.indices);
-        //   console.log("Derived custom key: ", serialiseUint8Array(key));
         //   return new SKey(extractPrv(key));
         // }
         const { walletIdx, role, keyIdx } = derivationPath;
@@ -108,8 +107,6 @@ describe('Cardano key derivation', () => {
       })();
       const sKeyBytes = sKey.getKey();
       const expectedPrv = extractPrv(addrXprv);
-      console.log("Expected addr xprv: ", serialiseUint8Array(addrXprv));
-      console.log("Derived addr xprv:   ", serialiseUint8Array(sKeyBytes));
       expect(sKeyBytes).toStrictEqual(expectedPrv);
 
       const vKey = sKey.toVKey();
@@ -122,6 +119,8 @@ describe('Cardano key derivation', () => {
       expect(vKey.verify(data, sig)).toBe(true);
     }
   });
+
+  it('should run README example successfully', async () => {
+    await readmeExample();
+  });
 });
-
-
