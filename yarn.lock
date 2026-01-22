@@ -1902,7 +1902,11 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+<<<<<<< HEAD
 "@konduit/cardano-keys@workspace:^, @konduit/cardano-keys@workspace:packages/cardano-keys":
+=======
+"@konduit/cardano-keys@workspace:packages/cardano-keys":
+>>>>>>> ff56dc6 (Test README example and add smart constructor for Mnemonic.)
   version: 0.0.0-use.local
   resolution: "@konduit/cardano-keys@workspace:packages/cardano-keys"
   dependencies:
@@ -1920,6 +1924,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+<<<<<<< HEAD
 "@konduit/codec@workspace:^, @konduit/codec@workspace:packages/codec":
   version: 0.0.0-use.local
   resolution: "@konduit/codec@workspace:packages/codec"
@@ -1955,6 +1960,8 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+=======
+>>>>>>> ff56dc6 (Test README example and add smart constructor for Mnemonic.)
 "@microsoft/api-extractor-model@npm:7.32.2":
   version: 7.32.2
   resolution: "@microsoft/api-extractor-model@npm:7.32.2"
@@ -2762,6 +2769,7 @@ __metadata:
   languageName: node
   linkType: hard
 
+<<<<<<< HEAD
 "@vitest/expect@npm:4.0.18":
   version: 4.0.18
   resolution: "@vitest/expect@npm:4.0.18"
@@ -2776,6 +2784,8 @@ __metadata:
   languageName: node
   linkType: hard
 
+=======
+>>>>>>> ff56dc6 (Test README example and add smart constructor for Mnemonic.)
 "@vitest/mocker@npm:4.0.15":
   version: 4.0.15
   resolution: "@vitest/mocker@npm:4.0.15"
@@ -2814,6 +2824,7 @@ __metadata:
   languageName: node
   linkType: hard
 
+<<<<<<< HEAD
 "@vitest/mocker@npm:4.0.18":
   version: 4.0.18
   resolution: "@vitest/mocker@npm:4.0.18"
@@ -2833,6 +2844,8 @@ __metadata:
   languageName: node
   linkType: hard
 
+=======
+>>>>>>> ff56dc6 (Test README example and add smart constructor for Mnemonic.)
 "@vitest/pretty-format@npm:4.0.15":
   version: 4.0.15
   resolution: "@vitest/pretty-format@npm:4.0.15"
@@ -2851,6 +2864,7 @@ __metadata:
   languageName: node
   linkType: hard
 
+<<<<<<< HEAD
 "@vitest/pretty-format@npm:4.0.18":
   version: 4.0.18
   resolution: "@vitest/pretty-format@npm:4.0.18"
@@ -2860,6 +2874,8 @@ __metadata:
   languageName: node
   linkType: hard
 
+=======
+>>>>>>> ff56dc6 (Test README example and add smart constructor for Mnemonic.)
 "@vitest/runner@npm:4.0.15":
   version: 4.0.15
   resolution: "@vitest/runner@npm:4.0.15"
@@ -2880,6 +2896,7 @@ __metadata:
   languageName: node
   linkType: hard
 
+<<<<<<< HEAD
 "@vitest/runner@npm:4.0.18":
   version: 4.0.18
   resolution: "@vitest/runner@npm:4.0.18"
@@ -2890,6 +2907,8 @@ __metadata:
   languageName: node
   linkType: hard
 
+=======
+>>>>>>> ff56dc6 (Test README example and add smart constructor for Mnemonic.)
 "@vitest/snapshot@npm:4.0.15":
   version: 4.0.15
   resolution: "@vitest/snapshot@npm:4.0.15"
@@ -2912,6 +2931,7 @@ __metadata:
   languageName: node
   linkType: hard
 
+<<<<<<< HEAD
 "@vitest/snapshot@npm:4.0.18":
   version: 4.0.18
   resolution: "@vitest/snapshot@npm:4.0.18"
@@ -2923,6 +2943,8 @@ __metadata:
   languageName: node
   linkType: hard
 
+=======
+>>>>>>> ff56dc6 (Test README example and add smart constructor for Mnemonic.)
 "@vitest/spy@npm:4.0.15":
   version: 4.0.15
   resolution: "@vitest/spy@npm:4.0.15"
@@ -2937,6 +2959,7 @@ __metadata:
   languageName: node
   linkType: hard
 
+<<<<<<< HEAD
 "@vitest/spy@npm:4.0.18":
   version: 4.0.18
   resolution: "@vitest/spy@npm:4.0.18"
@@ -2944,6 +2967,8 @@ __metadata:
   languageName: node
   linkType: hard
 
+=======
+>>>>>>> ff56dc6 (Test README example and add smart constructor for Mnemonic.)
 "@vitest/utils@npm:4.0.15":
   version: 4.0.15
   resolution: "@vitest/utils@npm:4.0.15"
@@ -2964,6 +2989,7 @@ __metadata:
   languageName: node
   linkType: hard
 
+<<<<<<< HEAD
 "@vitest/utils@npm:4.0.18":
   version: 4.0.18
   resolution: "@vitest/utils@npm:4.0.18"
@@ -2974,6 +3000,8 @@ __metadata:
   languageName: node
   linkType: hard
 
+=======
+>>>>>>> ff56dc6 (Test README example and add smart constructor for Mnemonic.)
 "@volar/language-core@npm:2.4.26":
   version: 2.4.26
   resolution: "@volar/language-core@npm:2.4.26"
@@ -7513,6 +7541,7 @@ __metadata:
   languageName: node
   linkType: hard
 
+<<<<<<< HEAD
 "type-fest@npm:^5.4.3":
   version: 5.4.3
   resolution: "type-fest@npm:5.4.3"
@@ -7522,6 +7551,8 @@ __metadata:
   languageName: node
   linkType: hard
 
+=======
+>>>>>>> ff56dc6 (Test README example and add smart constructor for Mnemonic.)
 "typed-array-buffer@npm:^1.0.3":
   version: 1.0.3
   resolution: "typed-array-buffer@npm:1.0.3"
@@ -8052,6 +8083,7 @@ __metadata:
   languageName: node
   linkType: hard
 
+<<<<<<< HEAD
 "vitest@npm:^4.0.16":
   version: 4.0.18
   resolution: "vitest@npm:4.0.18"
@@ -8111,6 +8143,8 @@ __metadata:
   languageName: node
   linkType: hard
 
+=======
+>>>>>>> ff56dc6 (Test README example and add smart constructor for Mnemonic.)
 "vitest@npm:^4.0.17":
   version: 4.0.17
   resolution: "vitest@npm:4.0.17"

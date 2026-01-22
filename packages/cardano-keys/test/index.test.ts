@@ -1,12 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import * as english from "@scure/bip39/wordlists/english.js";
+import { deriveEd25519XPrv, type Mnemonic, RootPrivateKey, KeyRole, WalletIndex, KeyIndex, Ed25519Pub, Signature, Ed25519XPrv, Ed25519XPub, HardenedIdx } from '../src/index'
 import testVectors from './test-vectors.json';
-import { Ed25519RootPrivateKey, Ed25519SigningKey, KeyIndex, KeyRole, WalletIndex } from '../src/cip1852';
-import { type DerivationIdx, Ed25519XPrv, type Ed25519XPub, extractExpandedSecret, HardenedIdx, NonHardenedIdx } from '../src/bip32Ed25519';
-import { readmeExample as readmeExample1 } from './readme-example-1';
-import { readmeExample as readmeExample2 } from './readme-example-2';
-import { deriveEd25519XPrv, Mnemonic } from "../src/index";
-import { Ed25519PublicKey, type Ed25519Signature, unsafeUnwrap } from '../src/rfc8032';
+import { SKey, unsafeUnwrap } from '../src/cip1852';
+import { DerivationIdx, extractPrv, NonHardenedIdx } from '../src/bip32Ed25519';
+import { readmeExample } from './readme-example';
 
 type DerivationPath = { type: "custom", indices: DerivationIdx[] } | { type: "cip1852", walletIdx: WalletIndex, role: KeyRole, keyIdx: KeyIndex };
 
@@ -16,11 +13,11 @@ type TestVector = {
   rootXprv: Ed25519XPrv,
   addrXprv: Ed25519XPrv,
   addrXpub: Ed25519XPub,
-  addrPub: Ed25519PublicKey,
+  addrPub: Ed25519Pub,
   signing: {
     data: Uint8Array,
-    signature: Ed25519Signature,
-    publicKey: Ed25519PublicKey,
+    signature: Signature,
+    publicKey: Ed25519Pub,
   }
 };
 
@@ -34,6 +31,13 @@ const deserialiseUint8Array = (hexStr: String): Uint8Array => {
   return bytes;
 }
 
+const serialiseUint8Array = (arr: Uint8Array): String => {
+  let str = "";
+  for (let i = 0; i < arr.length; i++) {
+    str += arr[i].toString(16).padStart(2, '0');
+  }
+  return str;
+}
 // Derivation path can be in one of two forms:
 // "derivationPath": { "walletIdx": 0, "role": 1, "keyIdx": 4 },
 // or:
@@ -60,16 +64,16 @@ const deserialiseDerivationPath = (obj: any): DerivationPath => {
 
 const deserialiseTestVector = (obj: any): TestVector => {
   return {
-    mnemonic: { mnemonicWords: obj.mnemonic, wordlist: english.wordlist } as Mnemonic,
+    mnemonic: obj.mnemonic as Mnemonic,
     derivationPath: deserialiseDerivationPath(obj.derivationPath),
     rootXprv: deserialiseUint8Array(obj.rootXprv) as Ed25519XPrv,
     addrXprv: deserialiseUint8Array(obj.addrXprv) as Ed25519XPrv,
     addrXpub: deserialiseUint8Array(obj.addrXpub) as Ed25519XPub,
-    addrPub: deserialiseUint8Array(obj.addrPub) as Ed25519PublicKey,
+    addrPub: deserialiseUint8Array(obj.addrPub) as Ed25519Pub,
     signing: {
       data: deserialiseUint8Array(obj['cardano-signer'].data),
-      signature: deserialiseUint8Array(obj['cardano-signer'].signature) as Ed25519Signature,
-      publicKey: deserialiseUint8Array(obj['cardano-signer'].publicKey) as Ed25519PublicKey,
+      signature: deserialiseUint8Array(obj['cardano-signer'].signature) as Signature,
+      publicKey: deserialiseUint8Array(obj['cardano-signer'].publicKey) as Ed25519Pub,
     }
   };
 }
@@ -77,12 +81,12 @@ const deserialiseTestVector = (obj: any): TestVector => {
 describe('Cardano key derivation', () => {
   it('should match test vectors', async () => {
     for (const vector of testVectors) {
-      const { mnemonic, derivationPath, rootXprv, addrXprv, addrXpub: _, addrPub, signing } = deserialiseTestVector(vector);
+      const { mnemonic, derivationPath, rootXprv, addrXprv, addrXpub, addrPub, signing } = deserialiseTestVector(vector);
 
       // Derive root key from mnemonic
       const password = new TextEncoder().encode("");
-      const rootKey = new Ed25519RootPrivateKey(await deriveEd25519XPrv(mnemonic, password));
-      const rootKeyBytes = rootKey.root;
+      const rootKey = new RootPrivateKey(await deriveEd25519XPrv(mnemonic, password));
+      const rootKeyBytes = rootKey.getKey();
 
       // Check root extended private key
       expect(rootKeyBytes).toStrictEqual(rootXprv);
@@ -92,35 +96,31 @@ describe('Cardano key derivation', () => {
         continue;
       }
 
-      const sKey: Ed25519SigningKey = (() => {
+      const sKey: SKey = (() => {
         // if (derivationPath.type === "custom") {
         //   // Custom derivation path
         //   const key = derivePrivatePath(rootKeyBytes, derivationPath.indices);
-        //   return new Ed25519SigningKey(extractPrv(key));
+        //   return new SKey(extractPrv(key));
         // }
         const { walletIdx, role, keyIdx } = derivationPath;
-        return rootKey.deriveSigningKey(walletIdx, role, keyIdx);
+        return rootKey.deriveSKey(walletIdx, role, keyIdx);
       })();
-      const sKeyBytes = sKey.key;
-      const expectedPrv = extractExpandedSecret(addrXprv);
+      const sKeyBytes = sKey.getKey();
+      const expectedPrv = extractPrv(addrXprv);
       expect(sKeyBytes).toStrictEqual(expectedPrv);
 
-      const vKey = sKey.toVerificationKey();
-      expect(vKey.key).toStrictEqual(addrPub);
+      const vKey = sKey.toVKey();
+      expect(vKey.getKey()).toStrictEqual(addrPub);
 
       const { data, signature, publicKey } = signing;
       const sig = sKey.sign(data);
-      expect(vKey.key).toStrictEqual(publicKey);
+      expect(vKey.getKey()).toStrictEqual(publicKey);
       expect(sig).toStrictEqual(signature);
       expect(vKey.verify(data, sig)).toBe(true);
     }
   });
 
-  it('should run first README example successfully', async () => {
-    await readmeExample1();
-  });
-
-  it('should run second README example successfully', async () => {
-    await readmeExample2();
+  it('should run README example successfully', async () => {
+    await readmeExample();
   });
 });
