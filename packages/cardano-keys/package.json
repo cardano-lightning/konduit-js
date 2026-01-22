@@ -18,6 +18,22 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./cip3": {
+      "types": "./dist/cip3.d.ts",
+      "default": "./dist/cip3.js"
+    },
+    "./cip1852": {
+      "types": "./dist/cip1852.d.ts",
+      "default": "./dist/cip1852.js"
+    },
+    "./bip32Ed25519": {
+      "types": "./dist/bip32Ed25519.d.ts",
+      "default": "./dist/bip32Ed25519.js"
+    },
+    "./uint8Array": {
+      "types": "./dist/uint8Array.d.ts",
+      "default": "./dist/uint8Array.js"
     }
   },
   "files": [

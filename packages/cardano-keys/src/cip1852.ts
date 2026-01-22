@@ -3,7 +3,7 @@ import sodium from "libsodium-wrappers-sumo";
 import * as uint8Array from "./uint8Array";
 import { err, ok, type Result } from "neverthrow";
 import { derivePrivate, derivePublic, extractPrv, HardenedIdx, NonHardenedIdx, type DerivationIdx, type Ed25519Prv, type Ed25519Pub, type Ed25519XPrv, type Ed25519XPub, type SmallInt } from "./bip32Ed25519";
-import { deriveEd25519XPrv, type Mnemonic, type Password } from "./cip3";
+import { deriveEd25519XPrv, type Mnemonic } from "./cip3";
 
 export function derivePrivatePath(
   parent: Ed25519XPrv,
