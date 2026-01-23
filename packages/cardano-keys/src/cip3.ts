@@ -25,18 +25,19 @@ function strengthWordsToBits(strength: MnemonicStrength = "24-words"): MnemomicS
 
 // We can not really avoid using string here (which is impossible to wipe out from memory on demand)
 // because the bip39 library works with strings only.
-export type Mnemonic = Tagged<string, "Mnemonic">;
+type _Mnemonic = { mnemonicWords: string, wordlist: string[] };
+export type Mnemonic = Tagged<_Mnemonic, "Mnemonic">;
 export namespace Mnemonic {
-  export function fromString(mnemonic: string): Result<Mnemonic, string> {
-    return bip39.validateMnemonic(mnemonic, english.wordlist)
-      ? ok(mnemonic as Mnemonic)
+  export function fromString(mnemonic: string, wordlist: string[] = english.wordlist): Result<Mnemonic, string> {
+    return bip39.validateMnemonic(mnemonic, wordlist)
+      ? ok({ mnemonicWords: mnemonic, wordlist } as Mnemonic)
       : err("Invalid mnemonic");
   }
 }
 
 export function generateMnemonic(strength: MnemonicStrength = "24-words", wordlist: string[] = english.wordlist): Mnemonic {
   const strengthInBits = strengthWordsToBits(strength);
-  return bip39.generateMnemonic(wordlist, strengthInBits) as Mnemonic;
+  return { mnemonicWords: bip39.generateMnemonic(wordlist, strengthInBits), wordlist } as Mnemonic;
 }
 
 const subtle = globalThis.crypto?.subtle;
@@ -45,12 +46,12 @@ const subtle = globalThis.crypto?.subtle;
 export const deriveEd25519XPrv = async (
   mnemonic: Mnemonic,
   password: Uint8Array = new Uint8Array(),
-  wordlist: string[] = english.wordlist,
   // Used for testing purposes only
   _enforceWebcrypto: boolean = false,
 ): Promise<Ed25519XPrv> => {
   // Get entropy from mnemonic (16-32 bytes depending on mnemonic length)
-  const entropy = bip39.mnemonicToEntropy(mnemonic, wordlist); // Returns Buffer, convert if needed
+  const { mnemonicWords, wordlist } = mnemonic;
+  const entropy = bip39.mnemonicToEntropy(mnemonicWords, wordlist); // Returns Buffer, convert if needed
   const salt = Uint8Array.from(entropy); // Entropy as salt
   const iterations = 4096;
   const dkLen = 96;

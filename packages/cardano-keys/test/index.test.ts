@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { deriveEd25519XPrv, type Mnemonic, RootPrivateKey, KeyRole, WalletIndex, KeyIndex, Ed25519Pub, Signature, Ed25519XPrv, Ed25519XPub, HardenedIdx } from '../src/index'
+import * as english from "@scure/bip39/wordlists/english.js";
 import testVectors from './test-vectors.json';
 import { SKey, unsafeUnwrap } from '../src/cip1852';
 import { DerivationIdx, extractPrv, NonHardenedIdx } from '../src/bip32Ed25519';
@@ -64,7 +65,7 @@ const deserialiseDerivationPath = (obj: any): DerivationPath => {
 
 const deserialiseTestVector = (obj: any): TestVector => {
   return {
-    mnemonic: obj.mnemonic as Mnemonic,
+    mnemonic: { mnemonicWords: obj.mnemonic, wordlist: english.wordlist } as Mnemonic,
     derivationPath: deserialiseDerivationPath(obj.derivationPath),
     rootXprv: deserialiseUint8Array(obj.rootXprv) as Ed25519XPrv,
     addrXprv: deserialiseUint8Array(obj.addrXprv) as Ed25519XPrv,
