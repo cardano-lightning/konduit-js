@@ -14,6 +14,9 @@ export type ChainCode = Tagged<Uint8Array, "ChainCode">;
 // kr - "nonce prefix" used as extra input to HMAC during hardened derivation
 export type Ed25519Prv = Tagged<Uint8Array, "Ed25519Prv">;
 
+// Scalar can be used for signing (we external source of randomness).
+export type Ed25519PrvScalar = Tagged<Uint8Array, "Ed25519PrvScalar">;
+
 // 32 bytes
 export type Ed25519Pub = Tagged<Uint8Array, "Ed25519Pub">;
 
@@ -22,6 +25,7 @@ export type Ed25519Pub = Tagged<Uint8Array, "Ed25519Pub">;
 // kr - "nonce prefix" used as extra input to HMAC during hardened derivation
 // cc - chain code used for derivation
 export type Ed25519XPrv = Tagged<Uint8Array, "Ed25519XPrv">;
+
 
 export function extractPrv(
   xprv: Ed25519XPrv
@@ -44,6 +48,12 @@ export function extractChainCode(
   key: Ed25519XPrv | Ed25519XPub
 ): ChainCode {
   return key.subarray(-32) as ChainCode;
+}
+
+export function extractPrvScalar(
+  prv: Ed25519Prv
+): Ed25519PrvScalar {
+  return prv.subarray(0, 32) as Ed25519PrvScalar;
 }
 
 export const HARDENING_OFFSET = 0x80000000;
