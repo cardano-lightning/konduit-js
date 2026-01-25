@@ -1,10 +1,13 @@
 import type { Json } from "@konduit/codec/json";
+import * as codec from "@konduit/codec";
+import * as jsonCodecs from "@konduit/codec/json/codecs";
 import { Address, AddressBech32, Lovelace, mainnet, TxHash } from "./cardano";
 import type { Ed25519Prv, Mnemonic } from "@konduit/cardano-keys";
 import { generateMnemonic, KeyIndex, KeyRole, RootPrivateKey, WalletIndex } from "@konduit/cardano-keys";
 import { NonNegativeInt } from "@konduit/codec/integers/smallish";
 import { Milliseconds, type Seconds } from "./time/duration";
 import type { TransactionReadyForSigning } from "../wasm/konduit_wasm";
+import { json2RootPrivateKeyCodec } from "./cardano/codecs";
 
 type WalletEvent<T> = CustomEvent<T>;
 
@@ -34,10 +37,12 @@ export class Wallet {
   // Event handling
   private readonly eventTarget = new EventTarget();
 
-  private constructor(rootPrivateKey: RootPrivateKey, provider: ChainConnector) {
+  constructor(rootPrivateKey: RootPrivateKey, provider: ChainConnector) {
     this.rootPrivateKey = rootPrivateKey;
     this.provider = provider;
   }
+
+  // Restore from mnemonic
   static async restore(connector: ChainConnector, mnemonic: Mnemonic, password?: Uint8Array): Promise<Wallet> {
     const rootPrivateKey = await RootPrivateKey.fromMnemonic(mnemonic, password);
     return Promise.resolve(new Wallet(rootPrivateKey, connector));
@@ -103,7 +108,7 @@ export class Wallet {
     this.balance = newBalance;
   }
 
-  // Start or restart (when not running or interval changed) polling
+  // (Re)start polling
   public async startPolling(interval: Seconds) {
     let intervalMs = Milliseconds.fromSeconds(interval);
     if (this.pollingTimer) {
@@ -126,9 +131,38 @@ export class Wallet {
       this.pollingTimer = null;
     }
   }
+
   public async signAndSubmit(tx: TransactionReadyForSigning, context?: Json): Promise<TxHash> {
     const txHash = await this.provider.signAndSubmit(tx, this.skey.getKey());
     this.emit("tx-submitted", context ? { txHash, context } : { txHash });
     return txHash;
   }
+
+  public static walletCodec(connectorCodec: jsonCodecs.JsonCodec<ChainConnector>) {
+    const walletRecordCodec = jsonCodecs.objectOf({
+      // Don't ask me why we store the private key in a plain text :-P
+      root_private_key: json2RootPrivateKeyCodec,
+      connector: connectorCodec,
+    });
+    return codec.rmap(
+      walletRecordCodec,
+      ({ root_private_key, connector }) => {
+        return new Wallet(root_private_key, connector);
+      },
+      (wallet: Wallet) => ({
+        root_private_key: wallet.rootPrivateKey,
+        connector: wallet.provider,
+      })
+    );
+  }
+
+  public serialise(connectorCodec: jsonCodecs.JsonCodec<ChainConnector>): Json {
+    const walletCodec = Wallet.walletCodec(connectorCodec);
+    return walletCodec.serialise(this);
+  }
+
+  public static deserialise(json: Json, connectorCodec: jsonCodecs.JsonCodec<ChainConnector>) {
+    return this.walletCodec(connectorCodec).deserialise(json);
+  }
 }
+
