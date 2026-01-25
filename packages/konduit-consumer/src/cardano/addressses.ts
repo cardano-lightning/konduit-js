@@ -109,7 +109,7 @@ export const string32ToAddressCodec: codec.Codec<string, Address, JsonError> = {
         const addressTypeNibble = (headerByte & 0xf0) >> 4;
         const paymentHash = data.slice(HEADER_LEN, HEADER_LEN + HASH_LEN);
         const stakingHash = data.slice(HEADER_LEN + HASH_LEN);
-        if (stakingHash.length === HASH_LEN) {
+        if (addressTypeNibble >= 0x00 && addressTypeNibble <= 0x03) {
           const expectedLen = HEADER_LEN + 2 * HASH_LEN;
           if(data.length !== expectedLen) return err(`Invalid address length for type 0x00-0x03: expected ${expectedLen}, got ${data.length}`);
           if (addressTypeNibble === 0x00) {
@@ -127,13 +127,16 @@ export const string32ToAddressCodec: codec.Codec<string, Address, JsonError> = {
               { type: "PubKeyHash", hash: paymentHash as PubKeyHash },
               { type: "ScriptHash", hash: stakingHash as ScriptHash }
             ]);
-          } else { // if (addressTypeNibble === 0x03) {
+          } else /* (addressTypeNibble === 0x03) */ {
             return ok ([
               { type: "ScriptHash", hash: paymentHash as ScriptHash },
               { type: "ScriptHash", hash: stakingHash as ScriptHash }
             ]);
           }
-        } else {
+        } else if(addressTypeNibble === 0x06 || addressTypeNibble === 0x07) {
+          if(stakingHash.length !== 0) {
+            return err(`Invalid staking credential length for type 0x06/0x07: expected 0, got ${stakingHash.length}`);
+          }
           const expectedLen = HEADER_LEN + HASH_LEN;
           if(data.length !== expectedLen) return err(`Invalid address length for type 0x06/0x07: expected ${expectedLen}, got ${data.length}`);
           if (addressTypeNibble === 0x06) {
@@ -141,14 +144,14 @@ export const string32ToAddressCodec: codec.Codec<string, Address, JsonError> = {
               { type: "PubKeyHash", hash: paymentHash as PubKeyHash },
               null
             ]);
-          } else if (addressTypeNibble === 0x07) {
+          } else /* (addressTypeNibble === 0x07) */ {
             return ok ([
               { type: "ScriptHash", hash: paymentHash as ScriptHash },
               null
             ]);
           }
-          return err(`Pointer addresses (type nibble 0x04 and 0x05) are not supported.`);
         }
+        return err(`Pointer addresses (type nibble 0x04 and 0x05) are not supported.`);
       })()
     ]).andThen(([network, [paymentCredential, stakingCredential]]) => {
         return ok({
