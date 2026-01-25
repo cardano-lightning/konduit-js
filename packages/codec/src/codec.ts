@@ -24,7 +24,8 @@ export const pipe = <I, M, O, E>(
   };
 }
 
-// A more natural order of composition :-P
+// A more natural order of composition
+// More Categorical one :-P
 export const compose = <I, M, O, E>(
   second: Codec<M, O, E>,
   first: Codec<I, M, E>
@@ -32,7 +33,8 @@ export const compose = <I, M, O, E>(
   return pipe(first, second);
 }
 
-export const imap = <I, O1, O2, E>(
+// Profunctor (tfu!) like mappings from both sides
+export const rmap = <I, O1, O2, E>(
   codec: Codec<I, O1, E>,
   fn: (o: O1) => O2,
   fnInv: (o: O2) => O1
@@ -44,6 +46,23 @@ export const imap = <I, O1, O2, E>(
     serialise: (output: O2): I => {
       const mid = fnInv(output);
       return codec.serialise(mid);
+    }
+  };
+}
+
+export const lmap = <I1, I2, O, E>(
+  codec: Codec<I2, O, E>,
+  fn: (i: I1) => I2,
+  fnInv: (i: I2) => I1
+): Codec<I1, O, E> => {
+  return {
+    deserialise: (input: I1): Result<O, E> => {
+      const mid = fn(input);
+      return codec.deserialise(mid);
+    },
+    serialise: (output: O): I1 => {
+      const mid = codec.serialise(output);
+      return fnInv(mid);
     }
   };
 }

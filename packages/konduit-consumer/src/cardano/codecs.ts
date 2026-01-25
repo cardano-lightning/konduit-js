@@ -18,4 +18,4 @@ export const json2Ed25519PubCodec: JsonCodec<Ed25519Pub> = codec.pipe(
   hexString2Ed25519PubCodec,
 );
 
-export const json2VKeyCodec = codec.imap(json2Ed25519PubCodec, (key) => new VKey(key), (vkey) => vkey.getKey());
+export const json2VKeyCodec = codec.rmap(json2Ed25519PubCodec, (key) => new VKey(key), (vkey) => vkey.getKey());

@@ -5,6 +5,30 @@ import type { JsonCodec } from "./json/codecs";
 
 // String which is a valid hex representation
 export type HexString = Tagged<string, "HexString">;
+export namespace HexString {
+  export const fromUint8Array = (arr: Uint8Array): HexString => {
+    let str = "";
+    for (let i = 0; i < arr.length; i++) {
+      const byte = arr[i];
+      str += byte.toString(16).padStart(2, '0');
+    }
+    return str as HexString;
+  }
+};
+
+// Serialisation/Deserialisation to a typed hex string
+// Given already validated hex string serialised as HexString
+export const toUint8Array = (hexStr: HexString): Uint8Array => {
+  const bytes = new Uint8Array(hexStr.length / 2);
+  for (let i = 0; i < hexStr.length; i += 2) {
+    const byteStr = hexStr.slice(i, i + 2);
+    const byte = Number.parseInt(byteStr, 16);
+    bytes[i / 2] = byte;
+  }
+  return bytes;
+}
+
+export const fromUint8Array = (arr: Uint8Array): HexString => HexString.fromUint8Array(arr);
 
 export const jsonCodec: JsonCodec<HexString> = {
   deserialise: (data: Json): Result<HexString, string> => {

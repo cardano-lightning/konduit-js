@@ -106,7 +106,7 @@ export const json2AdaptorInfoCodec: jsonCodecs.JsonCodec<AdaptorInfo> = (() => {
     script_hash: json2ScriptHashCodec,
     url: jsonCodecs.json2StringCodec,
   });
-  return codec.imap(
+  return codec.rmap(
     adaptorRecordCodec,
     (obj) =>
       new AdaptorInfo(

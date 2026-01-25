@@ -1998,20 +1998,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@konduit/wallet@workspace:packages/wallet":
-  version: 0.0.0-use.local
-  resolution: "@konduit/wallet@workspace:packages/wallet"
-  dependencies:
-    "@types/node": "npm:^24.10.1"
-    neverthrow: "npm:^8.2.0"
-    type-fest: "npm:^5.4.1"
-    typescript: "npm:~5.9.3"
-    vite: "npm:^7.2.4"
-    vite-plugin-dts: "npm:^4.5.4"
-    vitest: "npm:^4.0.14"
-  languageName: unknown
-  linkType: soft
-
 "@microsoft/api-extractor-model@npm:7.32.2":
   version: 7.32.2
   resolution: "@microsoft/api-extractor-model@npm:7.32.2"

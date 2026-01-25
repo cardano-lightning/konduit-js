@@ -18,7 +18,7 @@ export namespace Milliseconds {
     return (diff < 0 ? -diff : diff) as Milliseconds;
   }
 }
-export const json2MillisecondsCodec = codec.imap(json2NonNegativeIntCodec, (n) => Milliseconds.fromNonNegativeInt(n), (ms) => ms);
+export const json2MillisecondsCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Milliseconds.fromNonNegativeInt(n), (ms) => ms);
 
 export type Seconds = Tagged<NonNegativeInt, "Seconds">;
 export namespace Seconds {
@@ -32,7 +32,7 @@ export namespace Seconds {
     return (diff < 0 ? -diff : diff) as Seconds;
   }
 }
-export const json2SecondsCodec = codec.imap(json2NonNegativeIntCodec, (n) => Seconds.fromNonNegativeInt(n), (s) => s);
+export const json2SecondsCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Seconds.fromNonNegativeInt(n), (s) => s);
 
 export type Minutes = Tagged<NonNegativeInt, "Minutes">;
 export namespace Minutes {
@@ -42,7 +42,7 @@ export namespace Minutes {
   export const fromHours = (hours: Hours): Minutes => (hours * 60) as Minutes;
   export const fromSecondsFloor = (seconds: Seconds): Minutes => (Math.floor(seconds / 60)) as Minutes;
 }
-export const json2MinutesCodec = codec.imap(json2NonNegativeIntCodec, (n) => Minutes.fromNonNegativeInt(n), (m) => m);
+export const json2MinutesCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Minutes.fromNonNegativeInt(n), (m) => m);
 
 export type Hours = Tagged<NonNegativeInt, "Hours">;
 export namespace Hours {
@@ -51,4 +51,4 @@ export namespace Hours {
   export const fromSmallNumber = (n: Small) => NonNegativeInt.fromSmallNumber(n) as Hours;
   export const fromMinutesFloor = (minutes: Minutes): Hours => (Math.floor(minutes / 60)) as Hours;
 }
-export const json2HoursCodec = codec.imap(json2NonNegativeIntCodec, (n) => Hours.fromNonNegativeInt(n), (h) => h);
+export const json2HoursCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Hours.fromNonNegativeInt(n), (h) => h);
