@@ -26,10 +26,10 @@ export const pipe = <I, M, O, E>(
 
 // A more natural order of composition :-P
 export const compose = <I, M, O, E>(
-  first: Codec<M, O, E>,
-  second: Codec<I, M, E>
+  second: Codec<M, O, E>,
+  first: Codec<I, M, E>
 ): Codec<I, O, E> => {
-  return pipe(second, first);
+  return pipe(first, second);
 }
 
 export const imap = <I, O1, O2, E>(
