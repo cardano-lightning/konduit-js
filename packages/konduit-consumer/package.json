@@ -1,49 +1,20 @@
 {
   "dependencies": {
-    "@konduit/bln": "workspace:^",
     "@konduit/cardano-keys": "workspace:^",
     "@konduit/codec": "workspace:^",
-    "@noble/hashes": "^2.0.1",
-    "@scure/base": "^2.0.0",
-    "type-fest": "^5.4.3"
+    "@scure/base": "^2.0.0"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
     "typescript": "~5.9.3",
     "vite": "^7.2.4",
     "vite-plugin-dts": "^4.5.4",
-    "vite-plugin-top-level-await": "^1.6.0",
-    "vite-plugin-wasm": "^3.5.0",
     "vitest": "^4.0.16"
   },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    },
-    "./wallets/embedded": {
-      "types": "./dist/wallets/embedded.d.ts",
-      "default": "./dist/wallets/embedded.js"
-    },
-    "./time/*": {
-      "types": "./dist/time/*.d.ts",
-      "default": "./dist/time/*.js"
-    },
-    "./cardano": {
-      "types": "./dist/cardano.d.ts",
-      "default": "./dist/cardano.js"
-    },
-    "./cardano/connector": {
-      "types": "./dist/cardano/connector.d.ts",
-      "default": "./dist/cardano/connector.js"
-    },
-    "./adaptorClient": {
-      "types": "./dist/adaptorClient.d.ts",
-      "default": "./dist/adaptorClient.js"
-    },
-    "./channel": {
-      "types": "./dist/channel.d.ts",
-      "default": "./dist/channel.js"
     }
   },
   "files": [
@@ -56,7 +27,7 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc --build",
+    "build": "vite --build",
     "test": "vitest"
   },
   "type": "module",

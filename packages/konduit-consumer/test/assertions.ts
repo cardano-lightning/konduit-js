@@ -1,19 +1,10 @@
 import { Result } from 'neverthrow';
-import { isJson, onString, stringify } from '@konduit/codec/json';
-import type { JsonError } from '@konduit/codec/json/codecs';
-import { expect } from 'vitest';
+import { onString } from '@konduit/codec/json';
 
 export const expectOk = <T, Err>(result: Result<T, Err>, msgTemplate?: string): T => {
   const mkMessage = (err: any) => {
-    console.debug(err);
     const tpl = msgTemplate || "Expected Ok result, got Err: ERROR_STR"
-    const errorStr = (() => {
-      if (isJson(err)) {
-        return stringify(err);
-      }
-      return stringify(err);
-    })();
-    return tpl.replace("ERROR_STR", errorStr);
+    return tpl.replace("ERROR_STR", String(err));
   };
   return result.match(
     (value) => value,
@@ -33,11 +24,7 @@ const expectErrWith = <T, E>(result: Result<T, E>, onErr: (error: E) => boolean)
   );
 }
 
-export const expectErr = <T, E>(result: Result<T, E>): E => {
-  return expectErrWith(result, (_error) => true);
-}
-
-export const expectErrWithSubstring = <T>(result: Result<T, JsonError>, substring: string): JsonError => {
+export const expectErrWithSubstring = <T, E>(result: Result<T, E>, substring: string): E => {
   return expectErrWith(result, (error) => {
     return onString((_) => false)((errStr: string) => {
       return errStr.includes(substring);
@@ -45,22 +32,7 @@ export const expectErrWithSubstring = <T>(result: Result<T, JsonError>, substrin
   });
 }
 
-// TYPE SAFE versions of expects:
-export const expectToBe = <T>(a: T, b: T): void => {
-  return expect(a).toBe(b);
+export const expectErr = <T, E>(result: Result<T, E>): E => {
+  return expectErrWith(result, (_error) => true);
 }
 
-export const expectToEqual = <T>(a: T, b: T): void => {
-  return expect(a).toEqual(b);
-}
-
-export const expectToStrictEqual = <T>(a: T, b: T): void => {
-  return expect(a).toStrictEqual(b);
-}
-
-export const expectNotNull = <T>(value: T | null): T => {
-  if (value === null) {
-    throw new Error("Expected value to be not null, but it was null");
-  }
-  return value;
-}

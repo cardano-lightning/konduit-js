@@ -1889,12 +1889,9 @@ __metadata:
     "@noble/secp256k1": "npm:^3.0.0"
     "@scure/base": "npm:^2.0.0"
     "@types/node": "npm:^24.10.1"
-    bip21: "npm:^3.0.0"
     bitcoinjs-lib: "npm:^7.0.0"
     bolt11: "npm:^1.4.1"
     light-bolt11-decoder: "npm:^3.2.0"
-    neverthrow: "npm:^8.2.0"
-    type-fest: "npm:^5.4.3"
     typescript: "npm:~5.9.3"
     vite: "npm:^7.2.4"
     vite-plugin-dts: "npm:^4.5.4"
@@ -1902,11 +1899,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-<<<<<<< HEAD
 "@konduit/cardano-keys@workspace:^, @konduit/cardano-keys@workspace:packages/cardano-keys":
-=======
-"@konduit/cardano-keys@workspace:packages/cardano-keys":
->>>>>>> ff56dc6 (Test README example and add smart constructor for Mnemonic.)
   version: 0.0.0-use.local
   resolution: "@konduit/cardano-keys@workspace:packages/cardano-keys"
   dependencies:
@@ -1924,7 +1917,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-<<<<<<< HEAD
 "@konduit/codec@workspace:^, @konduit/codec@workspace:packages/codec":
   version: 0.0.0-use.local
   resolution: "@konduit/codec@workspace:packages/codec"
@@ -1944,24 +1936,31 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@konduit/konduit-consumer@workspace:packages/konduit-consumer"
   dependencies:
-    "@konduit/bln": "workspace:^"
     "@konduit/cardano-keys": "workspace:^"
     "@konduit/codec": "workspace:^"
-    "@noble/hashes": "npm:^2.0.1"
     "@scure/base": "npm:^2.0.0"
     "@types/node": "npm:^24.10.1"
-    type-fest: "npm:^5.4.3"
     typescript: "npm:~5.9.3"
     vite: "npm:^7.2.4"
     vite-plugin-dts: "npm:^4.5.4"
-    vite-plugin-top-level-await: "npm:^1.6.0"
-    vite-plugin-wasm: "npm:^3.5.0"
     vitest: "npm:^4.0.16"
   languageName: unknown
   linkType: soft
 
-=======
->>>>>>> ff56dc6 (Test README example and add smart constructor for Mnemonic.)
+"@konduit/wallet@workspace:packages/wallet":
+  version: 0.0.0-use.local
+  resolution: "@konduit/wallet@workspace:packages/wallet"
+  dependencies:
+    "@types/node": "npm:^24.10.1"
+    neverthrow: "npm:^8.2.0"
+    type-fest: "npm:^5.4.1"
+    typescript: "npm:~5.9.3"
+    vite: "npm:^7.2.4"
+    vite-plugin-dts: "npm:^4.5.4"
+    vitest: "npm:^4.0.14"
+  languageName: unknown
+  linkType: soft
+
 "@microsoft/api-extractor-model@npm:7.32.2":
   version: 7.32.2
   resolution: "@microsoft/api-extractor-model@npm:7.32.2"
@@ -2169,18 +2168,6 @@ __metadata:
     rollup:
       optional: true
   checksum: 10c0/b9cb6c8f02ac1c1344019e9fb854321b74f880efebc41b6bdd84f18331fce0f4a2aadcdb481042245cd3f409b429ac363af71f9efec4a2024731d67d32af36ee
-  languageName: node
-  linkType: hard
-
-"@rollup/plugin-virtual@npm:^3.0.2":
-  version: 3.0.2
-  resolution: "@rollup/plugin-virtual@npm:3.0.2"
-  peerDependencies:
-    rollup: ^1.20.0||^2.0.0||^3.0.0||^4.0.0
-  peerDependenciesMeta:
-    rollup:
-      optional: true
-  checksum: 10c0/7115edb7989096d1ce334939fcf6e1ba365586b487bf61b2dd4f915386197f350db70904030342c0720fe58f5a52828975c645c4d415c1d432d9b1b6760a22ef
   languageName: node
   linkType: hard
 
@@ -2488,145 +2475,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@swc/core-darwin-arm64@npm:1.15.11":
-  version: 1.15.11
-  resolution: "@swc/core-darwin-arm64@npm:1.15.11"
-  conditions: os=darwin & cpu=arm64
-  languageName: node
-  linkType: hard
-
-"@swc/core-darwin-x64@npm:1.15.11":
-  version: 1.15.11
-  resolution: "@swc/core-darwin-x64@npm:1.15.11"
-  conditions: os=darwin & cpu=x64
-  languageName: node
-  linkType: hard
-
-"@swc/core-linux-arm-gnueabihf@npm:1.15.11":
-  version: 1.15.11
-  resolution: "@swc/core-linux-arm-gnueabihf@npm:1.15.11"
-  conditions: os=linux & cpu=arm
-  languageName: node
-  linkType: hard
-
-"@swc/core-linux-arm64-gnu@npm:1.15.11":
-  version: 1.15.11
-  resolution: "@swc/core-linux-arm64-gnu@npm:1.15.11"
-  conditions: os=linux & cpu=arm64 & libc=glibc
-  languageName: node
-  linkType: hard
-
-"@swc/core-linux-arm64-musl@npm:1.15.11":
-  version: 1.15.11
-  resolution: "@swc/core-linux-arm64-musl@npm:1.15.11"
-  conditions: os=linux & cpu=arm64 & libc=musl
-  languageName: node
-  linkType: hard
-
-"@swc/core-linux-x64-gnu@npm:1.15.11":
-  version: 1.15.11
-  resolution: "@swc/core-linux-x64-gnu@npm:1.15.11"
-  conditions: os=linux & cpu=x64 & libc=glibc
-  languageName: node
-  linkType: hard
-
-"@swc/core-linux-x64-musl@npm:1.15.11":
-  version: 1.15.11
-  resolution: "@swc/core-linux-x64-musl@npm:1.15.11"
-  conditions: os=linux & cpu=x64 & libc=musl
-  languageName: node
-  linkType: hard
-
-"@swc/core-win32-arm64-msvc@npm:1.15.11":
-  version: 1.15.11
-  resolution: "@swc/core-win32-arm64-msvc@npm:1.15.11"
-  conditions: os=win32 & cpu=arm64
-  languageName: node
-  linkType: hard
-
-"@swc/core-win32-ia32-msvc@npm:1.15.11":
-  version: 1.15.11
-  resolution: "@swc/core-win32-ia32-msvc@npm:1.15.11"
-  conditions: os=win32 & cpu=ia32
-  languageName: node
-  linkType: hard
-
-"@swc/core-win32-x64-msvc@npm:1.15.11":
-  version: 1.15.11
-  resolution: "@swc/core-win32-x64-msvc@npm:1.15.11"
-  conditions: os=win32 & cpu=x64
-  languageName: node
-  linkType: hard
-
-"@swc/core@npm:^1.12.14":
-  version: 1.15.11
-  resolution: "@swc/core@npm:1.15.11"
-  dependencies:
-    "@swc/core-darwin-arm64": "npm:1.15.11"
-    "@swc/core-darwin-x64": "npm:1.15.11"
-    "@swc/core-linux-arm-gnueabihf": "npm:1.15.11"
-    "@swc/core-linux-arm64-gnu": "npm:1.15.11"
-    "@swc/core-linux-arm64-musl": "npm:1.15.11"
-    "@swc/core-linux-x64-gnu": "npm:1.15.11"
-    "@swc/core-linux-x64-musl": "npm:1.15.11"
-    "@swc/core-win32-arm64-msvc": "npm:1.15.11"
-    "@swc/core-win32-ia32-msvc": "npm:1.15.11"
-    "@swc/core-win32-x64-msvc": "npm:1.15.11"
-    "@swc/counter": "npm:^0.1.3"
-    "@swc/types": "npm:^0.1.25"
-  peerDependencies:
-    "@swc/helpers": ">=0.5.17"
-  dependenciesMeta:
-    "@swc/core-darwin-arm64":
-      optional: true
-    "@swc/core-darwin-x64":
-      optional: true
-    "@swc/core-linux-arm-gnueabihf":
-      optional: true
-    "@swc/core-linux-arm64-gnu":
-      optional: true
-    "@swc/core-linux-arm64-musl":
-      optional: true
-    "@swc/core-linux-x64-gnu":
-      optional: true
-    "@swc/core-linux-x64-musl":
-      optional: true
-    "@swc/core-win32-arm64-msvc":
-      optional: true
-    "@swc/core-win32-ia32-msvc":
-      optional: true
-    "@swc/core-win32-x64-msvc":
-      optional: true
-  peerDependenciesMeta:
-    "@swc/helpers":
-      optional: true
-  checksum: 10c0/84b9dbed8d4d39da9941b796f97f84a52a3ab1a5e002b0395e98d0c3368acab4dde84051eb97c47c85b67c5fc29e3e9b7a646cf238a96df93fc7c54177925c3e
-  languageName: node
-  linkType: hard
-
-"@swc/counter@npm:^0.1.3":
-  version: 0.1.3
-  resolution: "@swc/counter@npm:0.1.3"
-  checksum: 10c0/8424f60f6bf8694cfd2a9bca45845bce29f26105cda8cf19cdb9fd3e78dc6338699e4db77a89ae449260bafa1cc6bec307e81e7fb96dbf7dcfce0eea55151356
-  languageName: node
-  linkType: hard
-
-"@swc/types@npm:^0.1.25":
-  version: 0.1.25
-  resolution: "@swc/types@npm:0.1.25"
-  dependencies:
-    "@swc/counter": "npm:^0.1.3"
-  checksum: 10c0/847a5b20b131281f89d640a7ed4887fb65724807d53d334b230e84b98c21097aa10cd28a074f9ed287a6ce109e443dd4bafbe7dcfb62333d7806c4ea3e7f8aca
-  languageName: node
-  linkType: hard
-
-"@swc/wasm@npm:^1.12.14":
-  version: 1.15.11
-  resolution: "@swc/wasm@npm:1.15.11"
-  checksum: 10c0/2829a263380e14fcc857ca9f4f1d7fd6cf753eeb105be06ff044c434a45e8a2f6545a5fb796d0d84ef33461348a3dc3e49a8344b8e56519fcd74cadee7bbc3ce
-  languageName: node
-  linkType: hard
-
 "@types/argparse@npm:1.0.38":
   version: 1.0.38
   resolution: "@types/argparse@npm:1.0.38"
@@ -2769,7 +2617,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-<<<<<<< HEAD
 "@vitest/expect@npm:4.0.18":
   version: 4.0.18
   resolution: "@vitest/expect@npm:4.0.18"
@@ -2784,8 +2631,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-=======
->>>>>>> ff56dc6 (Test README example and add smart constructor for Mnemonic.)
 "@vitest/mocker@npm:4.0.15":
   version: 4.0.15
   resolution: "@vitest/mocker@npm:4.0.15"
@@ -2824,7 +2669,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-<<<<<<< HEAD
 "@vitest/mocker@npm:4.0.18":
   version: 4.0.18
   resolution: "@vitest/mocker@npm:4.0.18"
@@ -2844,8 +2688,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-=======
->>>>>>> ff56dc6 (Test README example and add smart constructor for Mnemonic.)
 "@vitest/pretty-format@npm:4.0.15":
   version: 4.0.15
   resolution: "@vitest/pretty-format@npm:4.0.15"
@@ -2864,7 +2706,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-<<<<<<< HEAD
 "@vitest/pretty-format@npm:4.0.18":
   version: 4.0.18
   resolution: "@vitest/pretty-format@npm:4.0.18"
@@ -2874,8 +2715,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-=======
->>>>>>> ff56dc6 (Test README example and add smart constructor for Mnemonic.)
 "@vitest/runner@npm:4.0.15":
   version: 4.0.15
   resolution: "@vitest/runner@npm:4.0.15"
@@ -2896,7 +2735,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-<<<<<<< HEAD
 "@vitest/runner@npm:4.0.18":
   version: 4.0.18
   resolution: "@vitest/runner@npm:4.0.18"
@@ -2907,8 +2745,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-=======
->>>>>>> ff56dc6 (Test README example and add smart constructor for Mnemonic.)
 "@vitest/snapshot@npm:4.0.15":
   version: 4.0.15
   resolution: "@vitest/snapshot@npm:4.0.15"
@@ -2931,7 +2767,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-<<<<<<< HEAD
 "@vitest/snapshot@npm:4.0.18":
   version: 4.0.18
   resolution: "@vitest/snapshot@npm:4.0.18"
@@ -2943,8 +2778,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-=======
->>>>>>> ff56dc6 (Test README example and add smart constructor for Mnemonic.)
 "@vitest/spy@npm:4.0.15":
   version: 4.0.15
   resolution: "@vitest/spy@npm:4.0.15"
@@ -2959,7 +2792,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-<<<<<<< HEAD
 "@vitest/spy@npm:4.0.18":
   version: 4.0.18
   resolution: "@vitest/spy@npm:4.0.18"
@@ -2967,8 +2799,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-=======
->>>>>>> ff56dc6 (Test README example and add smart constructor for Mnemonic.)
 "@vitest/utils@npm:4.0.15":
   version: 4.0.15
   resolution: "@vitest/utils@npm:4.0.15"
@@ -2989,7 +2819,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-<<<<<<< HEAD
 "@vitest/utils@npm:4.0.18":
   version: 4.0.18
   resolution: "@vitest/utils@npm:4.0.18"
@@ -3000,8 +2829,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-=======
->>>>>>> ff56dc6 (Test README example and add smart constructor for Mnemonic.)
 "@volar/language-core@npm:2.4.26":
   version: 2.4.26
   resolution: "@volar/language-core@npm:2.4.26"
@@ -3713,15 +3540,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"bip21@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "bip21@npm:3.0.0"
-  dependencies:
-    query-string: "npm:^9.0.0"
-  checksum: 10c0/af775afd18a5c188d4f27ca49ad3a055c50e887ccbb74c6c644fb5b66e5987616658abd7c4431a30e9feb0cff54f4306a41f66ff66ba2326632999b61a9b3220
-  languageName: node
-  linkType: hard
-
 "bitcoinjs-lib@npm:^6.0.0":
   version: 6.1.7
   resolution: "bitcoinjs-lib@npm:6.1.7"
@@ -4225,13 +4043,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"decode-uri-component@npm:^0.4.1":
-  version: 0.4.1
-  resolution: "decode-uri-component@npm:0.4.1"
-  checksum: 10c0/a180bbdb5398ec8270d236a3ac07cb988bbf6097428481780b85840f088951dc0318a8d8f9d56796e1a322b55b29859cea29982f22f9b03af0bc60974c54e591
-  languageName: node
-  linkType: hard
-
 "deepmerge@npm:^4.2.2":
   version: 4.3.1
   resolution: "deepmerge@npm:4.3.1"
@@ -4728,13 +4539,6 @@ __metadata:
   dependencies:
     to-regex-range: "npm:^5.0.1"
   checksum: 10c0/b75b691bbe065472f38824f694c2f7449d7f5004aa950426a2c28f0306c60db9b880c0b0e4ed819997ffb882d1da02cfcfc819bddc94d71627f5269682edf018
-  languageName: node
-  linkType: hard
-
-"filter-obj@npm:^5.1.0":
-  version: 5.1.0
-  resolution: "filter-obj@npm:5.1.0"
-  checksum: 10c0/716e8ad2bc352e206556b3e5695b3cdff8aab80c53ea4b00c96315bbf467b987df3640575100aef8b84e812cf5ea4251db4cd672bbe33b1e78afea88400c67dd
   languageName: node
   linkType: hard
 
@@ -6347,17 +6151,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"query-string@npm:^9.0.0":
-  version: 9.3.1
-  resolution: "query-string@npm:9.3.1"
-  dependencies:
-    decode-uri-component: "npm:^0.4.1"
-    filter-obj: "npm:^5.1.0"
-    split-on-first: "npm:^3.0.0"
-  checksum: 10c0/47f62350be7ace6d2e03d12becf5d1985731d97577963a4d8b684e166f6708cb42f63f09aa4c92931f2ee1ff57c0800a25807b95f28fd98f7064b1d06b02b07e
-  languageName: node
-  linkType: hard
-
 "queue-lit@npm:^1.5.1":
   version: 1.5.2
   resolution: "queue-lit@npm:1.5.2"
@@ -7157,13 +6950,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"split-on-first@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "split-on-first@npm:3.0.0"
-  checksum: 10c0/a1262eae12b68de235e1a08e011bf5b42c42621985ddf807e6221fb1e2b3304824913ae7019f18436b96b8fab8aef5f1ad80dedd2385317fdc51b521c3882cd0
-  languageName: node
-  linkType: hard
-
 "sprintf-js@npm:~1.0.2":
   version: 1.0.3
   resolution: "sprintf-js@npm:1.0.3"
@@ -7541,18 +7327,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-<<<<<<< HEAD
-"type-fest@npm:^5.4.3":
-  version: 5.4.3
-  resolution: "type-fest@npm:5.4.3"
-  dependencies:
-    tagged-tag: "npm:^1.0.0"
-  checksum: 10c0/daea168fbd24db08d0a616254d18b8b454f40be48fbe1c546693c367f65b2040a3507c5b0f8e19397633aa93f552dba38c39f8c730696a3eb07cd6fba8380b09
-  languageName: node
-  linkType: hard
-
-=======
->>>>>>> ff56dc6 (Test README example and add smart constructor for Mnemonic.)
 "typed-array-buffer@npm:^1.0.3":
   version: 1.0.3
   resolution: "typed-array-buffer@npm:1.0.3"
@@ -7847,15 +7621,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"uuid@npm:10.0.0":
-  version: 10.0.0
-  resolution: "uuid@npm:10.0.0"
-  bin:
-    uuid: dist/bin/uuid
-  checksum: 10c0/eab18c27fe4ab9fb9709a5d5f40119b45f2ec8314f8d4cf12ce27e4c6f4ffa4a6321dc7db6c515068fa373c075b49691ba969f0010bf37f44c37ca40cd6bf7fe
-  languageName: node
-  linkType: hard
-
 "valibot@npm:^0.38.0":
   version: 0.38.0
   resolution: "valibot@npm:0.38.0"
@@ -7927,29 +7692,6 @@ __metadata:
     "@vite-pwa/assets-generator":
       optional: true
   checksum: 10c0/d037591fc6a44b9a97f45b2452f691fce34c1c8ece4721d4f1a068f6dd7c30991b63c090a2af87d5b78d351bf5f5eee9d9dbbfc4bb39a77d3bc2ab7d2ca5df6b
-  languageName: node
-  linkType: hard
-
-"vite-plugin-top-level-await@npm:^1.6.0":
-  version: 1.6.0
-  resolution: "vite-plugin-top-level-await@npm:1.6.0"
-  dependencies:
-    "@rollup/plugin-virtual": "npm:^3.0.2"
-    "@swc/core": "npm:^1.12.14"
-    "@swc/wasm": "npm:^1.12.14"
-    uuid: "npm:10.0.0"
-  peerDependencies:
-    vite: ">=2.8"
-  checksum: 10c0/499054e67f38ce925b1bae270cc334e1ee42194d00cae084792a5a00c7f246f27f3fd7798e0d4cfe07510f1c7620288bcbcf463570e7650f57977ac0591bf8da
-  languageName: node
-  linkType: hard
-
-"vite-plugin-wasm@npm:^3.5.0":
-  version: 3.5.0
-  resolution: "vite-plugin-wasm@npm:3.5.0"
-  peerDependencies:
-    vite: ^2 || ^3 || ^4 || ^5 || ^6 || ^7
-  checksum: 10c0/39d77b60eb10aececd41e7592ef109fb3404ea1cc3275238eb627e8f3fca9796a4f501fdbee402e7f8c8cbc0aa87b4cae5efcf7fd7de75bbf194b733558661a1
   languageName: node
   linkType: hard
 
@@ -8083,7 +7825,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-<<<<<<< HEAD
 "vitest@npm:^4.0.16":
   version: 4.0.18
   resolution: "vitest@npm:4.0.18"
@@ -8143,8 +7884,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-=======
->>>>>>> ff56dc6 (Test README example and add smart constructor for Mnemonic.)
 "vitest@npm:^4.0.17":
   version: 4.0.17
   resolution: "vitest@npm:4.0.17"
