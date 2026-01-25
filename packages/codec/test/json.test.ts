@@ -6,6 +6,13 @@ import { expectOk, expectErr } from './assertions';
 
 describe('JSON Codecs', () => {
   describe('basic codecs', () => {
+    it('should handle null json correctly', () => {
+      expect(json.nullJson).toBeNull();
+      const encoded = null;
+      expect(encoded).toBeNull();
+      const decoded = expectOk(json2NullCodec.deserialise(encoded));
+      expect(decoded).toBeNull();
+    });
     it('should encode and decode strings', () => {
       const original = "hello world";
       const encoded = json2StringCodec.serialise(original);
@@ -74,7 +81,7 @@ describe('JSON Codecs', () => {
         name: json2StringCodec,
         age: json2NumberCodec
       });
-      const incomplete = json.fromObject({ name: json.fromString("Charlie") });
+      const incomplete = { name: "Charlie" };
       const result = json2personCodec.deserialise(incomplete);
       expectErr(result);
     });
@@ -85,10 +92,10 @@ describe('JSON Codecs', () => {
         age: json2NumberCodec
       });
 
-      const wrongType = json.fromObject({
-        name: json.fromString("Dave"),
-        age: json.fromString("not a number")
-      });
+      const wrongType = {
+        name: "Dave",
+        age: "not a number"
+      };
       const result = json2personCodec.deserialise(wrongType);
       expectErr(result);
     });
@@ -125,13 +132,13 @@ describe('JSON Codecs', () => {
     });
 
     it('should collect errors in nested objects', () => {
-      const invalidPerson = json.fromObject({
-        name: json.fromString("Eve"),
-        address: json.fromObject({
-          street: json.fromBigInt(123n), // invalid type
-          city: json.fromString("Metropolis")
-        })
-      });
+      const invalidPerson = {
+        name: "Eve",
+        address: {
+          street: 123n, // invalid type
+          city: "Metropolis"
+        }
+      };
       const result = json2personCodec.deserialise(invalidPerson);
       const errorJson = expectErr(result);
       expect(typeof errorJson).toBe("object");
@@ -158,23 +165,22 @@ describe('JSON Codecs', () => {
     );
 
     it('should decode first alternative successfully', () => {
-      const strValue = json.fromString("test");
+      const strValue = "test";
       const decoded = expectOk(json2StringOrNumberCodec.deserialise(strValue));
       expect(decoded).toBe("test");
     });
 
     it('should decode second alternative when first fails', () => {
-      const numValue = json.fromBigInt(42n);
+      const numValue = 42n;
       const decoded = expectOk(json2StringOrNumberCodec.deserialise(numValue));
       expect(decoded).toBe(42);
     });
 
     it('should fail when both alternatives fail', () => {
-      const boolValue = json.fromBoolean(true);
+      const boolValue = true;
       const error = expectErr(json2StringOrNumberCodec.deserialise(boolValue));
       expect(Array.isArray(error)).toBe(true);
-      error as Array<any>;
-      expect(error.length).toBe(2);
+      expect((error as Json[]).length).toBe(2);
     });
 
     it('should serialize using correct case', () => {
@@ -283,11 +289,11 @@ describe('JSON Codecs', () => {
         expect(decoded.age).toBeUndefined();
       });
       it('should store errors for complex object deserialization as JSON object', () => {
-        const invalidPerson = json.fromObject({
-          name: json.fromObject({}), // valid
-          nickname: json.fromBoolean(true), // invalid type
-          age: json.fromString("not a number") // invalid type
-        });
+        const invalidPerson = {
+          name: {}, // valid
+          nickname: true, // invalid type
+          age: "not a number" // invalid type
+        };
         const result = json2personCodec.deserialise(invalidPerson);
         const errorJson = expectErr(result);
         expect(typeof errorJson).toBe("object");

@@ -15,7 +15,7 @@ export const LOVELACE_TOTAL_SUPPLY = 45_000_000_000_000_000n;
 
 export type Lovelace = Tagged<bigint, "Lovelace">;
 export namespace Lovelace {
-  export const fromBigInt = (v: bigint) => bigInt2LovelaceCodec.deserialise(v);
+  export const fromBigInt = (v: bigint): Result<Lovelace, JsonError> => bigInt2LovelaceCodec.deserialise(v);
   export const fromJson = (v: unknown) => json2LovelaceCodec.deserialise(v);
 }
 export const bigInt2LovelaceCodec: codec.Codec<bigint, Lovelace, JsonError> = {

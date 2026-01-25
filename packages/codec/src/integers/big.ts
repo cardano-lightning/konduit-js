@@ -5,6 +5,7 @@ import type { Tagged } from 'type-fest';
 import type { Codec } from '../codec';
 import * as codec from '../codec';
 import type { Small, SmallPositive, ZeroToNine, OneToNine } from './smallish';
+import type { Json } from '../json';
 
 // Positive BigInt (> 0n)
 export type PositiveBigInt = Tagged<bigint, "PositiveBigInt">;
@@ -19,7 +20,7 @@ export namespace PositiveBigInt {
     return value as PositiveBigInt;
   }
   export const fromBigInt = (n: bigint) => bigInt2PositiveBigIntCodec.deserialise(n);
-  export const fromJson = (n: unknown) => json2PositiveBigIntCodec.deserialise(n);
+  export const fromJson = (n: Json) => json2PositiveBigIntCodec.deserialise(n);
 }
 
 export const bigInt2PositiveBigIntCodec: Codec<bigint, PositiveBigInt, JsonError> = {
@@ -48,7 +49,7 @@ export namespace NonNegativeBigInt {
   }
   export const fromBigInt = (n: bigint) => bigInt2NonNegativeBigIntCodec.deserialise(n);
   export const fromAbs = (n: bigint) => (n < 0n ? -n : n) as PositiveBigInt;
-  export const fromJson = (n: unknown) => json2NonNegativeBigIntCodec.deserialise(n);
+  export const fromJson = (n: Json) => json2NonNegativeBigIntCodec.deserialise(n);
 }
 
 export const bigInt2NonNegativeBigIntCodec: Codec<bigint, NonNegativeBigInt, JsonError> = {

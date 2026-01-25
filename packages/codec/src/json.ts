@@ -1,20 +1,18 @@
 import _JSONBig from 'json-bigint';
-import type { Tagged } from 'type-fest';
+// import type { Tagged } from 'type-fest';
 import { err, ok, type Result } from 'neverthrow';
 import { stringifyThrowable } from './neverthrow';
 
 const JSONBig = _JSONBig({ useNativeBigInt: true, alwaysParseAsBig: true });
 
-// Values of `Json` type are valid JSON values in which `bigint` and not `number` is used
-// to encode integer values.
-//
-// In essence under the hood of this fully opaque type is something along the lines of:
-// ```
-// type Json = null | boolean | string | bigint | Json[] | { [key: string]: Json };
-// ```
-// But we gain nearly nothing by exposing this full definition as TS can not handle
-// such a recursive type well.
-export type Json = Tagged<any, "Json">;
+/* `Json` type is not pleasant to work with directly because
+ * the compiler can be puzzled by the recurssion AFAIK.
+ * Please rather rely on the matchJson function and the onType helpers
+ */
+export type JsonPrimitive = string | bigint | boolean | null;
+export type JsonObject = { [key: string]: Json };
+export type JsonArray = Json[];
+export type Json = JsonPrimitive | JsonObject | JsonArray;
 
 export const parse = (text: string): Result<Json, string> => {
   return stringifyThrowable(() => JSONBig.parse(text), "Invalid JSON format");
@@ -87,29 +85,9 @@ export const onNull = <T>(def: T) => (handle: (() => T)) => (json: Json): T => {
   return def;
 }
 
-export const fromBigInt = (value: bigint): Json => {
-  return value as Json;
-}
+export const nullJson = null! as Json;
 
-export const fromString = (value: string): Json => {
-  return value as Json;
-}
-
-export const fromBoolean = (value: boolean): Json => {
-  return value as Json;
-}
-
-export const nullJson = null as Json;
-
-export const fromArray = (value: Json[]): Json => {
-  return value as Json;
-}
-
-export const fromObject = (value: { [key: string]: Json }): Json => {
-  return value as Json;
-}
-
-export const mkJSON = (data: any): Result<Json, string> => {
+export const toJson = (data: any): Result<Json, string> => {
   if (isJson(data)) {
     return ok(data as Json);
   } else {

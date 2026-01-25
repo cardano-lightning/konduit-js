@@ -1,33 +1,31 @@
 /* A tiny wrappings around the wasm which provides some more typing */
 
-// import * as wasm from "../../wasm/konduit_wasm.js";
-// export type { CardanoConnector as WasmCardanoConnector, TransactionReadyForSigning } from "../../wasm/konduit_wasm.js";
-// export { LogLevel } from "../../wasm/konduit_wasm.js";
-// import type { VKey } from "@konduit/cardano-keys";
-// import type { ChannelTag } from "./channel";
-// import { ok, err, Result } from "neverthrow";
-// import type { Milliseconds } from "../time/duration";
-// import type { Lovelace } from "../cardano";
-// import { stringifyAsyncThrowable } from "@konduit/codec/neverthrow";
-// 
+import * as wasm from "../../wasm/konduit_wasm.js";
+export type { CardanoConnector as WasmCardanoConnector, TransactionReadyForSigning } from "../../wasm/konduit_wasm.js";
+export { LogLevel } from "../../wasm/konduit_wasm.js";
+import { extractPrvScalar, SKey, type Ed25519PrvScalar, type VKey } from "@konduit/cardano-keys";
+import { Result } from "neverthrow";
+import { Lovelace } from "../cardano";
+import { stringifyAsyncThrowable } from "@konduit/codec/neverthrow";
+
 // // export const enableLogs = (level: wasm.LogLevel): void => {
 // //   wasm.enableLogs(level);
 // // };
 // // 
-// // export class Connector {
-// //   private connector: wasm.CardanoConnector;
-// // 
-// //   private constructor(connector: wasm.CardanoConnector) {
-// //     this.connector = connector;
-// //   }
-// // 
-// //   static async new(baseUrl: string): Promise<Result<Connector, string>> {
-// //     stringifyAsyncThrowable(async () => {
-// //       const connector = await wasm.CardanoConnector.new(baseUrl);
-// //       return ok(new Connector(connector));
-// //     });
-// //   }
-// // 
+export class Connector {
+  private connector: wasm.CardanoConnector;
+
+  private constructor(connector: wasm.CardanoConnector) {
+    this.connector = connector;
+  }
+
+  static async new(backendUrl: string): Promise<Result<Connector, string>> {
+    return stringifyAsyncThrowable(async () => {
+      const connector = await wasm.CardanoConnector.new(backendUrl);
+      return new Connector(connector);
+    });
+  }
+
 // //   async open(
 // //     tag: ChannelTag,
 // //     consumer: VKey,
@@ -73,25 +71,23 @@
 // // 
 // // 
 // //   }
-// // 
-// //   async signAndSubmit(
-// //     transaction: wasm.TransactionReadyForSigning,
-// //     signingKey: Ed25519VKey,
-// //   ): Promise<Result<void, ConnectorError>> {
-// //     try {
-// //       await this.cardanoConnector.signAndSubmit(transaction, signingKey);
-// //       return ok(undefined);
-// //     } catch (error) {
-// //       return err(wrapError(error));
-// //     }
-// //   }
-// // 
-// //   async balance(verificationKey: Ed25519VKey): Promise<Result<Lovelace, ConnectorError>> {
-// //     try {
-// //       const balance = await this.cardanoConnector.balance(verificationKey as Uint8Array);
-// //       return ok(balance as Lovelace);
-// //     } catch (error) {
-// //       return err(wrapError(error));
-// //     }
-// //   }
-// // }
+
+    async signAndSubmit(
+      transaction: wasm.TransactionReadyForSigning,
+      sKey: SKey,
+    ): Promise<Result<void, string>> {
+      const keyScalar: Ed25519PrvScalar = extractPrvScalar(sKey.getKey());
+      return stringifyAsyncThrowable(async () => {
+        await this.connector.signAndSubmit(transaction, keyScalar);
+      });
+    }
+
+    async balance(vKey: VKey): Promise<Result<Lovelace, void>> {
+      const result = await stringifyAsyncThrowable(async () => {
+         return await this.connector.balance(vKey.getKey());
+      });
+      return result.andThen((balance: bigint) => {
+        return Lovelace.fromBigInt(balance);
+      });
+    }
+}

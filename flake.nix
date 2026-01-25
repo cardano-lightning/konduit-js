@@ -47,6 +47,12 @@
           treefmt.enable = true;
         };
         devShells.default = let
+          vitest = pkgs.writeShellScriptBin "vitest"
+            ''
+              #!/usr/bin/env bash
+              root=$(git rev-parse --show-toplevel)
+              node $root/node_modules/vitest/vitest.mjs $@
+            '';
           vtsls =
             pkgs.writeShellScriptBin "vtsls"
             ''
@@ -88,6 +94,7 @@
               pkgs.yarn-bash-completion
               pkgs.nodePackages_latest.nodejs
               pkgs.typescript-language-server
+              vitest
               vtsls
               vue-language-server
               vue-tsc

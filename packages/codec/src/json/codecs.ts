@@ -1,12 +1,11 @@
 import { err, ok, type Result } from "neverthrow";
-import type { Tagged } from "type-fest";
 import type { Json } from "../json";
-import { onBigInt, onBoolean, onArray, onObject, onNull, fromBoolean, fromString, nullJson, fromBigInt, onString, fromArray } from "../json";
+import { onBigInt, onBoolean, onArray, onObject, onNull, nullJson, onString } from "../json";
 import * as json from "../json";
 import { altCodec, type Codec, type Deserialiser, type Serialiser } from "../codec";
 
 // We actually represent parsing errors as JSON too :-P
-export type JsonError = Tagged<Json, 'JsonError'>;
+export type JsonError = Json;
 
 export const toJsonError = (error: Json): JsonError => {
   return error as JsonError;
@@ -22,7 +21,7 @@ export const mkParser = <T>(codec: JsonCodec<T>): (jsonStr: string) => Result<T,
   return (jsonStr: string): Result<T, JsonError> => {
     return json.parse(jsonStr).match(
       (parsedJson) => codec.deserialise(parsedJson),
-      (parseErr) => err(fromString(parseErr) as JsonError)
+      (parseErr) => err(parseErr)
     );
   }
 };
@@ -49,19 +48,19 @@ export const json2NumberCodec: JsonCodec<number> = {
     }
     return ok(num);
   }),
-  serialise: (value: number) => fromBigInt(BigInt(Math.round(value)))
+  serialise: (value: number) => BigInt(Math.round(value))
 };
 
 // Codec for boolean
 export const json2BooleanCodec: JsonCodec<boolean> = {
   deserialise: onBoolean(err("Expected boolean") as Result<boolean, JsonError>)(ok),
-  serialise: fromBoolean
+  serialise: (value: boolean) => value
 };
 
 // Codec for string
 export const json2StringCodec: JsonCodec<string> = {
   deserialise: onString(err("Expected string") as Result<string, JsonError>)(ok),
-  serialise: fromString
+  serialise: (value: string) => value
 };
 
 // Codec for null
@@ -73,7 +72,7 @@ export const json2NullCodec: JsonCodec<null> = {
 // Codec for array (identity - keeps Json[] as is)
 export const json2ArrayCodec: JsonCodec<Json[]> = {
   deserialise: onArray(err("Expected array") as Result<Json[], JsonError>)(ok),
-  serialise: (value: Json[]) => value as Json
+  serialise: (value: Json[]) => value
 };
 
 // Codec for object (identity - keeps object as is)
@@ -91,7 +90,7 @@ export const altJsonCodecs = <O1, O2>(
     combineErrs = (err1: JsonError, err2: JsonError): JsonError => {
       const arr1 = Array.isArray(err1) ? err1 : [err1];
       const arr2 = Array.isArray(err2) ? err2 : [err2];
-      return fromArray([...arr1, ...arr2]);
+      return [...arr1, ...arr2];
     };
   return altCodec<Json, O1, O2, JsonError>(
     first,
@@ -132,7 +131,7 @@ export const objectOf = <T extends Record<string, JsonCodec<any>>>(
   return {
     deserialise: (data: Json): Result<CodecsToObject<T>, JsonError> => {
       // Check if input is an object
-      return onObject(err(fromString("Expected object")) as Result<{ [key: string]: Json }, JsonError>)(ok)(data).match(
+      return onObject(err("Expected object") as Result<{ [key: string]: Json }, JsonError>)(ok)(data).match(
         (obj) => {
           const result: any = {};
           const errors: { [key: string]: Json } = {};
@@ -153,7 +152,7 @@ export const objectOf = <T extends Record<string, JsonCodec<any>>>(
             );
           }
           if (hasErrors) {
-            return err(json.fromObject(errors));
+            return err(errors);
           }
           return ok(result as CodecsToObject<T>);
         },
@@ -169,7 +168,7 @@ export const objectOf = <T extends Record<string, JsonCodec<any>>>(
           result[fieldName] = fieldCodec.serialise(fieldValue);
         }
       }
-      return json.fromObject(result);
+      return result;
     }
   };
 };

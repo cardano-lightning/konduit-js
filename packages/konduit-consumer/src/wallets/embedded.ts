@@ -1,13 +1,13 @@
 import type { Json } from "@konduit/codec/json";
 import * as codec from "@konduit/codec";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
-import { Address, AddressBech32, Lovelace, mainnet, TxHash } from "./cardano";
+import { Address, AddressBech32, Lovelace, mainnet, TxHash } from "../cardano";
 import type { Ed25519Prv, Mnemonic } from "@konduit/cardano-keys";
 import { generateMnemonic, KeyIndex, KeyRole, RootPrivateKey, WalletIndex } from "@konduit/cardano-keys";
 import { NonNegativeInt } from "@konduit/codec/integers/smallish";
-import { Milliseconds, type Seconds } from "./time/duration";
-import type { TransactionReadyForSigning } from "../wasm/konduit_wasm";
-import { json2RootPrivateKeyCodec } from "./cardano/codecs";
+import { Milliseconds, type Seconds } from "../time/duration";
+import type { TransactionReadyForSigning } from "../../wasm/konduit_wasm";
+import { json2RootPrivateKeyCodec } from "../cardano/codecs";
 
 type WalletEvent<T> = CustomEvent<T>;
 
@@ -16,6 +16,8 @@ export type WalletEvents = {
   "tx-submitted": { txHash: TxHash, context?: Json };
 };
 
+// We separate this tiny interface so we can plug in quickly not only cardano-connector
+// but also blockfrost or mock connectors for testing.
 export type ChainConnector = {
   getBalance: (addr: AddressBech32) => Promise<Lovelace>;
   signAndSubmit: (tx: TransactionReadyForSigning, sKey: Ed25519Prv) => Promise<TxHash>;
@@ -138,7 +140,9 @@ export class Wallet {
     return txHash;
   }
 
-  public static walletCodec(connectorCodec: jsonCodecs.JsonCodec<ChainConnector>) {
+  // A bit convoluted - we keep that method on the class level so it can access private
+  // members, but in general it could be considered a stand alone function.
+  public static mkWalletCodec(connectorCodec: jsonCodecs.JsonCodec<ChainConnector>) {
     const walletRecordCodec = jsonCodecs.objectOf({
       // Don't ask me why we store the private key in a plain text :-P
       root_private_key: json2RootPrivateKeyCodec,
@@ -155,14 +159,6 @@ export class Wallet {
       })
     );
   }
-
-  public serialise(connectorCodec: jsonCodecs.JsonCodec<ChainConnector>): Json {
-    const walletCodec = Wallet.walletCodec(connectorCodec);
-    return walletCodec.serialise(this);
-  }
-
-  public static deserialise(json: Json, connectorCodec: jsonCodecs.JsonCodec<ChainConnector>) {
-    return this.walletCodec(connectorCodec).deserialise(json);
-  }
 }
+
 

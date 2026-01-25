@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import * as json from '../src/json';
 import * as smallish from '../src/integers/smallish';
 import * as big from '../src/integers/big';
 import { expectOk, expectErr } from './assertions';
@@ -7,14 +6,14 @@ import { expectOk, expectErr } from './assertions';
 describe('Integer Codecs', () => {
   describe('Int codec', () => {
     it('should successfully deserialize valid safe integer', () => {
-      const validInt = json.fromBigInt(42n);
+      const validInt = 42n;
       const result = smallish.json2IntCodec.deserialise(validInt);
       const decoded = expectOk(result);
       expect(decoded).toBe(42);
     });
 
     it('should fail to deserialize integer outside safe range', () => {
-      const tooBig = json.fromBigInt(BigInt(Number.MAX_SAFE_INTEGER) + 100n);
+      const tooBig = BigInt(BigInt(Number.MAX_SAFE_INTEGER) + 100n);
       const result = smallish.json2IntCodec.deserialise(tooBig);
       expectErr(result);
     });
@@ -44,20 +43,20 @@ describe('Integer Codecs', () => {
 
   describe('PositiveInt codec', () => {
     it('should successfully deserialize positive integer', () => {
-      const positiveInt = json.fromBigInt(100n);
+      const positiveInt = 100n;
       const result = smallish.json2PositiveIntCodec.deserialise(positiveInt);
       const decoded = expectOk(result);
       expect(decoded).toBe(100);
     });
 
     it('should fail to deserialize zero', () => {
-      const zero = json.fromBigInt(0n);
+      const zero = 0n;
       const result = smallish.json2PositiveIntCodec.deserialise(zero);
       expectErr(result);
     });
 
     it('should fail to deserialize negative integer', () => {
-      const negative = json.fromBigInt(-5n);
+      const negative = -5n;
       const result = smallish.json2PositiveIntCodec.deserialise(negative);
       expectErr(result);
     });
@@ -85,21 +84,21 @@ describe('Integer Codecs', () => {
 
   describe('NonNegativeInt codec', () => {
     it('should successfully deserialize zero', () => {
-      const zero = json.fromBigInt(0n);
+      const zero = 0n;
       const result = smallish.json2NonNegativeIntCodec.deserialise(zero);
       const decoded = expectOk(result);
       expect(decoded).toBe(0);
     });
 
     it('should successfully deserialize positive integer', () => {
-      const positive = json.fromBigInt(50n);
+      const positive = 50n;
       const result = smallish.json2NonNegativeIntCodec.deserialise(positive);
       const decoded = expectOk(result);
       expect(decoded).toBe(50);
     });
 
     it('should fail to deserialize negative integer', () => {
-      const negative = json.fromBigInt(-10n);
+      const negative = -10n;
       const result = smallish.json2NonNegativeIntCodec.deserialise(negative);
       expectErr(result);
     });
@@ -127,20 +126,20 @@ describe('Integer Codecs', () => {
 
   describe('PositiveBigInt codec', () => {
     it('should successfully deserialize positive bigint', () => {
-      const positiveBigInt = json.fromBigInt(1000000000000n);
+      const positiveBigInt = 1000000000000n;
       const result = big.json2PositiveBigIntCodec.deserialise(positiveBigInt);
       const decoded = expectOk(result);
       expect(decoded).toBe(1000000000000n);
     });
 
     it('should fail to deserialize zero', () => {
-      const zero = json.fromBigInt(0n);
+      const zero = 0n;
       const result = big.json2PositiveBigIntCodec.deserialise(zero);
       expectErr(result);
     });
 
     it('should fail to deserialize negative bigint', () => {
-      const negative = json.fromBigInt(-999n);
+      const negative = -999n;
       const result = big.json2PositiveBigIntCodec.deserialise(negative);
       expectErr(result);
     });
@@ -153,8 +152,8 @@ describe('Integer Codecs', () => {
     });
 
     it('should construct PositiveBigInt from small number', () => {
-      const value = big.PositiveBigInt.fromSmallNumber(42);
-      expect(value).toBe(42n);
+      const value = big.PositiveBigInt.fromSmallNumber(40);
+      expect(value).toBe(40n);
     });
 
     it('should construct PositiveBigInt from single digit', () => {
@@ -170,21 +169,21 @@ describe('Integer Codecs', () => {
 
   describe('NonNegativeBigInt codec', () => {
     it('should successfully deserialize zero', () => {
-      const zero = json.fromBigInt(0n);
+      const zero = 0n;
       const result = big.json2NonNegativeBigIntCodec.deserialise(zero);
       const decoded = expectOk(result);
       expect(decoded).toBe(0n);
     });
 
     it('should successfully deserialize positive bigint', () => {
-      const positive = json.fromBigInt(999999999999n);
+      const positive = 999999999999n;
       const result = big.json2NonNegativeBigIntCodec.deserialise(positive);
       const decoded = expectOk(result);
       expect(decoded).toBe(999999999999n);
     });
 
     it('should fail to deserialize negative bigint', () => {
-      const negative = json.fromBigInt(-1n);
+      const negative = -1n;
       const result = big.json2NonNegativeBigIntCodec.deserialise(negative);
       expectErr(result);
     });

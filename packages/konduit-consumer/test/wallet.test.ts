@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { Wallet, type ChainConnector } from '../src/wallet';
+import { Wallet, type ChainConnector } from '../src/wallets/embedded';
 import { Lovelace, type TxHash, type AddressBech32 } from '../src/cardano';
 import { generateMnemonic } from '@konduit/cardano-keys';
 import type { TransactionReadyForSigning } from '../wasm/konduit_wasm';
@@ -77,7 +77,7 @@ describe('Wallet Events', () => {
 
     // Create dummy transaction (opaque object)
     const dummyTx = { type: 'dummy-tx' } as unknown as TransactionReadyForSigning;
-    const context = { purpose: 'test-payment', amount: 500000 };
+    const context = { purpose: 'test-payment', amount: 500000n };
 
     // Submit transaction with context
     const txHash1 = await wallet.signAndSubmit(dummyTx, context);
