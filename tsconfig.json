@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2023",
-    "lib": ["ES2023"],
+    "lib": ["ES2023", "DOM"],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "esModuleInterop": true,
@@ -16,6 +16,8 @@
   "references": [
     { "path": "./packages/bln" },
     { "path": "./packages/cardano-keys" },
+    { "path": "./packages/codec" },
+    { "path": "./packages/koduit-consumer" },
     { "path": "./apps/bln-cli" },
     { "path": "./apps/konduit-app" }
   ]

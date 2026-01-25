@@ -1,0 +1,35 @@
+{
+  "dependencies": {
+    "@konduit/cardano-keys": "workspace:^",
+    "@konduit/codec": "workspace:^",
+    "@scure/base": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.4",
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^4.0.16"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "wasm"
+  ],
+  "main": "dist/index.js",
+  "module": "dist/index.es.js",
+  "name": "@konduit/konduit-consumer",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite --build",
+    "test": "vitest"
+  },
+  "type": "module",
+  "version": "0.0.1"
+}
