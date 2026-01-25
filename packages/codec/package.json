@@ -1,0 +1,62 @@
+{
+  "dependencies": {
+    "json-bigint": "^1.0.0",
+    "neverthrow": "^8.2.0"
+  },
+  "devDependencies": {
+    "@types/json-bigint": "^1",
+    "@types/node": "^24.10.1",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.4",
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^4.0.17"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./hexString": {
+      "types": "./dist/hexString.d.ts",
+      "default": "./dist/hexString.js"
+    },
+    "./uint8Array": {
+      "types": "./dist/uint8Array.d.ts",
+      "default": "./dist/uint8Array.js"
+    },
+    "./integers/big": {
+      "types": "./dist/integers/big.d.ts",
+      "default": "./dist/integers/big.js"
+    },
+    "./integers/smallish": {
+      "types": "./dist/integers/smallish.d.ts",
+      "default": "./dist/integers/smallish.js"
+    },
+    "./json": {
+      "types": "./dist/json.d.ts",
+      "default": "./dist/json.js"
+    },
+    "./json/codecs": {
+      "types": "./dist/json/codecs.d.ts",
+      "default": "./dist/json/codecs.js"
+    },
+    "./neverthrow": {
+      "types": "./dist/neverthrow.d.ts",
+      "default": "./dist/neverthrow.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "main": "dist/index.js",
+  "module": "dist/index.es.js",
+  "name": "@konduit/codec",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --build",
+    "test": "vitest"
+  },
+  "type": "module",
+  "version": "0.0.0"
+}
