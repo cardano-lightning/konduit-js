@@ -1,6 +1,6 @@
 // Extra helpers for neverthrow library
 
-import { err, ok, Result } from "neverthrow";
+import { err, errAsync, ok, okAsync, Result, ResultAsync } from "neverthrow";
 
 // Try to stringify the exception and append that to the message if provided
 export const stringifyThrowable = <T>(fn: () => T, message: string = ""): Result<T, string> => {
@@ -23,3 +23,11 @@ export const stringifyAsyncThrowable = async <T>(fn: () => Promise<T>, message: 
     return err(fullMessage);
   }
 }
+
+export const resultToResultAsync = <T, E>(result: Result<T, E>): ResultAsync<T, E> => {
+  return result.match(
+    (value) => okAsync(value),
+    (error) => errAsync(error)
+  );
+}
+

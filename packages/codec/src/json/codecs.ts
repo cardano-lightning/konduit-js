@@ -1,8 +1,9 @@
-import { err, ok, type Result } from "neverthrow";
+import { err, ok, ResultAsync, type Result } from "neverthrow";
 import type { Json } from "../json";
 import { onBigInt, onBoolean, onArray, onObject, onNull, nullJson, onString } from "../json";
 import * as json from "../json";
 import { altCodec, type Codec, type Deserialiser, type Serialiser } from "../codec";
+import type { AsyncCodec } from "../codec/async";
 
 // We actually represent parsing errors as JSON too :-P
 export type JsonError = Json;
@@ -16,6 +17,12 @@ export type JsonSerialiser<O> = Serialiser<O, Json>;
 export type JsonDeserialiser<O> = Deserialiser<Json, O, JsonError>;
 
 export type JsonCodec<O> = Codec<Json, O, JsonError>;
+
+// We provide types for async codecs too but you should
+// hoist sync codecs to async yourself using hoistCodec.
+export type JsonAsyncDeserialiser<O> = (i: Json) => ResultAsync<O, JsonError>;
+
+export type JsonAsyncCodec<O> = AsyncCodec<Json, O, JsonError>;
 
 export const mkParser = <T>(codec: JsonCodec<T>): (jsonStr: string) => Result<T, JsonError> => {
   return (jsonStr: string): Result<T, JsonError> => {
@@ -116,6 +123,37 @@ export const optional = <O>(codec: JsonCodec<O>): JsonCodec<O | undefined> => {
     }
   };
 };
+
+export const nullable = <O>(codec: JsonCodec<O>): JsonCodec<O | null> => {
+  return {
+    deserialise: (data: Json): Result<O | null, JsonError> => {
+      if (data === null) {
+        return ok(null);
+      }
+      return codec.deserialise(data).map(value => value as O | null);
+    },
+    serialise: (value: O | null): Json => {
+      if (value === null) {
+        return nullJson;
+      }
+      return codec.serialise(value);
+    }
+  };
+}
+
+export const constant = <C extends string | number | boolean | bigint>(constant: C): JsonCodec<C> => {
+  return {
+    deserialise: (data: Json): Result<C, JsonError> => {
+      if (data === constant) {
+        return ok(constant);
+      }
+      return err(`Expected constant value ${constant}, got ${JSON.stringify(data)}`);
+    },
+    serialise: (_value: C): Json => {
+      return constant as Json;
+    }
+  };
+}
 
 // Type to extract the output type from a codec
 type CodecOutput<C> = C extends JsonCodec<infer O> ? O : never;

@@ -1,4 +1,4 @@
-import { err, ok, type Result } from "neverthrow";
+import { ok, type Result } from "neverthrow";
 
 export type Deserialiser<I, O, E> = (i: I) => Result<O, E>;
 
@@ -31,6 +31,13 @@ export const compose = <I, M, O, E>(
   first: Codec<I, M, E>
 ): Codec<I, O, E> => {
   return pipe(first, second);
+}
+
+export const mkIdentityCodec = <I, E>(): Codec<I, I, E> => {
+  return {
+    deserialise: (input: I): Result<I, E> => ok(input),
+    serialise: (output: I): I => output
+  };
 }
 
 // Profunctor (tfu!) like mappings from both sides
@@ -93,13 +100,9 @@ export const altCodec = <I, O1, O2, E>(
 ): Codec<I, O1 | O2, E> => {
   return {
     deserialise: (input: I): Result<O1 | O2, E> =>
-      first.deserialise(input).match(
-        (res) => ok(res),
-        (err1) => second.deserialise(input).match(
-          (res) => ok(res),
-          (err2) => err(combineErrs(err1, err2))
-        )
-    ),
+      first.deserialise(input).orElse(
+        (err1) => second.deserialise(input).mapErr(
+          (err2) => combineErrs(err1, err2))),
     serialise: (output: O1 | O2): I => {
       const ser = caseSerialisers(first.serialise, second.serialise);
       return ser(output);

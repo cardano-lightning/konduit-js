@@ -4,25 +4,37 @@ import * as wasm from "../../wasm/konduit_wasm.js";
 export type { CardanoConnector as WasmCardanoConnector, TransactionReadyForSigning } from "../../wasm/konduit_wasm.js";
 export { LogLevel } from "../../wasm/konduit_wasm.js";
 import { extractPrvScalar, SKey, type Ed25519PrvScalar, type VKey } from "@konduit/cardano-keys";
-import { Result } from "neverthrow";
-import { Lovelace } from "../cardano";
+import { err, ok, Result } from "neverthrow";
+import { Lovelace, NetworkMagicNumber, TxHash } from "../cardano";
 import { stringifyAsyncThrowable } from "@konduit/codec/neverthrow";
+import type { JsonError } from "@konduit/codec/json/codecs";
+import { PositiveBigInt } from "@konduit/codec/integers/big";
 
-// // export const enableLogs = (level: wasm.LogLevel): void => {
-// //   wasm.enableLogs(level);
-// // };
-// // 
+export const enableLogs = (level: wasm.LogLevel): void => {
+  wasm.enableLogs(level);
+};
+
 export class Connector {
   private connector: wasm.CardanoConnector;
+  public readonly networkMagicNumber: NetworkMagicNumber;
 
-  private constructor(connector: wasm.CardanoConnector) {
+  private constructor(connector: wasm.CardanoConnector, networkMagicNumber: NetworkMagicNumber) {
     this.connector = connector;
+    this.networkMagicNumber = networkMagicNumber;
   }
 
   static async new(backendUrl: string): Promise<Result<Connector, string>> {
-    return stringifyAsyncThrowable(async () => {
-      const connector = await wasm.CardanoConnector.new(backendUrl);
-      return new Connector(connector);
+    const possibleConnector = await stringifyAsyncThrowable(async () => wasm.CardanoConnector.new(backendUrl));
+    return possibleConnector.andThen((connector: wasm.CardanoConnector) => {
+      return PositiveBigInt.fromBigInt(connector.network_magic_number).match(
+        (positive) => {
+          let networkMagicNumber = NetworkMagicNumber.fromPositiveBigInt(positive);
+          return ok(new Connector(connector, networkMagicNumber));
+        },
+        () => {
+          return err(`Invalid network magic number: ${connector.network_magic_number}`);
+        }
+      );
     });
   }
 
@@ -75,16 +87,17 @@ export class Connector {
     async signAndSubmit(
       transaction: wasm.TransactionReadyForSigning,
       sKey: SKey,
-    ): Promise<Result<void, string>> {
+    ): Promise<Result<TxHash, string>> {
       const keyScalar: Ed25519PrvScalar = extractPrvScalar(sKey.getKey());
-      return stringifyAsyncThrowable(async () => {
-        await this.connector.signAndSubmit(transaction, keyScalar);
-      });
+      const possibleTxHashBytes = await stringifyAsyncThrowable(async () => this.connector.signAndSubmit(transaction, keyScalar));
+      return possibleTxHashBytes.andThen(
+        (txHashBytes) => TxHash.fromBytes(txHashBytes),
+      );
     }
 
-    async balance(vKey: VKey): Promise<Result<Lovelace, void>> {
+    async balance(vkey: VKey): Promise<Result<Lovelace, JsonError>> {
       const result = await stringifyAsyncThrowable(async () => {
-         return await this.connector.balance(vKey.getKey());
+         return await this.connector.balance(vkey.getKey());
       });
       return result.andThen((balance: bigint) => {
         return Lovelace.fromBigInt(balance);

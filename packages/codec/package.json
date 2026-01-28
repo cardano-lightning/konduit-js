@@ -16,6 +16,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./async": {
+      "types": "./dist/codec/async.d.ts",
+      "default": "./dist/codec/async.js"
+    },
     "./hexString": {
       "types": "./dist/hexString.d.ts",
       "default": "./dist/hexString.js"

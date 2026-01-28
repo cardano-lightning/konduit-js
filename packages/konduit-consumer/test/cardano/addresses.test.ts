@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as addresses from '../../src/cardano/addressses';
+import { Network } from '../../src/cardano/addressses';
 import { expectOk, expectErrWithSubstring } from '../assertions';
 import { parse } from '@konduit/codec/json';
 import { bech32 } from '@scure/base';
@@ -68,7 +69,7 @@ describe('Cardano Addresses', () => {
     describe('mainnet addresses', () => {
       it('should encode PubKeyHash/PubKeyHash address (type 0x00)', () => {
         const address: addresses.Address = {
-          network: addresses.mainnet,
+          network: Network.MAINNET,
           paymentCredential: { type: "PubKeyHash", hash: testPaymentHash },
           stakingCredential: { type: "PubKeyHash", hash: testStakingHash }
         };
@@ -78,7 +79,7 @@ describe('Cardano Addresses', () => {
 
       it('should encode ScriptHash/PubKeyHash address (type 0x01)', () => {
         const address: addresses.Address = {
-          network: addresses.mainnet,
+          network: Network.MAINNET,
           paymentCredential: { type: "ScriptHash", hash: testScriptHash },
           stakingCredential: { type: "PubKeyHash", hash: testStakingHash }
         };
@@ -88,7 +89,7 @@ describe('Cardano Addresses', () => {
 
       it('should encode PubKeyHash/ScriptHash address (type 0x02)', () => {
         const address: addresses.Address = {
-          network: addresses.mainnet,
+          network: Network.MAINNET,
           paymentCredential: { type: "PubKeyHash", hash: testPaymentHash },
           stakingCredential: { type: "ScriptHash", hash: testScriptHash }
         };
@@ -98,7 +99,7 @@ describe('Cardano Addresses', () => {
 
       it('should encode ScriptHash/ScriptHash address (type 0x03)', () => {
         const address: addresses.Address = {
-          network: addresses.mainnet,
+          network: Network.MAINNET,
           paymentCredential: { type: "ScriptHash", hash: testScriptHash },
           stakingCredential: { type: "ScriptHash", hash: testScriptHash }
         };
@@ -108,7 +109,7 @@ describe('Cardano Addresses', () => {
 
       it('should encode PubKeyHash without staking credential (type 0x06)', () => {
         const address: addresses.Address = {
-          network: addresses.mainnet,
+          network: Network.MAINNET,
           paymentCredential: { type: "PubKeyHash", hash: testPaymentHash }
         };
         const bech32 = addresses.AddressBech32.fromAddress(address);
@@ -117,7 +118,7 @@ describe('Cardano Addresses', () => {
 
       it('should encode ScriptHash without staking credential (type 0x07)', () => {
         const address: addresses.Address = {
-          network: addresses.mainnet,
+          network: Network.MAINNET,
           paymentCredential: { type: "ScriptHash", hash: testScriptHash }
         };
         const bech32 = addresses.AddressBech32.fromAddress(address);
@@ -128,7 +129,7 @@ describe('Cardano Addresses', () => {
     describe('testnet addresses', () => {
       it('should encode testnet address with correct prefix', () => {
         const address: addresses.Address = {
-          network: addresses.testnet,
+          network: Network.TESTNET,
           paymentCredential: { type: "PubKeyHash", hash: testPaymentHash },
           stakingCredential: { type: "PubKeyHash", hash: testStakingHash }
         };
@@ -150,7 +151,7 @@ describe('Cardano Addresses', () => {
 
         for (const [payment, staking] of types) {
           const address: addresses.Address = {
-            network: addresses.mainnet,
+            network: Network.MAINNET,
             paymentCredential: payment,
             stakingCredential: staking
           };
@@ -198,7 +199,7 @@ describe('Cardano Addresses', () => {
   describe('json2AddressCodec', () => {
     it('should deserialize JSON string to Address', () => {
       const address: addresses.Address = {
-        network: addresses.mainnet,
+        network: Network.MAINNET,
         paymentCredential: { type: "PubKeyHash", hash: new Uint8Array(28).fill(0x55) as addresses.PubKeyHash },
         stakingCredential: { type: "PubKeyHash", hash: new Uint8Array(28).fill(0x66) as addresses.PubKeyHash }
       };
@@ -210,7 +211,7 @@ describe('Cardano Addresses', () => {
 
     it('should serialize Address to JSON string', () => {
       const address: addresses.Address = {
-        network: addresses.testnet,
+        network: Network.TESTNET,
         paymentCredential: { type: "ScriptHash", hash: new Uint8Array(28).fill(0x77) as addresses.ScriptHash }
       };
       const json = addresses.json2AddressCodec.serialise(address);
@@ -220,7 +221,7 @@ describe('Cardano Addresses', () => {
 
     it('should round through JSON', () => {
       const original: addresses.Address = {
-        network: addresses.mainnet,
+        network: Network.MAINNET,
         paymentCredential: { type: "PubKeyHash", hash: new Uint8Array(28).fill(0x88) as addresses.PubKeyHash },
         stakingCredential: { type: "ScriptHash", hash: new Uint8Array(28).fill(0x99) as addresses.ScriptHash }
       };

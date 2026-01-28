@@ -1,32 +1,49 @@
+import type { Tagged } from "type-fest";
 import { describe, it, expect, beforeEach } from 'vitest';
-import { Wallet, type ChainConnector } from '../src/wallets/embedded';
-import { Lovelace, type TxHash, type AddressBech32 } from '../src/cardano';
-import { generateMnemonic } from '@konduit/cardano-keys';
+import { ok, type Result } from "neverthrow";
+import { Wallet, type ChainConnectorBase } from '../src/wallets/embedded';
+import { Lovelace, NetworkMagicNumber, type TxHash} from '../src/cardano';
+import { Ed25519Pub, generateMnemonic, VKey } from '@konduit/cardano-keys';
 import type { TransactionReadyForSigning } from '../wasm/konduit_wasm';
 import { Milliseconds, Seconds } from '../src/time/duration';
+import { JsonError } from '@konduit/codec/json/codecs';
+import { PositiveBigInt } from '@konduit/codec/integers/big';
+import { HexString } from '@konduit/codec/hexString';
+import { expectOk, expectToBe } from "./assertions";
+
+type Ed25519PubHex = Tagged<HexString, "Ed25519PubHex">;
+namespace Ed25519PubHex {
+  export function fromEd25519Pub(pub: Ed25519Pub): Ed25519PubHex {
+    return HexString.fromUint8Array(pub) as Ed25519PubHex;
+  }
+  export function fromVKey(vKey: VKey): Ed25519PubHex {
+    return fromEd25519Pub(vKey.getKey());
+  }
+}
 
 // Mock ChainConnector for testing
-class MockChainConnector implements ChainConnector {
-  private balances = new Map<AddressBech32, Lovelace>();
+class MockChainConnector implements ChainConnectorBase {
+  private balances = new Map<Ed25519PubHex, Lovelace>();
   private txCounter = 0;
+  public readonly networkMagicNumber = NetworkMagicNumber.fromPositiveBigInt(PositiveBigInt.fromDigits(6, 6, 6));
 
-  setBalance(addr: AddressBech32, balance: Lovelace): void {
-    this.balances.set(addr, balance);
+  setBalance(addr: VKey, balance: Lovelace): void {
+    this.balances.set(Ed25519PubHex.fromVKey(addr), balance);
   }
 
-  async getBalance(addr: AddressBech32): Promise<Lovelace> {
-    return this.balances.get(addr) ?? (0n as Lovelace);
+  async getBalance(vKey: VKey): Promise<Result<Lovelace, JsonError>> {
+    return ok(this.balances.get(Ed25519PubHex.fromVKey(vKey)) || 0n as Lovelace);
   }
 
-  async signAndSubmit(_tx: TransactionReadyForSigning, _sKey: any): Promise<TxHash> {
+  async signAndSubmit(_tx: TransactionReadyForSigning, _sKey: any): Promise<Result<TxHash, JsonError>> {
     this.txCounter++;
-    return  (new Uint8Array(32).fill(0x00)) as TxHash;
+    return ok((new Uint8Array(32).fill(0x00)) as TxHash);
   }
 }
 
 describe('Wallet Events', () => {
   let mockConnector: MockChainConnector;
-  let wallet: Wallet;
+  let wallet: Wallet<MockChainConnector>;
 
   beforeEach(async () => {
     mockConnector = new MockChainConnector();
@@ -35,14 +52,14 @@ describe('Wallet Events', () => {
   });
 
   it('should emit balance-changed event when balance updates via polling', async () => {
-    const balanceChanges: Array<{ oldBalance?: Lovelace; newBalance: Lovelace }> = [];
+    const balanceChanges: Array<{ newBalance: Lovelace }> = [];
 
     const unsubscribe = wallet.subscribe('balance-changed', (payload) => {
       balanceChanges.push(payload);
     });
 
     // Set initial balance
-    mockConnector.setBalance(wallet.addressBech32, 1000000n as Lovelace);
+    mockConnector.setBalance(wallet.vKey, 1000000n as Lovelace);
 
     let pollingInterval = Seconds.fromSmallNumber(1);
 
@@ -54,7 +71,7 @@ describe('Wallet Events', () => {
     await new Promise(resolve => setTimeout(resolve, pollingCheckDelay));
 
     // Change balance
-    mockConnector.setBalance(wallet.addressBech32, 2000000n as Lovelace);
+    mockConnector.setBalance(wallet.vKey, 2000000n as Lovelace);
 
     // Wait for second poll
     await new Promise(resolve => setTimeout(resolve, pollingCheckDelay));
@@ -80,10 +97,10 @@ describe('Wallet Events', () => {
     const context = { purpose: 'test-payment', amount: 500000n };
 
     // Submit transaction with context
-    const txHash1 = await wallet.signAndSubmit(dummyTx, context);
+    const txHash1 = expectOk(await wallet.signAndSubmit(dummyTx, context));
 
     // Submit transaction without context
-    const txHash2 = await wallet.signAndSubmit(dummyTx);
+    const txHash2 = expectOk(await wallet.signAndSubmit(dummyTx));
 
     unsubscribe();
 
@@ -95,7 +112,7 @@ describe('Wallet Events', () => {
     expect(txSubmissions[0].context).toEqual(context);
 
     // Second submission without context
-    expect(txSubmissions[1].txHash).toBe(txHash2);
+    expectToBe(txSubmissions[1].txHash, txHash2);
     expect(txSubmissions[1].context).toBeUndefined();
   });
 });

@@ -1,5 +1,7 @@
 import { Result } from 'neverthrow';
 import { onString } from '@konduit/codec/json';
+import { JsonError } from '@konduit/codec/json/codecs';
+import { expect } from 'vitest';
 
 export const expectOk = <T, Err>(result: Result<T, Err>, msgTemplate?: string): T => {
   const mkMessage = (err: any) => {
@@ -24,7 +26,11 @@ const expectErrWith = <T, E>(result: Result<T, E>, onErr: (error: E) => boolean)
   );
 }
 
-export const expectErrWithSubstring = <T, E>(result: Result<T, E>, substring: string): E => {
+export const expectErr = <T, E>(result: Result<T, E>): E => {
+  return expectErrWith(result, (_error) => true);
+}
+
+export const expectErrWithSubstring = <T>(result: Result<T, JsonError>, substring: string): JsonError => {
   return expectErrWith(result, (error) => {
     return onString((_) => false)((errStr: string) => {
       return errStr.includes(substring);
@@ -32,7 +38,15 @@ export const expectErrWithSubstring = <T, E>(result: Result<T, E>, substring: st
   });
 }
 
-export const expectErr = <T, E>(result: Result<T, E>): E => {
-  return expectErrWith(result, (_error) => true);
+// TYPE SAFE versions of expects:
+export const expectToBe = <T>(a: T, b: T): void => {
+  return expect(a).toBe(b);
 }
 
+export const expectToEqual = <T>(a: T, b: T): void => {
+  return expect(a).toEqual(b);
+}
+
+export const expectToStrictEqual = <T>(a: T, b: T): void => {
+  return expect(a).toStrictEqual(b);
+}

@@ -10,6 +10,7 @@ import type { HexString } from "@konduit/codec/hexString";
 import { json2StringCodec, type JsonError, type JsonCodec } from "@konduit/codec/json/codecs";
 import { blake2b } from "@noble/hashes/blake2.js";
 import type { Json } from "@konduit/codec/json";
+import { PositiveBigInt } from "@konduit/codec/integers/big";
 
 // Credential hash length
 const HASH_LEN = 28;
@@ -45,10 +46,23 @@ export type Credential =
   | { type: "ScriptHash"; hash: ScriptHash }
   | { type: "PubKeyHash"; hash: PubKeyHash };
 
-export type Network = Tagged<"mainnet" | "testnet", "Network">;
+export type NetworkMagicNumber = Tagged<PositiveBigInt, "NetworkMagicNumber">;
+export namespace NetworkMagicNumber {
+  export const fromPositiveBigInt = (v: PositiveBigInt): NetworkMagicNumber => v as NetworkMagicNumber;
+  export const MAINNET = 764824073n;
+  export const PREPROD = 1n;
+  export const PREVIEW = 2n;
+}
 
-export const mainnet: Network = "mainnet" as Network;
-export const testnet: Network = "testnet" as Network;
+export type Network = Tagged<"mainnet" | "testnet", "Network">;
+export namespace Network {
+  export const fromNetworkMagicNumber = (networkMagicNumber: NetworkMagicNumber): Network => {
+    if(networkMagicNumber !== NetworkMagicNumber.MAINNET) return TESTNET;
+    return MAINNET;
+  }
+  export const MAINNET: Network = "mainnet" as Network;
+  export const TESTNET: Network = "testnet" as Network;
+}
 
 export type Address = {
   network: Network;
@@ -90,7 +104,9 @@ const MAX_BECH32_LEN = 108;
 export const string32ToAddressCodec: codec.Codec<string, Address, JsonError> = {
   deserialise: (value: string): Result<Address, JsonError> => {
     const result = bech32.decodeUnsafe(value, MAX_BECH32_LEN);
-    if(result === undefined) return err("Invalid bech32 address. Decoding failed.");
+    // The library types the return value wrongly: `void | ...` and the
+    // only way which I found working to narrow `void` result is this:
+    if(!result) return err("Invalid bech32 address. Decoding failed.");
     const { prefix, words } = result;
     const data = new Uint8Array(bech32.fromWords(words));
     // header byte: t | t | t | t | n | n | n | n
@@ -98,8 +114,8 @@ export const string32ToAddressCodec: codec.Codec<string, Address, JsonError> = {
     return Result.combine([
       (() => {
         const networkNibble = headerByte & 0x0f;
-        const network: Network = (networkNibble === 0x00 ? testnet : mainnet);
-        const expectedPrefix = (network === mainnet ? "addr" : "addr_test");
+        const network: Network = (networkNibble === 0x00 ? Network.TESTNET : Network.MAINNET);
+        const expectedPrefix = (network === Network.MAINNET ? "addr" : "addr_test");
         if((prefix !== expectedPrefix)) {
           return err(`Invalid address prefix for network ${network}: expected ${expectedPrefix}, got ${prefix}`);
         }
@@ -174,7 +190,7 @@ export namespace AddressBech32 {
   export const fromString = (addressStr: string): Result<AddressBech32, JsonError> => string32ToAddressCodec.deserialise(addressStr).map((addr) => fromAddress(addr));
   export const fromAddress = (address: Address): AddressBech32 => {
     // The second nibble of the header byte
-    const networkNibble = address.network === mainnet ? 0x01 : 0x00;
+    const networkNibble = address.network === Network.MAINNET ? 0x01 : 0x00;
     // cip-19
     // (0) 0000.... PaymentKeyHash  StakeKeyHash
     // (1) 0001.... ScriptHash      StakeKeyHash
@@ -201,7 +217,7 @@ export namespace AddressBech32 {
     // header byte: t | t | t | t | n | n | n | n
     const headerByte = (addressTypeNibble << 4) | networkNibble;
     // bech32 encoding:
-    const humanReadablePart = address.network === mainnet ? "addr" : "addr_test";
+    const humanReadablePart = address.network === Network.MAINNET ? "addr" : "addr_test";
     const dataPart = (() => {
       const paymentHash = address.paymentCredential.hash;
       const stakingHash = address.stakingCredential? address.stakingCredential.hash : new Uint8Array();

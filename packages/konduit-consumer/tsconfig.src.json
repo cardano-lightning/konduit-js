@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "moduleResolution": "bundler",
+    "noEmit": false,
+    "outDir": "./dist",
+    "module": "ES2020",
+    "resolveJsonModule": true,
+    "rootDir": "./src"
+  },
+  "extends": "./tsconfig.json",
+  "include": ["src/**/*", "wasm/**/*.d.ts", "vite-env.d.ts"]
+}
