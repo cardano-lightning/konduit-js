@@ -1,7 +1,7 @@
 import type { Tagged } from "type-fest";
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ok, type Result } from "neverthrow";
-import { Wallet, type ChainConnectorBase } from '../src/wallets/embedded';
+import { Wallet, type WalletBackendBase } from '../src/wallets/embedded';
 import { Lovelace, NetworkMagicNumber, type TxHash} from '../src/cardano';
 import { Ed25519Pub, generateMnemonic, VKey } from '@konduit/cardano-keys';
 import type { TransactionReadyForSigning } from '../wasm/konduit_wasm';
@@ -21,8 +21,8 @@ namespace Ed25519PubHex {
   }
 }
 
-// Mock ChainConnector for testing
-class MockChainConnector implements ChainConnectorBase {
+// Mock WalletBackend for testing
+class MockWalletBackend implements WalletBackendBase {
   private balances = new Map<Ed25519PubHex, Lovelace>();
   private txCounter = 0;
   public readonly networkMagicNumber = NetworkMagicNumber.fromPositiveBigInt(PositiveBigInt.fromDigits(6, 6, 6));
@@ -42,11 +42,11 @@ class MockChainConnector implements ChainConnectorBase {
 }
 
 describe('Wallet Events', () => {
-  let mockConnector: MockChainConnector;
-  let wallet: Wallet<MockChainConnector>;
+  let mockConnector: MockWalletBackend;
+  let wallet: Wallet<MockWalletBackend>;
 
   beforeEach(async () => {
-    mockConnector = new MockChainConnector();
+    mockConnector = new MockWalletBackend();
     const mnemonic = generateMnemonic("24-words");
     wallet = await Wallet.restore(mockConnector, mnemonic);
   });

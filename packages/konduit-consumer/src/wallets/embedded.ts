@@ -25,7 +25,7 @@ export type WalletEvents = {
 
 // We separate this tiny interface so we can plug in quickly not only cardano-connector
 // but also blockfrost or mock connectors for testing.
-export type ChainConnectorBase = {
+export type WalletBackendBase = {
   getBalance: (vKey: VKey) => Promise<Result<Lovelace, JsonError>>;
   networkMagicNumber: NetworkMagicNumber;
   signAndSubmit: (tx: TransactionReadyForSigning, sKey: SKey) => Promise<Result<TxHash, JsonError>>;
@@ -134,9 +134,9 @@ export const json2BalanceInfoCodec: JsonCodec<BalanceInfo> = rmap(
 
 
 /* A simple, single-address, no staking wallet implementation */
-export class Wallet<ChainConnector extends ChainConnectorBase> {
+export class Wallet<WalletBackend extends WalletBackendBase> {
   public readonly networkMagicNumber: NetworkMagicNumber;
-  public readonly chainConnector: ChainConnector;
+  public readonly chainConnector: WalletBackend;
 
   private _balanceInfo: BalanceInfo | null = null;
   private rootPrivateKey: RootPrivateKey;
@@ -151,7 +151,7 @@ export class Wallet<ChainConnector extends ChainConnectorBase> {
   // Event handling
   private readonly eventTarget = new EventTarget();
 
-  constructor(rootPrivateKey: RootPrivateKey, chainConnector: ChainConnector, balanceInfo?: BalanceInfo) {
+  constructor(rootPrivateKey: RootPrivateKey, chainConnector: WalletBackend, balanceInfo?: BalanceInfo) {
     this.rootPrivateKey = rootPrivateKey;
     this.chainConnector = chainConnector;
     this.networkMagicNumber = chainConnector.networkMagicNumber;
@@ -159,12 +159,12 @@ export class Wallet<ChainConnector extends ChainConnectorBase> {
   }
 
   // Restore from mnemonic
-  static async restore<C extends ChainConnectorBase>(connector: C, mnemonic: Mnemonic, password?: Uint8Array): Promise<Wallet<C>> {
+  static async restore<C extends WalletBackendBase>(connector: C, mnemonic: Mnemonic, password?: Uint8Array): Promise<Wallet<C>> {
     const rootPrivateKey = await RootPrivateKey.fromMnemonic(mnemonic, password);
     return Promise.resolve(new Wallet(rootPrivateKey, connector));
   }
 
-  static async create<C extends ChainConnectorBase>(connector: C, mnemonicPassword?: Uint8Array): Promise<{ wallet: Wallet<C>; mnemonic: Mnemonic }> {
+  static async create<C extends WalletBackendBase>(connector: C, mnemonicPassword?: Uint8Array): Promise<{ wallet: Wallet<C>; mnemonic: Mnemonic }> {
     const mnemonic = generateMnemonic("24-words");
     const rootPrivateKey = await RootPrivateKey.fromMnemonic(mnemonic, mnemonicPassword);
     const wallet = new Wallet(rootPrivateKey, connector);
@@ -283,11 +283,11 @@ const json2WalletRecordCodec: JsonCodec<WalletRecord> = jsonCodecs.objectOf({
 
 export namespace CardanoConnectorWallet {
   // We additionally store the url
-  export type ChainConnector = ChainConnectorBase & {
+  export type WalletBackend = WalletBackendBase & {
     readonly backendUrl: string;
   };
 
-  const createConnector = async (backendUrl: string): Promise<Result<ChainConnector, JsonError>> => {
+  const createConnector = async (backendUrl: string): Promise<Result<WalletBackend, JsonError>> => {
     const result = await Connector.new(backendUrl);
     return result.map(
       (connector: Connector) => {
@@ -304,7 +304,7 @@ export namespace CardanoConnectorWallet {
   export async function create(
     backendUrl: string,
     mnemonicPassword?: Uint8Array
-  ): Promise<Result<{ wallet: Wallet<ChainConnector>; mnemonic: Mnemonic }, JsonError>> {
+  ): Promise<Result<{ wallet: Wallet<WalletBackend>; mnemonic: Mnemonic }, JsonError>> {
     return resultAsyncToPromise(hoistToResultAsync(createConnector(backendUrl)).map(async (connector) => {
       return Wallet.create(connector, mnemonicPassword);
     }));
@@ -314,34 +314,34 @@ export namespace CardanoConnectorWallet {
     backendUrl: string,
     mnemonic: Mnemonic,
     password?: Uint8Array
-  ): Promise<Result<Wallet<ChainConnector>, JsonError>> {
+  ): Promise<Result<Wallet<WalletBackend>, JsonError>> {
     return resultAsyncToPromise(hoistToResultAsync(createConnector(backendUrl)).map(async (connector) => {
       return Wallet.restore(connector, mnemonic, password);
     }));
   }
 
-  type ChainConnectorRecord = {
+  type WalletBackendRecord = {
     backend_url: string;
-    type: "CardanoConnectorWallet.ChainConnector";
+    type: "CardanoConnectorWallet.WalletBackend";
   };
 
   const chainConnectorRecordCodec = jsonCodecs.objectOf({
     backend_url: jsonCodecs.json2StringCodec,
-    type: jsonCodecs.constant("CardanoConnectorWallet.ChainConnector"),
+    type: jsonCodecs.constant("CardanoConnectorWallet.WalletBackend"),
   });
 
   type FullWalletRecord = {
-    connector: ChainConnectorRecord;
+    connector: WalletBackendRecord;
     wallet: WalletRecord;
   };
 
-  export const json2WalletAsyncCodec: JsonAsyncCodec<Wallet<ChainConnector>> = (() => {
+  export const json2WalletAsyncCodec: JsonAsyncCodec<Wallet<WalletBackend>> = (() => {
     const json2FullWalletRecordCodec: JsonAsyncCodec<FullWalletRecord> = asyncCodec.fromSync(jsonCodecs.objectOf({
         connector: chainConnectorRecordCodec,
         wallet: json2WalletRecordCodec,
     }));
-    const fullWalletRecord2WalletAsyncCodec: asyncCodec.AsyncCodec<FullWalletRecord, Wallet<ChainConnector>, JsonError> = {
-      deserialise: ({ wallet: w, connector: c }): ResultAsync<Wallet<ChainConnector>, JsonError> => {
+    const fullWalletRecord2WalletAsyncCodec: asyncCodec.AsyncCodec<FullWalletRecord, Wallet<WalletBackend>, JsonError> = {
+      deserialise: ({ wallet: w, connector: c }): ResultAsync<Wallet<WalletBackend>, JsonError> => {
         return hoistToResultAsync(createConnector(c.backend_url)).map((connector) => {
           return new Wallet(
             w.root_private_key,
@@ -350,11 +350,11 @@ export namespace CardanoConnectorWallet {
           );
         });
       },
-      serialise: (wallet: Wallet<ChainConnector>) => {
+      serialise: (wallet: Wallet<WalletBackend>) => {
         return {
           connector: {
             backend_url: wallet.chainConnector.backendUrl,
-            type: "CardanoConnectorWallet.ChainConnector" as const,
+            type: "CardanoConnectorWallet.WalletBackend" as const,
           },
           wallet: {
             balance_info: wallet.balanceInfo,
