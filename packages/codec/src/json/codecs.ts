@@ -1,9 +1,8 @@
-import { err, ok, ResultAsync, type Result } from "neverthrow";
+import { err, ok, type Result } from "neverthrow";
 import type { Json } from "../json";
-import { onBigInt, onBoolean, onArray, onObject, onNull, nullJson, onString } from "../json";
+import { onBigInt, onBoolean, onArray, onObject, onNull, nullJson, onString, stringify } from "../json";
 import * as json from "../json";
 import { altCodec, type Codec, type Deserialiser, type Serialiser } from "../codec";
-import type { AsyncCodec } from "../codec/async";
 
 // We actually represent parsing errors as JSON too :-P
 export type JsonError = Json;
@@ -17,12 +16,6 @@ export type JsonSerialiser<O> = Serialiser<O, Json>;
 export type JsonDeserialiser<O> = Deserialiser<Json, O, JsonError>;
 
 export type JsonCodec<O> = Codec<Json, O, JsonError>;
-
-// We provide types for async codecs too but you should
-// hoist sync codecs to async yourself using hoistCodec.
-export type JsonAsyncDeserialiser<O> = (i: Json) => ResultAsync<O, JsonError>;
-
-export type JsonAsyncCodec<O> = AsyncCodec<Json, O, JsonError>;
 
 export const mkParser = <T>(codec: JsonCodec<T>): (jsonStr: string) => Result<T, JsonError> => {
   return (jsonStr: string): Result<T, JsonError> => {
@@ -84,7 +77,9 @@ export const json2ArrayCodec: JsonCodec<Json[]> = {
 
 // Codec for object (identity - keeps object as is)
 export const json2ObjectCodec: JsonCodec<{ [key: string]: Json }> = {
-  deserialise: onObject(err("Expected object") as Result<{ [key: string]: Json }, JsonError>)(ok),
+  deserialise: onObject(
+      (value: Json) => err(`Expected object but got ${stringify(value)}`) as Result<{ [key: string]: Json }, JsonError>
+    )(ok),
   serialise: (value: { [key: string]: Json }) => value as Json
 };
 
@@ -169,7 +164,9 @@ export const objectOf = <T extends Record<string, JsonCodec<any>>>(
   return {
     deserialise: (data: Json): Result<CodecsToObject<T>, JsonError> => {
       // Check if input is an object
-      return onObject(err("Expected object") as Result<{ [key: string]: Json }, JsonError>)(ok)(data).match(
+      return onObject(
+          (value: Json) => err(`Expected object but got ${stringify(value)}`) as Result<{ [key: string]: Json }, JsonError>
+        )(ok)(data).match(
         (obj) => {
           const result: any = {};
           const errors: { [key: string]: Json } = {};

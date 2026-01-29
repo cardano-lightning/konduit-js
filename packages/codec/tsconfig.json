@@ -2,7 +2,7 @@
   "compilerOptions": {
     "composite": true,
     "declaration": true,
-    "lib": ["ES2023", "DOM"],
+    "lib": ["ES2020", "DOM"],
     "moduleResolution": "bundler",
     "noEmit": false,
     "noUnusedLocals": true,

@@ -1,8 +1,53 @@
-import { ResultAsync, okAsync, errAsync } from "neverthrow";
+import { Result, ok, err } from "neverthrow";
 import type { Codec, Serialiser } from "../codec";
 
-// Async deserialiser returns a ResultAsync instead of Result
-export type AsyncDeserialiser<I, O, E> = (i: I) => ResultAsync<O, E>;
+export type AsyncDeserialiser<I, O, E> = (i: I) => Promise<Result<O, E>>;
+
+export const mapAsyncDeserialiser = <I, O1, O2, E>(
+  deserialiser: AsyncDeserialiser<I, O1, E>,
+  fn: (o: O1) => O2
+): AsyncDeserialiser<I, O2, E> => {
+  return async (input: I): Promise<Result<O2, E>> => {
+    const result = await deserialiser(input);
+    return result.map(fn);
+  };
+};
+
+export const mapAsyncDeserialiserErr = <I, O, E1, E2>(
+  deserialiser: AsyncDeserialiser<I, O, E1>,
+  fn: (e: E1) => E2
+): AsyncDeserialiser<I, O, E2> => {
+  return async (input: I): Promise<Result<O, E2>> => {
+    const result = await deserialiser(input);
+    return result.mapErr(fn);
+  };
+}
+
+export const andThenAsyncDeserialiser = <I, M, O, E>(
+  first: AsyncDeserialiser<I, M, E>,
+  second: AsyncDeserialiser<M, O, E>
+): AsyncDeserialiser<I, O, E> => {
+  return async (input: I): Promise<Result<O, E>> => {
+    const firstResult = await first(input);
+    return firstResult.match(
+      second,
+      (error) => err(error)
+    );
+  };
+}
+
+export const orElseAsyncDeserialiser = <I, O, E>(
+  first: AsyncDeserialiser<I, O, E>,
+  second: AsyncDeserialiser<I, O, E>
+): AsyncDeserialiser<I, O, E> => {
+  return async (input: I): Promise<Result<O, E>> => {
+    const firstResult = await first(input);
+    return firstResult.match(
+      (value) => ok(value),
+      (_error) => second(input)
+    );
+  };
+}
 
 // Serialiser remains synchronous (same as in sync codecs)
 export type AsyncCodec<I, O, E> = {
@@ -15,11 +60,11 @@ export const fromSync = <I, O, E>(
   codec: Codec<I, O, E>
 ): AsyncCodec<I, O, E> => {
   return {
-    deserialise: (input: I): ResultAsync<O, E> => {
+    deserialise: async (input: I): Promise<Result<O, E>> => {
       const result = codec.deserialise(input);
       return result.match(
-        (value) => okAsync(value),
-        (error) => errAsync(error)
+        (value) => ok(value),
+        (error) => err(error)
       );
     },
     serialise: codec.serialise
@@ -32,8 +77,8 @@ export const pipe = <I, M, O, E>(
   second: AsyncCodec<M, O, E>
 ): AsyncCodec<I, O, E> => {
   return {
-    deserialise: (input: I): ResultAsync<O, E> => {
-      return first.deserialise(input).andThen(second.deserialise);
+    deserialise: async (input: I): Promise<Result<O, E>> => {
+      return andThenAsyncDeserialiser(first.deserialise, second.deserialise)(input);
     },
     serialise: (output: O): I => {
       const mid = second.serialise(output);
@@ -53,7 +98,7 @@ export const compose = <I, M, O, E>(
 // Identity async codec
 export const mkIdentityCodec = <I, E>(): AsyncCodec<I, I, E> => {
   return {
-    deserialise: (input: I): ResultAsync<I, E> => okAsync(input),
+    deserialise: async (input: I): Promise<Result<I, E>> => ok(input),
     serialise: (output: I): I => output
   };
 };
@@ -65,8 +110,8 @@ export const rmapSync = <I, O1, O2, E>(
   fnInv: (o: O2) => O1
 ): AsyncCodec<I, O2, E> => {
   return {
-    deserialise: (input: I): ResultAsync<O2, E> => {
-      return codec.deserialise(input).map(fn);
+    deserialise: async (input: I): Promise<Result<O2, E>> => {
+      return mapAsyncDeserialiser(codec.deserialise, fn)(input);
     },
     serialise: (output: O2): I => {
       const mid = fnInv(output);
@@ -82,7 +127,7 @@ export const lmapSync = <I1, I2, O, E>(
   fnInv: (i: I2) => I1
 ): AsyncCodec<I1, O, E> => {
   return {
-    deserialise: (input: I1): ResultAsync<O, E> => {
+    deserialise: async (input: I1): Promise<Result<O, E>> => {
       const mid = fn(input);
       return codec.deserialise(mid);
     },
@@ -93,14 +138,37 @@ export const lmapSync = <I1, I2, O, E>(
   };
 };
 
+export const rmap = <I, O1, O2, E>(
+  codec: AsyncCodec<I, O1, E>,
+  fn: (o: O1) => Promise<O2>,
+  fnInv: (o: O2) => O1
+): AsyncCodec<I, O2, E> => {
+  return {
+    deserialise: async (input: I): Promise<Result<O2, E>> => {
+      const result = await codec.deserialise(input);
+      return result.match(
+        async (value) => {
+          const newValue = await fn(value);
+          return ok(newValue);
+        },
+        (error) => err(error)
+      );
+    },
+    serialise: (output: O2): I => {
+      const mid = fnInv(output);
+      return codec.serialise(mid);
+    }
+  };
+};
+
 // Map error type
 export const mapErr = <I, O, E, F>(
   codec: AsyncCodec<I, O, E>,
   fn: (e: E) => F
 ): AsyncCodec<I, O, F> => {
   return {
-    deserialise: (input: I): ResultAsync<O, F> => {
-      return codec.deserialise(input).mapErr(fn);
+    deserialise: async (input: I): Promise<Result<O, F>> => {
+      return mapAsyncDeserialiserErr(codec.deserialise, fn)(input);
     },
     serialise: codec.serialise
   };
@@ -117,12 +185,18 @@ export const altCodec = <I, O1, O2, E>(
   combineErrs: (err1: E, err2: E) => E = (_e1, e2) => e2
 ): AsyncCodec<I, O1 | O2, E> => {
   return {
-    deserialise: (input: I): ResultAsync<O1 | O2, E> =>
-      first.deserialise(input).orElse(
-        (err1) => second.deserialise(input).mapErr(
-          (err2) => combineErrs(err1, err2)
-        )
-      ),
+    deserialise: async (input: I): Promise<Result<O1 | O2, E>> => {
+      const firstResult = await first.deserialise(input);
+      return firstResult.match(
+        (value) => ok(value),
+        async (err1) => {
+          const secondResult = await second.deserialise(input);
+          return secondResult.mapErr(
+            (err2) => combineErrs(err1, err2)
+          );
+        }
+      )
+    },
     serialise: (output: O1 | O2): I => {
       const ser = caseSerialisers(first.serialise, second.serialise);
       return ser(output);

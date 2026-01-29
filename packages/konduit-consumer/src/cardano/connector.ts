@@ -15,11 +15,14 @@ export const enableLogs = (level: wasm.LogLevel): void => {
 };
 
 export class Connector {
-  private connector: wasm.CardanoConnector;
   public readonly networkMagicNumber: NetworkMagicNumber;
 
-  private constructor(connector: wasm.CardanoConnector, networkMagicNumber: NetworkMagicNumber) {
+  private connector: wasm.CardanoConnector;
+  private readonly _backendUrl: string;
+
+  private constructor(connector: wasm.CardanoConnector, backendUrl: string, networkMagicNumber: NetworkMagicNumber) {
     this.connector = connector;
+    this._backendUrl = backendUrl;
     this.networkMagicNumber = networkMagicNumber;
   }
 
@@ -29,13 +32,17 @@ export class Connector {
       return PositiveBigInt.fromBigInt(connector.network_magic_number).match(
         (positive) => {
           let networkMagicNumber = NetworkMagicNumber.fromPositiveBigInt(positive);
-          return ok(new Connector(connector, networkMagicNumber));
+          return ok(new Connector(connector, backendUrl, networkMagicNumber));
         },
         () => {
           return err(`Invalid network magic number: ${connector.network_magic_number}`);
         }
       );
     });
+  }
+
+  public get backendUrl(): string {
+    return this._backendUrl;
   }
 
 // //   async open(

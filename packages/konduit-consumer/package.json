@@ -17,6 +17,18 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./wallets/embedded": {
+      "types": "./dist/wallets/embedded.d.ts",
+      "default": "./dist/wallets/embedded.js"
+    },
+    "./time/*": {
+      "types": "./dist/time/*.d.ts",
+      "default": "./dist/time/*.js"
+    },
+    "./cardano/connector": {
+      "types": "./dist/cardano/connector.d.ts",
+      "default": "./dist/cardano/connector.js"
     }
   },
   "files": [
@@ -29,7 +41,7 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "vite --build",
+    "build": "vue-tsc --build",
     "test": "vitest"
   },
   "type": "module",

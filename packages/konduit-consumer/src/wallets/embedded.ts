@@ -1,6 +1,6 @@
 import type { Json } from "@konduit/codec/json";
-import type { JsonCodec, JsonAsyncCodec, JsonError } from "@konduit/codec/json/codecs";
-import { ResultAsync, type Result } from "neverthrow";
+import type { JsonCodec, JsonError } from "@konduit/codec/json/codecs";
+import { err, ok, type Result } from "neverthrow";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import * as asyncCodec from "@konduit/codec/async";
 import { Address, AddressBech32, json2LovelaceCodec, Lovelace, Network, NetworkMagicNumber, TxHash } from "../cardano";
@@ -14,11 +14,13 @@ import { Connector } from "../cardano/connector";
 import { hoistToResultAsync, resultAsyncToPromise } from "../neverthrow";
 import { rmap, mkIdentityCodec } from "@konduit/codec";
 import { json2ValidDateCodec, ValidDate } from "../time/absolute";
+import { JsonAsyncCodec } from "@konduit/codec/json/async";
 
 type WalletEvent<T> = CustomEvent<T>;
 
-export type WalletEvents = {
-  "balance-changed": { newBalance: Lovelace }
+export type WalletEvents<WalletBackend> = {
+  "backend-changed": { oldBackend: WalletBackend; newBackend: WalletBackend };
+  "balance-changed": { newBalance: Lovelace };
   "balance-update-failed": { error: JsonError };
   "tx-submitted": { txHash: TxHash, context?: Json };
 };
@@ -136,9 +138,12 @@ export const json2BalanceInfoCodec: JsonCodec<BalanceInfo> = rmap(
 /* A simple, single-address, no staking wallet implementation */
 export class Wallet<WalletBackend extends WalletBackendBase> {
   public readonly networkMagicNumber: NetworkMagicNumber;
-  public readonly chainConnector: WalletBackend;
+  // A memory leak debugging helper
+  public readonly subscriptionCounter: number;
 
+  private _subscriptionCounter: number = 0;
   private _balanceInfo: BalanceInfo | null = null;
+  private _walletBackend: WalletBackend;
   private rootPrivateKey: RootPrivateKey;
   private addrPath = {
     walletIdx: WalletIndex.fromSmallInt(0),
@@ -151,24 +156,37 @@ export class Wallet<WalletBackend extends WalletBackendBase> {
   // Event handling
   private readonly eventTarget = new EventTarget();
 
-  constructor(rootPrivateKey: RootPrivateKey, chainConnector: WalletBackend, balanceInfo?: BalanceInfo) {
+  constructor(rootPrivateKey: RootPrivateKey, walletBackend: WalletBackend, balanceInfo?: BalanceInfo) {
     this.rootPrivateKey = rootPrivateKey;
-    this.chainConnector = chainConnector;
-    this.networkMagicNumber = chainConnector.networkMagicNumber;
+    this._walletBackend = walletBackend;
+    this.networkMagicNumber = walletBackend.networkMagicNumber;
     this._balanceInfo = balanceInfo || null;
   }
 
   // Restore from mnemonic
-  static async restore<C extends WalletBackendBase>(connector: C, mnemonic: Mnemonic, password?: Uint8Array): Promise<Wallet<C>> {
+  static async restore<C extends WalletBackendBase>(backend: C, mnemonic: Mnemonic, password?: Uint8Array): Promise<Wallet<C>> {
     const rootPrivateKey = await RootPrivateKey.fromMnemonic(mnemonic, password);
-    return Promise.resolve(new Wallet(rootPrivateKey, connector));
+    return Promise.resolve(new Wallet(rootPrivateKey, backend));
   }
 
-  static async create<C extends WalletBackendBase>(connector: C, mnemonicPassword?: Uint8Array): Promise<{ wallet: Wallet<C>; mnemonic: Mnemonic }> {
+  static async create<C extends WalletBackendBase>(backend: C, mnemonicPassword?: Uint8Array): Promise<{ wallet: Wallet<C>; mnemonic: Mnemonic }> {
     const mnemonic = generateMnemonic("24-words");
     const rootPrivateKey = await RootPrivateKey.fromMnemonic(mnemonic, mnemonicPassword);
-    const wallet = new Wallet(rootPrivateKey, connector);
-    return Promise.resolve({ wallet, mnemonic });
+    const wallet = new Wallet(rootPrivateKey, backend);
+    return { wallet, mnemonic };
+  }
+
+  public switchBackend(newBackend: WalletBackend): Result<null, string> {
+    if (newBackend.networkMagicNumber !== this.networkMagicNumber) {
+      return err("Cannot switch to a backend with a different network magic number");
+    }
+    this._walletBackend = newBackend;
+    this.emit("backend-changed", { oldBackend: this._walletBackend, newBackend });
+    return ok(undefined);
+  }
+
+  public get walletBackend(): WalletBackend {
+    return this._walletBackend;
   }
 
   private get sKey() {
@@ -199,31 +217,35 @@ export class Wallet<WalletBackend extends WalletBackendBase> {
     return this._balanceInfo;
   }
 
-  private emit<K extends keyof WalletEvents>(event: K, payload: WalletEvents[K]) {
+  private emit<K extends keyof WalletEvents<WalletBackend>>(event: K, payload: WalletEvents<WalletBackend>[K]) {
     this.eventTarget.dispatchEvent(
-      new CustomEvent<WalletEvents[K]>(event, { detail: payload })
+      new CustomEvent<WalletEvents<WalletBackend>[K]>(event, { detail: payload })
     );
   }
 
-  subscribe<K extends keyof WalletEvents>(
+  // WARNING! Please do not forget to unsubscribe when you no longer need the events
+  // as the listeners will stay in memory otherwise!
+  subscribe<K extends keyof WalletEvents<WalletBackend>>(
     event: K,
-    listener: (payload: WalletEvents[K]) => void
+    listener: (payload: WalletEvents<WalletBackend>[K]) => void
   ): () => void {  // returns unsubscribe function — very convenient!
     const handler = (e: Event) => {
-      const ce = e as WalletEvent<WalletEvents[K]>;
+      const ce = e as WalletEvent<WalletEvents<WalletBackend>[K]>;
       listener(ce.detail);
     };
 
     this.eventTarget.addEventListener(event, handler as EventListener);
+    this._subscriptionCounter += 1;
 
     // Return cleanup function
     return () => {
       this.eventTarget.removeEventListener(event, handler as EventListener);
+      this._subscriptionCounter -= 1;
     };
   }
 
   private async poll() {
-    const result = await this.chainConnector.getBalance(this.vKey);
+    const result = await this.walletBackend.getBalance(this.vKey);
     const resultFlattened = result.match((lovelace) => lovelace, (error) => error);
     result.match(
       (lovelace) => {
@@ -254,6 +276,9 @@ export class Wallet<WalletBackend extends WalletBackendBase> {
     );
   }
 
+  // WARNING! Please do not forget to stop polling
+  // when you no longer need it, as the instance
+  // will stay in memory otherwise!
   public stopPolling() {
     if (this.pollingTimer) {
       clearInterval(this.pollingTimer);
@@ -262,7 +287,7 @@ export class Wallet<WalletBackend extends WalletBackendBase> {
   }
 
   public async signAndSubmit(tx: TransactionReadyForSigning, context?: Json): Promise<Result<TxHash, JsonError>> {
-    const result = await this.chainConnector.signAndSubmit(tx, this.sKey);
+    const result = await this.walletBackend.signAndSubmit(tx, this.sKey);
     return result.map(txHash => {
       this.emit("tx-submitted", context ? { txHash, context } : { txHash });
       return txHash;
@@ -281,41 +306,50 @@ const json2WalletRecordCodec: JsonCodec<WalletRecord> = jsonCodecs.objectOf({
 });
 
 
+export type CardanoConnectorWallet = Wallet<CardanoConnectorWallet.WalletBackend>;
 export namespace CardanoConnectorWallet {
   // We additionally store the url
   export type WalletBackend = WalletBackendBase & {
-    readonly backendUrl: string;
+    readonly connector: Connector;
   };
 
-  const createConnector = async (backendUrl: string): Promise<Result<WalletBackend, JsonError>> => {
+  const mkWalletBackend = (connector: Connector): WalletBackend => {
+    return {
+      connector,
+      getBalance: async (vKey: VKey) => connector.balance(vKey),
+      signAndSubmit: async (tx: TransactionReadyForSigning, sKey: SKey) => connector.signAndSubmit(tx, sKey),
+      networkMagicNumber: connector.networkMagicNumber,
+    };
+  }
+
+  export const createBackend = async (backendUrl: string): Promise<Result<WalletBackend, JsonError>> => {
     const result = await Connector.new(backendUrl);
-    return result.map(
-      (connector: Connector) => {
-        return {
-          backendUrl,
-          getBalance: async (vKey: VKey) => connector.balance(vKey),
-          signAndSubmit: async (tx: TransactionReadyForSigning, sKey: SKey) => connector.signAndSubmit(tx, sKey),
-          networkMagicNumber: connector.networkMagicNumber,
-        };
-      }
-    );
+    return result.map(mkWalletBackend);
   }
 
   export async function create(
-    backendUrl: string,
+    connector: string | Connector,
     mnemonicPassword?: Uint8Array
   ): Promise<Result<{ wallet: Wallet<WalletBackend>; mnemonic: Mnemonic }, JsonError>> {
-    return resultAsyncToPromise(hoistToResultAsync(createConnector(backendUrl)).map(async (connector) => {
+    if(connector instanceof Connector) {
+      const walletBackend =  mkWalletBackend(connector);
+      return ok(await Wallet.create(walletBackend, mnemonicPassword));
+    }
+    return resultAsyncToPromise(hoistToResultAsync(createBackend(connector)).map(async (connector) => {
       return Wallet.create(connector, mnemonicPassword);
     }));
   }
 
   export async function restore(
-    backendUrl: string,
+    connector: string | Connector,
     mnemonic: Mnemonic,
     password?: Uint8Array
   ): Promise<Result<Wallet<WalletBackend>, JsonError>> {
-    return resultAsyncToPromise(hoistToResultAsync(createConnector(backendUrl)).map(async (connector) => {
+    if(connector instanceof Connector) {
+      const walletBackend =  mkWalletBackend(connector);
+      return ok(await Wallet.restore(walletBackend, mnemonic, password));
+    }
+    return resultAsyncToPromise(hoistToResultAsync(createBackend(connector)).map(async (connector) => {
       return Wallet.restore(connector, mnemonic, password);
     }));
   }
@@ -325,38 +359,38 @@ export namespace CardanoConnectorWallet {
     type: "CardanoConnectorWallet.WalletBackend";
   };
 
-  const chainConnectorRecordCodec = jsonCodecs.objectOf({
+  const walletBackendRecordCodec = jsonCodecs.objectOf({
     backend_url: jsonCodecs.json2StringCodec,
     type: jsonCodecs.constant("CardanoConnectorWallet.WalletBackend"),
   });
 
   type FullWalletRecord = {
     connector: WalletBackendRecord;
-    wallet: WalletRecord;
+    state: WalletRecord;
   };
 
   export const json2WalletAsyncCodec: JsonAsyncCodec<Wallet<WalletBackend>> = (() => {
     const json2FullWalletRecordCodec: JsonAsyncCodec<FullWalletRecord> = asyncCodec.fromSync(jsonCodecs.objectOf({
-        connector: chainConnectorRecordCodec,
-        wallet: json2WalletRecordCodec,
+        connector: walletBackendRecordCodec,
+        state: json2WalletRecordCodec,
     }));
     const fullWalletRecord2WalletAsyncCodec: asyncCodec.AsyncCodec<FullWalletRecord, Wallet<WalletBackend>, JsonError> = {
-      deserialise: ({ wallet: w, connector: c }): ResultAsync<Wallet<WalletBackend>, JsonError> => {
-        return hoistToResultAsync(createConnector(c.backend_url)).map((connector) => {
+      deserialise: async ({ state: w, connector: c }): Promise<Result<Wallet<WalletBackend>, JsonError>> => {
+        return resultAsyncToPromise(hoistToResultAsync(createBackend(c.backend_url)).map((connector) => {
           return new Wallet(
             w.root_private_key,
             connector,
             w.balance_info || undefined
           );
-        });
+        }));
       },
       serialise: (wallet: Wallet<WalletBackend>) => {
         return {
           connector: {
-            backend_url: wallet.chainConnector.backendUrl,
+            backend_url: wallet.walletBackend.connector.backendUrl,
             type: "CardanoConnectorWallet.WalletBackend" as const,
           },
-          wallet: {
+          state: {
             balance_info: wallet.balanceInfo,
             root_private_key: wallet["rootPrivateKey"],
           },

@@ -75,7 +75,7 @@ export const onBoolean = <T>(def: T | ((json: Json) => T)) => (handle: ((value: 
 export const onArray = <T>(def: T | ((json: Json) => T)) => (handle: ((value: Json[]) => T)) =>
   onType((j) => typeof j === "object" && j !== null && Array.isArray(j), def, handle);
 
-export const onObject = <T>(def: T) => (handle: ((value: { [key: string]: Json }) => T)) =>
+export const onObject = <T>(def: T | ((json: Json) => T)) => (handle: ((value: { [key: string]: Json }) => T)) =>
   onType((j) => typeof j === "object" && j !== null && !Array.isArray(j), def, handle);
 
 export const onNull = <T>(def: T) => (handle: (() => T)) => (json: Json): T => {

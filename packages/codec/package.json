@@ -44,6 +44,10 @@
       "types": "./dist/json/codecs.d.ts",
       "default": "./dist/json/codecs.js"
     },
+    "./json/async": {
+      "types": "./dist/json/async.d.ts",
+      "default": "./dist/json/async.js"
+    },
     "./neverthrow": {
       "types": "./dist/neverthrow.d.ts",
       "default": "./dist/neverthrow.js"
