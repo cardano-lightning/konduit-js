@@ -67,8 +67,6 @@ a.edit {
 a.edit svg {
   color: var(--primary-color);
   stroke-width: 1.5;
-  width: 1.4rem;
-  height: 1.4rem;
 }
 </style>
 

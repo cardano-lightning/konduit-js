@@ -3,7 +3,7 @@
     "composite": true,
     "declaration": true,
     "erasableSyntaxOnly": true,
-    "lib": ["ES2023"],
+    "lib": ["ES2022"],
     "module": "ESNext",
     "moduleDetection": "force",
     "moduleResolution": "bundler",
@@ -14,7 +14,7 @@
     "noUnusedParameters": true,
     "skipLibCheck": true,
     "strict": true,
-    "target": "ES2023",
+    "target": "ES2022",
     "tsBuildInfoFile": "./tsconfig.node.tsbuildinfo",
     "types": ["node"],
     "verbatimModuleSyntax": true

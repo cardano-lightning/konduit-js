@@ -70,9 +70,14 @@ const router = createRouter({
 });
 
 router.beforeEach(async (to, _from) => {
-  await store.init();
+  let initResult = await store.init();
+  if (initResult.isErr()) {
+    console.error(`Failed to initialize store in router.beforeEach: ${initResult.error}`);
+  }
+
   let launchRouteNames = ["launch", "create"];
-  if (!store.hasSigningKey.value && !launchRouteNames.includes(to.name as string)) {
+  console.log(`Routing to ${to.name as string}, hasWallet: ${store.hasWallet.value}`);
+  if (!store.hasWallet.value && !launchRouteNames.includes(to.name as string)) {
     return { name: "launch" }
   }
 })

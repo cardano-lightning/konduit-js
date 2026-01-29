@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { exportSettings, forget } from "../store";
 import { writeJson } from "../utils/dom";
 import { useNotifications } from "../composables/notifications";
 import SettingRow from "./SettingsPage/SettingRow.vue";
 import TheHeader from "../components/TheHeader.vue";
 import NavBar from "../components/NavBar.vue";
 import { computed } from "vue";
-import { cardanoConnectorUrl, signingKey } from "../store";
-import { toVerificationKey } from "../cardano/keys";
-import { abbreviateHex, MISSING_PLACEHOLDER } from "../utils/formatters";
+import { cardanoConnector, wallet } from "../store";
+import { abbreviate, MISSING_PLACEHOLDER } from "../utils/formatters";
+import { json2KonduitConsumerAsyncCodec, KonduitConsumer } from "@konduit/konduit-consumer";
+import { konduitConsumer, forget } from "../store";
 
 const notifications = useNotifications();
 
@@ -23,7 +23,14 @@ const forgetReload = () => {
 };
 
 const writeSettings = () => {
-  writeJson(exportSettings(), "konduit.json");
+  if(!konduitConsumer.value) {
+    notifications.error(
+      "Cannot export settings: no wallet is configured."
+    );
+    return;
+  }
+  const json = json2KonduitConsumerAsyncCodec.serialise(konduitConsumer.value as KonduitConsumer);
+  writeJson(json, "konduit.json");
 };
 
 //  <ButtonGroup
@@ -44,29 +51,28 @@ const writeSettings = () => {
 //   },
 // ];
 
-const formattedVkey = computed(() => {
-  if(signingKey.value !== null)
-    return abbreviateHex(toVerificationKey(signingKey.value));
+const formattedConnector = computed(() => {
+  if(cardanoConnector.value === null) return MISSING_PLACEHOLDER;
+  return abbreviate(cardanoConnector.value.backendUrl, 25, 20);
+});
+
+const formattedAddress = computed(() => {
+  if(wallet.value !== null)
+    return abbreviate(wallet.value.addressBech32, 20, 10);
   return MISSING_PLACEHOLDER;
 });
 
-const formattedConnector = computed(() => {
-  if(cardanoConnectorUrl.value !== null)
-    return cardanoConnectorUrl.value;
-  return MISSING_PLACEHOLDER;
-});
 
 </script>
 
 <template>
   <TheHeader :back-page-name="'home'" />
   <dl id="container">
-    <SettingRow :label="'Verification key'" :formatted-value="formattedVkey" />
     <SettingRow :label="'Cardano connector'" :formatted-value="formattedConnector || MISSING_PLACEHOLDER" :action="'edit-cardano-connector-url'" />
-    <SettingRow :label="'Cardano network'" :formatted-value="'Mainnet'" :action="'cardano-network'" />
     <hr />
+    <SettingRow :label="'Embedded wallet address'" :formatted-value="formattedAddress" />
     <SettingRow :label="'Export'" :formatted-value="''" :action="writeSettings" :action-icon="'download'" />
-    <SettingRow :label="'Forget Me'" :formatted-value="''" :action="forgetReload" :action-icon="'trash'" />
+    <SettingRow :label="'Forget'" :formatted-value="''" :action="forgetReload" :action-icon="'trash'" />
   </dl>
   <NavBar />
 </template>

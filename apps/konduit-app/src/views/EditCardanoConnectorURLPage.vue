@@ -2,20 +2,66 @@
 import TheHeader from "../components/TheHeader.vue";
 import { useRouter } from 'vue-router';
 import { computed, type ComputedRef } from 'vue';
-import { useRegle } from '@regle/core';
-import { cardanoConnectorUrl } from "../store";
+import { createRule, useRegle, type Maybe } from '@regle/core';
+import { cardanoConnector } from "../store";
 import * as rules from '@regle/rules';
 import { type Props as ButtonProps } from "../components/Button.vue";
 import ButtonGroup from "../components/ButtonGroup.vue";
+import { CardanoConnectorWallet } from "@konduit/konduit-consumer/wallets/embedded";
+import { wallet } from "../store";
+import { isEmpty } from "@regle/rules";
+
+const walletBackendRule = createRule({
+  message: ({ backend }) => {
+    if(backend) return "The provided URL is not a valid Cardano Connector backend for the current network.";
+    return "The provided URL is not a valid Cardano Connector backend or the backend is unreachable.";
+  },
+  validator: async (value: Maybe<string>) => {
+    let backendUrl;
+    if(isEmpty(value)) {
+      return {
+        backendUrl: null,
+        backend: null,
+        $valid: false
+      };
+    }
+    backendUrl = value as string;
+    const createResult = await CardanoConnectorWallet.createBackend(backendUrl);
+    return createResult.match(
+      (newBackend) => {
+        if (wallet.value && wallet.value.networkMagicNumber === newBackend.networkMagicNumber) {
+          return {
+            backendUrl,
+            backend: newBackend,
+            $valid: true
+          };
+        }
+        return {
+          backendUrl,
+          backend: newBackend,
+          $valid: false
+        };
+      },
+      () => {
+        return {
+          backendUrl,
+          backend: null,
+          $valid: false
+        };
+      }
+    );
+  },
+});
 
 const { r$ } = useRegle(
   {
-    url: cardanoConnectorUrl.value || '',
+    url: cardanoConnector.value.backendUrl || '',
   },
   {
     url: {
       required: rules.required,
       url: rules.url,
+      walletBackendRule,
       $debounce: 1000,
     },
   }
@@ -23,7 +69,7 @@ const { r$ } = useRegle(
 
 const handleSubmit = () => {
   if (r$.$ready) {
-    cardanoConnectorUrl.value = r$.$value.url;
+    console.log("Submitting form", r$.$value);
     router.push({ name: 'settings' });
   }
 };

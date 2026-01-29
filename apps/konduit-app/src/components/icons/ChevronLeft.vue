@@ -2,7 +2,7 @@
   <svg
     id="screenshot-75077544-965f-80d2-8006-cd341e300e0c"
     width="100%"
-    height="auto"
+    height="18"
     xmlns="http://www.w3.org/2000/svg"
     viewBox="2659 9275.5 16 22"
     style="-webkit-print-color-adjust::exact"

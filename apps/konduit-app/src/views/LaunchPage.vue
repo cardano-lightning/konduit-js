@@ -1,50 +1,57 @@
 <script setup lang="ts">
-import { importSettings, signingKey } from "../store";
 import { type Props as ButtonProps } from "../components/Button.vue";
 import ButtonGroup from "../components/ButtonGroup.vue";
 import { loadJson } from "../utils/dom";
-import * as keys from "../cardano/keys";
 import { useNotifications } from "../composables/notifications";
+import * as store from "../store";
+import type { JsonError } from "@konduit/codec/json/codecs";
+import { stringify } from "@konduit/codec/json";
 
 const notifications = useNotifications();
 
-const loadSettings = async () => {
-  try {
-    const jsonData = await loadJson();
-    // null == user cancelled
-    if (jsonData) {
-      const result = importSettings(jsonData);
-      if (result.type === "success") {
-        notifications.redirectSuccess(
-          "Settings imported successfully.",
+const loadKonduitConsumerJson = async () => {
+  const jsonData = await loadJson();
+  jsonData.match(
+    async (json) => {
+      const result = await store.loadKonduitConsumerFromJson(json);
+      result.match(
+        () => notifications.redirectSuccess(
+          "Konduit app imported successfully.",
           { name: "home" }
-        );
-      } else if (result.type === "error") {
-        notifications.error(result.message);
-      }
+        ),
+        (e: JsonError) => {
+          notifications.error(`Failed to import Konduit app: ${stringify(e)}`);
+        }
+      );
+    },
+    () => {
+      notifications.error("No file selected.");
     }
-  } catch (err) {
-    notifications.error("Failed to load settings: " + (err as Error).message);
-  }
+  );
 };
 
-const createSkey = () => {
-  signingKey.value = keys.genSkey();
-  notifications.redirectSuccess(
-    "Signing key created successfully.",
-    { name: "home" }
+const createKonduitConsumer = async () => {
+  const result = await store.createKonduitConsumer();
+  result.match(
+    () => notifications.redirectSuccess(
+      "A new Konduit wallet created successfully.",
+      { name: "home" }
+    ),
+    (e: any) => {
+      notifications.error(`Failed to create Konduit app: ${e}`);
+    }
   );
 };
 
 const buttons: ButtonProps[] = [
   {
     label: "Import",
-    action: loadSettings,
+    action: loadKonduitConsumerJson,
     primary: false,
   },
   {
     label: "Create",
-    action: createSkey,
+    action: createKonduitConsumer,
     primary: true,
   },
 ];

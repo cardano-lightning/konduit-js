@@ -1,5 +1,9 @@
-export function loadJson(): Promise<any> {
-  return new Promise((resolve, reject) => {
+import { parse, stringify, type Json } from "@konduit/codec/json";
+import type { Result } from "neverthrow";
+import { err } from "neverthrow";
+
+export const loadJson = async (): Promise<Result<Json, string>> => {
+  const promise: Promise<Result<Json, string>> = new Promise((resolve, reject) => {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "application/json, .json";
@@ -12,7 +16,7 @@ export function loadJson(): Promise<any> {
       // Check if target and target files are defined and not empty
         const file = event.target.files[0];
         if (!file) {
-          resolve(null);
+          reject("No file selected");
         }
         const reader = new FileReader();
         reader.onload = (readerEvent: ProgressEvent<FileReader>) => {
@@ -25,7 +29,7 @@ export function loadJson(): Promise<any> {
               fileContent = new TextDecoder().decode(content);  // TS now knows content is ArrayBuffer
             }
             try {
-              resolve(JSON.parse(fileContent));
+              resolve(parse(fileContent));
             } catch (error) {
               reject(error);
             }
@@ -41,10 +45,14 @@ export function loadJson(): Promise<any> {
     };
     input.click();
   });
+  return promise
+    .catch(async (e) => {
+      return err(`Failed to read JSON file: ${e}`) as Result<Json, string>;
+    });
 }
 
-export function writeJson(data: any, filename = "data.json") {
-  const jsonString = JSON.stringify(data);
+export function writeJson(data: Json, filename = "data.json") {
+  const jsonString = stringify(data);
   const blob = new Blob([jsonString], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

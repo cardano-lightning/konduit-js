@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import NavBar from "../components/NavBar.vue";
 import TheHeader from "../components/TheHeader.vue";
-import { channels } from "../store.js";
-import * as hex from "@konduit/hex";
+import { HexString } from "@konduit/codec/hexString";
+
+let channels = [
+  { keytag: new Uint8Array([1, 2, 3, 4]) },
+  { keytag: new Uint8Array([5, 6, 7, 8]) },
+];
 </script>
 
 <template>
@@ -16,9 +20,9 @@ import * as hex from "@konduit/hex";
         <p>Please open a channel to start transacting.</p>
       </div>
       <ul v-else class="channel-list">
-        <li v-for="channel in channels" :key="hex.encode(channel.keytag)" class="channel-item">
+        <li v-for="channel in channels" :key="HexString.fromUint8Array(channel.keytag)" class="channel-item">
           <div class="channel-info">
-            <h3>Channel KeyTag: {{ hex.encode(channel.keytag) }}</h3>
+            <h3>Channel KeyTag: {{ HexString.fromUint8Array(channel.keytag) }}</h3>
           </div>
         </li>
       </ul>

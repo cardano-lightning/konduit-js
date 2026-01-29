@@ -8,10 +8,12 @@ export function useNotifications(_router: Router | null = null, _toast: ToastInt
     if(_router) return _router;
     return useRouter();
   })();
+
   const toast: ToastInterface = (() => {
     if(_toast) return _toast;
     return useToast();
   })();
+
   function success(message: string) {
     logs.archive(message, 'success');
     toast(message, {

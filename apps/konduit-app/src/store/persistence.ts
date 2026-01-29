@@ -1,3 +1,4 @@
+import type { Json } from "@konduit/codec/json";
 import { openDB, type IDBPDatabase } from "idb";
 import type { Ref } from "vue";
 
@@ -5,7 +6,7 @@ const DB_NAME = "db";
 const STORE_NAME = "kv";
 const DB_VERSION = 1;
 
-export async function get(key: string): Promise<any> {
+export async function get(key: string): Promise<Json> {
   return (await getDb()).get(STORE_NAME, key);
 }
 
@@ -39,12 +40,8 @@ export async function clearDb(): Promise<void> {
  * Loads a value from the database and sets it to a Vue ref.
  * If the value is undefined in the DB, the ref is not modified.
  */
-export async function fromDb(label: string, ref: Ref<any>): Promise<void> {
-  return get(label).then((x) => {
-    if (typeof x !== "undefined") {
-      ref.value = x;
-    }
-  });
+export async function fromDb(label: string): Promise<Json | null> {
+  return get(label) || null;
 }
 
 /**
@@ -70,7 +67,7 @@ export async function fromDbWith(label: string, ref: Ref<any>, with_: (x: any) =
  * @param {any} value - The value to store.
  * @returns {Promise<void>} A promise that resolves when the operation is complete.
  */
-export async function toDb(label: string, value: any): Promise<void> {
+export async function toDb(label: string, value: Json): Promise<void> {
   if (value != null) {
     set(label, value);
   } else {
