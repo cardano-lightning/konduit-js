@@ -53,7 +53,7 @@ const formattedExpiresAt = computed((): string => {
       <dl id="invoice-details">
         <dt>Amount</dt>
         <dd class="detail-value amount">
-          {{ formatters.btc(currentStep?.decodedInvoice?.amount) }}
+          {{ formatters.formatBtc(currentStep?.decodedInvoice?.amount) }}
         </dd>
 
         <dt>Description</dt>

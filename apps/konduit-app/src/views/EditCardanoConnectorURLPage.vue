@@ -10,6 +10,7 @@ import ButtonGroup from "../components/ButtonGroup.vue";
 import { CardanoConnectorWallet } from "@konduit/konduit-consumer/wallets/embedded";
 import { wallet } from "../store";
 import { isEmpty } from "@regle/rules";
+import { Milliseconds } from "@konduit/konduit-consumer/time/duration";
 
 const walletBackendRule = createRule({
   message: ({ backend }) => {
@@ -22,14 +23,15 @@ const walletBackendRule = createRule({
       return {
         backendUrl: null,
         backend: null,
-        $valid: false
+        $valid: false,
       };
     }
     backendUrl = value as string;
-    const createResult = await CardanoConnectorWallet.createBackend(backendUrl);
+    const createResult = await CardanoConnectorWallet.createBackend(backendUrl, Milliseconds.fromDigits(5, 0, 0));
     return createResult.match(
       (newBackend) => {
         if (wallet.value && wallet.value.networkMagicNumber === newBackend.networkMagicNumber) {
+          console.log("Succeeding");
           return {
             backendUrl,
             backend: newBackend,
@@ -60,8 +62,14 @@ const { r$ } = useRegle(
   {
     url: {
       required: rules.required,
-      url: rules.url,
-      walletBackendRule,
+      // TODO: I have no clue why this composition of rules doesn't work:
+      // url: rules.withMessage(
+      //   rules.and(rules.url, walletBackendRule),
+      //   () => "Please provide a valid Cardano Connector URL."
+      // ),
+      // TODO: It would be much nicer to error only if the URL is syntactically valid.
+      //       And the root domain does exist.
+      url: walletBackendRule,
       $debounce: 1000,
     },
   }
@@ -77,7 +85,6 @@ const handleSubmit = () => {
 const router = useRouter();
 
 const buttons: ComputedRef<ButtonProps[]> = computed(() => {
-  console.log("Recomputing buttons", r$.$invalid);
   return [
     {
       label: "Cancel",
@@ -85,7 +92,7 @@ const buttons: ComputedRef<ButtonProps[]> = computed(() => {
       primary: false,
     },
     {
-      disabled: !r$.$ready,
+      disabled: !r$.$ready || r$.$value.url === cardanoConnector.value.backendUrl,
       label: "Save",
       action: handleSubmit,
       primary: true,
@@ -106,9 +113,16 @@ const buttons: ComputedRef<ButtonProps[]> = computed(() => {
           type='text'
           placeholder='https://cardano-lightning.org/konduit'
         />
+        <!-- Let's rewrite this as a list
         <span v-for="error of r$.url.$errors" :key='error'>
           {{ error }}
         </span>
+        -->
+        <ul class="errors" v-if="r$.url.$errors.length > 0">
+          <li v-for="error of r$.url.$errors" :key='error'>
+            {{ error }}
+          </li>
+        </ul>
       </div>
     </div>
     <ButtonGroup :buttons="buttons" />

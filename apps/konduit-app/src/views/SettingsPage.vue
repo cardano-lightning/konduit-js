@@ -6,9 +6,10 @@ import TheHeader from "../components/TheHeader.vue";
 import NavBar from "../components/NavBar.vue";
 import { computed } from "vue";
 import { cardanoConnector, wallet } from "../store";
-import { abbreviate, MISSING_PLACEHOLDER } from "../utils/formatters";
+import { MISSING_PLACEHOLDER } from "../utils/formatters";
 import { json2KonduitConsumerAsyncCodec, KonduitConsumer } from "@konduit/konduit-consumer";
 import { konduitConsumer, forget } from "../store";
+import { useAbbreviate } from "../composables/formatters";
 
 const notifications = useNotifications();
 
@@ -33,35 +34,8 @@ const writeSettings = () => {
   writeJson(json, "konduit.json");
 };
 
-//  <ButtonGroup
-//    :buttons="buttons"
-//    :style="{ padding: '10vh 0 10vh' }"
-//  />
-
-// const buttons: ButtonProps[] = [
-//   {
-//     label: "Export",
-//     action: writeSettings,
-//     primary: true,
-//   },
-//   {
-//     label: "Forget Me",
-//     action: forgetReload,
-//     primary: true,
-//   },
-// ];
-
-const formattedConnector = computed(() => {
-  if(cardanoConnector.value === null) return MISSING_PLACEHOLDER;
-  return abbreviate(cardanoConnector.value.backendUrl, 25, 20);
-});
-
-const formattedAddress = computed(() => {
-  if(wallet.value !== null)
-    return abbreviate(wallet.value.addressBech32, 20, 10);
-  return MISSING_PLACEHOLDER;
-});
-
+const formattedConnector = useAbbreviate(computed(() => cardanoConnector.value?.backendUrl), 25, 20);
+const formattedAddress = useAbbreviate(computed(() => wallet.value?.addressBech32), 20, 10);
 
 </script>
 

@@ -76,14 +76,19 @@ const _setupKonduitConsumer = (consumer: KonduitConsumer): void => {
     forgetKonduitConsumer();
   }
   _konduitConsumer.value = consumer;
+
   _subscriptions.push(consumer.wallet.subscribe('balance-changed', () => {
     _saveKonduitConsumer();
     _walletBalance.value = consumer.wallet.balance;
   }));
+  _walletBalance.value = consumer.wallet.balance;
+
   _subscriptions.push(consumer.wallet.subscribe('backend-changed', async ({ newBackend }) => {
     _saveKonduitConsumer();
     _cardanoConnector.value = newBackend.connector
   }));
+  _cardanoConnector.value = consumer.wallet.walletBackend.connector;
+
   consumer.wallet.startPolling(Seconds.fromSmallNumber(30));
   _wallet.value = consumer.wallet;
 }

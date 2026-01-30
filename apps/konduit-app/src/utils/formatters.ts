@@ -49,3 +49,4 @@ export function formatBytesAlphanumericOrHex(bytes: Uint8Array, hexPrefix: strin
 
   return `${hexPrefix}${hex.encode(bytes)}`;
 }
+
