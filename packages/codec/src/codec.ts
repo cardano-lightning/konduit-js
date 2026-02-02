@@ -1,4 +1,4 @@
-import { ok, type Result } from "neverthrow";
+import { err, ok, type Result } from "neverthrow";
 
 export type Deserialiser<I, O, E> = (i: I) => Result<O, E>;
 
@@ -86,26 +86,42 @@ export const mapErr = <I, O, E, F>(
   };
 }
 
-export type CaseSerialisers<O1, O2, I> =
+export type Case2Serialisers<O1, O2, I> =
   (serO1: Serialiser<O1, I>, serO2: Serialiser<O2, I>) => Serialiser<O1 | O2, I>;
 
-// Unfortunately we need some help in order to compose two alternative codecs:
+// Unfortunately we need some help in order to compose alternative codecs:
 // * we need a little help to dispatch between the two values
 // * we need a way to combine errors from both deserialisers
-export const altCodec = <I, O1, O2, E>(
-  first: Codec<I, O1, E>,
-  second: Codec<I, O2, E>,
-  caseSerialisers: CaseSerialisers<O1, O2, I>,
-  combineErrs: (err1: E, err2: E) => E = (_e1, e2) => e2
-): Codec<I, O1 | O2, E> => {
+// This uses recursive types and variadic tuples to handle arbitrary numbers of alternatives
+export type ExtractCodecOutput<C> = C extends Codec<any, infer O, any> ? O : never;
+export type ExtractCodecInput<C> = C extends Codec<infer I, any, any> ? I : never;
+export type ExtractCodecError<C> = C extends Codec<any, any, infer E> ? E : never;
+export type UnionOfCodecsOutputs<Codecs extends readonly Codec<any, any, any>[]> = ExtractCodecOutput<Codecs[number]>;
+
+export const altCodecs = <Codecs extends readonly Codec<any, any, any>[]>(
+  codecs: [...Codecs],
+  caseSerialisers: (
+    ...serialisers: { [K in keyof Codecs]: Codecs[K] extends Codec<infer I, infer O, any> ? Serialiser<O, I> : never }
+  ) => Serialiser<UnionOfCodecsOutputs<Codecs>, ExtractCodecInput<Codecs[number]>>,
+  combineErrs: (...errors: ExtractCodecError<Codecs[number]>[]) => ExtractCodecError<Codecs[number]> = (...errs) => errs[errs.length - 1]
+): Codec<ExtractCodecInput<Codecs[number]>, UnionOfCodecsOutputs<Codecs>, ExtractCodecError<Codecs[number]>> => {
   return {
-    deserialise: (input: I): Result<O1 | O2, E> =>
-      first.deserialise(input).orElse(
-        (err1) => second.deserialise(input).mapErr(
-          (err2) => combineErrs(err1, err2))),
-    serialise: (output: O1 | O2): I => {
-      const ser = caseSerialisers(first.serialise, second.serialise);
+    deserialise: (input: ExtractCodecInput<Codecs[number]>): Result<UnionOfCodecsOutputs<Codecs>, ExtractCodecError<Codecs[number]>> => {
+      const errors: ExtractCodecError<Codecs[number]>[] = [];
+      for (const codec of codecs) {
+        const result = codec.deserialise(input);
+        if (result.isOk()) {
+          return result as Result<UnionOfCodecsOutputs<Codecs>, ExtractCodecError<Codecs[number]>>;
+        }
+        result.mapErr(err => errors.push(err));
+      }
+      // All alternatives failed, combine all errors
+      return err(combineErrs(...errors)) as Result<UnionOfCodecsOutputs<Codecs>, ExtractCodecError<Codecs[number]>>;
+    },
+    serialise: (output: UnionOfCodecsOutputs<Codecs>): ExtractCodecInput<Codecs[number]> => {
+      const serialisers = codecs.map(codec => codec.serialise) as any;
+      const ser = caseSerialisers(...serialisers);
       return ser(output);
     }
   };
-}
+};

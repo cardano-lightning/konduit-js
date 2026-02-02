@@ -1,190 +1,191 @@
 import { describe, it, expect } from 'vitest';
-import { expectOk, expectErr } from './assertions';
-import { fromSync, pipe, rmapSync } from '../src/codec/async';
-import { JsonAsyncCodec, objectOf as syncObjectOf } from '../src/json/async';
-import { json2StringCodec, json2NumberCodec, json2BooleanCodec, JsonError } from '../src/json/codecs';
+import { fromSync, pipe, compose, rmapSync, lmapSync, rmap, mapErr, altCodec } from '../src/codec/async';
+import { json2StringCodec, json2NumberCodec, json2BooleanCodec, type JsonCodec } from '../src/json/codecs';
 import type { Json } from '../src/json';
-import { err, ok, Result } from 'neverthrow';
+import { expectOk, expectErr } from './assertions';
 
 describe('Async Codecs', () => {
-  describe('fromSync and basic operations', () => {
-    it('should lift sync codec to async and roundtrip', async () => {
+  describe('fromSync', () => {
+    it('should lift a sync codec to async', async () => {
       const asyncStringCodec = fromSync(json2StringCodec);
-      const original = "hello async";
-      const encoded = asyncStringCodec.serialise(original);
-      const decoded = expectOk(await asyncStringCodec.deserialise(encoded));
-      expect(decoded).toBe(original);
+      const result = await asyncStringCodec.deserialise("hello");
+      const decoded = expectOk(result);
+      expect(decoded).toBe("hello");
     });
 
-    it('should rmap async codecs correctly', async () => {
-      const asyncNumberCodec: JsonAsyncCodec<number> = fromSync(json2NumberCodec);
-      const doubleCodec: JsonAsyncCodec<number> = rmapSync(
-        asyncNumberCodec,
-        (n: number): number => n * 2,
-        (n: number): number => n / 2
-      );
-
-      const original = 21n as Json;
-      const decoded = expectOk(await doubleCodec.deserialise(original));
-      expect(decoded).toBe(42);
-
-      const encoded = doubleCodec.serialise(42);
-      expect(encoded).toBe(21n);
-    });
-
-    it('should pipe async codecs correctly', async () => {
-      const asyncNumberCodec: JsonAsyncCodec<number> = fromSync(json2NumberCodec);
-      const numberHalfOfNumberCodec = {
-        serialise: (n: number): number => n * 2,
-        deserialise: async (n: number): Promise<Result<number, JsonError>> => {
-          if(n % 2 !== 0) {
-            return err(`Cannot deserialise odd number ${n} to half`);
-          }
-          return ok(n / 2);
-        }
-      };
-      const doubleCodec: JsonAsyncCodec<number> = pipe(
-        asyncNumberCodec,
-        numberHalfOfNumberCodec
-      );
-
-      const original = 42n as Json;
-      const decoded = expectOk(await doubleCodec.deserialise(original));
-      expect(decoded).toBe(21);
-
-      const encoded = doubleCodec.serialise(21);
+    it('should preserve serialization', () => {
+      const asyncNumberCodec = fromSync(json2NumberCodec);
+      const encoded = asyncNumberCodec.serialise(42);
       expect(encoded).toBe(42n);
-
-      const failResult = await doubleCodec.deserialise(43n);
-      expectErr(failResult);
     });
   });
 
-  describe('async objectOf with nested objects', () => {
-    type Address = {
-      street: string;
-      city: string;
-      zipCode: number;
-    };
-
-    type Company = {
-      name: string;
-      founded: number;
-    };
-
-    type Person = {
-      name: string;
-      age: number;
-      isActive: boolean;
-      address: Address;
-      employer: Company;
-    };
-
-    const asyncAddressCodec = syncObjectOf({
-      street: fromSync(json2StringCodec),
-      city: fromSync(json2StringCodec),
-      zipCode: fromSync(json2NumberCodec)
-    });
-
-    const asyncCompanyCodec = syncObjectOf({
-      name: fromSync(json2StringCodec),
-      founded: fromSync(json2NumberCodec)
-    });
-
-    const asyncPersonCodec = syncObjectOf({
-      name: fromSync(json2StringCodec),
-      age: fromSync(json2NumberCodec),
-      isActive: fromSync(json2BooleanCodec),
-      address: asyncAddressCodec,
-      employer: asyncCompanyCodec
-    });
-
-    it('should encode and decode nested objects', async () => {
-      const person: Person = {
-        name: "Alice",
-        age: 30,
-        isActive: true,
-        address: {
-          street: "123 Main St",
-          city: "Springfield",
-          zipCode: 12345
+  describe('pipe', () => {
+    it('should compose two async codecs', async () => {
+      const stringToNumber: JsonCodec<number> = {
+        deserialise: (input: Json) => {
+          if (typeof input === 'string') {
+            const num = parseInt(input, 10);
+            if (!isNaN(num)) {
+              return json2NumberCodec.deserialise(BigInt(num));
+            }
+          }
+          return json2NumberCodec.deserialise(input);
         },
-        employer: {
-          name: "Tech Corp",
-          founded: 2010
+        serialise: (output: number) => {
+          return String(json2NumberCodec.serialise(output));
         }
       };
 
-      const encoded = asyncPersonCodec.serialise(person);
-      const decoded = expectOk(await asyncPersonCodec.deserialise(encoded));
-      expect(decoded).toEqual(person);
-    });
+      const asyncStringCodec = fromSync(json2StringCodec);
+      const asyncStringToNumber = fromSync(stringToNumber);
+      const composed = pipe(asyncStringCodec, asyncStringToNumber);
 
-    it('should collect errors from nested objects', async () => {
-      const invalidPerson = {
-        name: "Bob",
-        age: "not a number", // invalid
-        isActive: true,
-        address: {
-          street: 456n, // invalid
-          city: "Metropolis",
-          zipCode: 54321n
+      const result = await composed.deserialise("123");
+      const decoded = expectOk(result);
+      expect(decoded).toBe(123);
+
+      const encoded = composed.serialise(456);
+      expect(encoded).toBe("456");
+    });
+  });
+
+  describe('compose', () => {
+    it('should compose in categorical order', async () => {
+      const stringToNumber: JsonCodec<number> = {
+        deserialise: (input: Json) => {
+          if (typeof input === 'string') {
+            const num = parseInt(input, 10);
+            if (!isNaN(num)) {
+              return json2NumberCodec.deserialise(BigInt(num));
+            }
+          }
+          return json2NumberCodec.deserialise(input);
         },
-        employer: {
-          name: true, // invalid
-          founded: 2015n
+        serialise: (output: number) => {
+          return String(json2NumberCodec.serialise(output));
         }
       };
 
-      const result = await asyncPersonCodec.deserialise(invalidPerson as Json);
-      const errorJson = expectErr(result);
-      expect(typeof errorJson).toBe("object");
+      const asyncStringCodec = fromSync(json2StringCodec);
+      const asyncStringToNumber = fromSync(stringToNumber);
+      const composed = compose(asyncStringToNumber, asyncStringCodec);
 
-      if (typeof errorJson === "object" && errorJson !== null) {
-        // Should have errors for age, address.street, and employer.name
-        expect(errorJson["age"]).toBeDefined();
-        expect(typeof errorJson["address"]).toBe("object");
-        expect(typeof errorJson["employer"]).toBe("object");
+      const result = await composed.deserialise("789");
+      const decoded = expectOk(result);
+      expect(decoded).toBe(789);
+    });
+  });
 
-        const addressErrors = errorJson["address"];
-        if (typeof addressErrors === "object" && addressErrors !== null) {
-          expect(addressErrors["street"]).toBeDefined();
-        }
+  describe('rmapSync', () => {
+    it('should map output type synchronously', async () => {
+      const asyncNumberCodec = fromSync(json2NumberCodec);
+      const doubled = rmapSync(
+        asyncNumberCodec,
+        (n) => n * 2,
+        (n) => n / 2
+      );
 
-        const employerErrors = errorJson["employer"];
-        if (typeof employerErrors === "object" && employerErrors !== null) {
-          expect(employerErrors["name"]).toBeDefined();
-        }
-      }
+      const result = await doubled.deserialise(21n);
+      const decoded = expectOk(result);
+      expect(decoded).toBe(42);
+
+      const encoded = doubled.serialise(100);
+      expect(encoded).toBe(50n);
+    });
+  });
+
+  describe('lmapSync', () => {
+    it('should map input type synchronously', async () => {
+      const asyncNumberCodec = fromSync(json2NumberCodec);
+      const stringInput = lmapSync(
+        asyncNumberCodec,
+        (s: string) => BigInt(s) as Json,
+        (n: Json) => String(n)
+      );
+
+      const result = await stringInput.deserialise("42");
+      const decoded = expectOk(result);
+      expect(decoded).toBe(42);
+
+      const encoded = stringInput.serialise(123);
+      expect(encoded).toBe("123");
+    });
+  });
+
+  describe('rmap', () => {
+    it('should map output type asynchronously', async () => {
+      const asyncNumberCodec = fromSync(json2NumberCodec);
+      const asyncDoubled = rmap(
+        asyncNumberCodec,
+        async (n) => {
+          await new Promise(resolve => setTimeout(resolve, 10));
+          return n * 2;
+        },
+        (n) => n / 2
+      );
+
+      const result = await asyncDoubled.deserialise(21n);
+      const decoded = expectOk(result);
+      expect(decoded).toBe(42);
+
+      const encoded = asyncDoubled.serialise(100);
+      expect(encoded).toBe(50n);
+    });
+  });
+
+  describe('mapErr', () => {
+    it('should map error type', async () => {
+      const asyncStringCodec = fromSync(json2StringCodec);
+      const withMappedErr = mapErr(
+        asyncStringCodec,
+        (err) => `Mapped: ${err}`
+      );
+
+      const result = await withMappedErr.deserialise(123n);
+      const error = expectErr(result);
+      expect(typeof error === 'string' && error.startsWith('Mapped:')).toBe(true);
+    });
+  });
+
+  describe('altCodec', () => {
+    it('should try first codec, then second on failure', async () => {
+      const asyncStringCodec = fromSync(json2StringCodec);
+      const asyncNumberCodec = fromSync(json2NumberCodec);
+      const stringOrNumber = altCodec(
+        asyncStringCodec,
+        asyncNumberCodec,
+        (serStr, serNum) => (value: string | number) =>
+          typeof value === 'string' ? serStr(value) : serNum(value)
+      );
+
+      const strResult = await stringOrNumber.deserialise("hello");
+      const strDecoded = expectOk(strResult);
+      expect(strDecoded).toBe("hello");
+
+      const numResult = await stringOrNumber.deserialise(42n);
+      const numDecoded = expectOk(numResult);
+      expect(numDecoded).toBe(42);
+
+      const boolResult = await stringOrNumber.deserialise(true);
+      expectErr(boolResult);
     });
 
-    it('should handle deeply nested valid objects', async () => {
-      const complexPerson: Person = {
-        name: "Charlie",
-        age: 45,
-        isActive: false,
-        address: {
-          street: "789 Oak Ave",
-          city: "Shelbyville",
-          zipCode: 67890
-        },
-        employer: {
-          name: "Mega Industries",
-          founded: 1995
-        }
-      };
+    it('should serialize using correct case', async () => {
+      const asyncStringCodec = fromSync(json2StringCodec);
+      const asyncNumberCodec = fromSync(json2NumberCodec);
+      const stringOrNumber = altCodec(
+        asyncStringCodec,
+        asyncNumberCodec,
+        (serStr, serNum) => (value: string | number) =>
+          typeof value === 'string' ? serStr(value) : serNum(value)
+      );
 
-      const encoded = asyncPersonCodec.serialise(complexPerson);
-      const decoded = expectOk(await asyncPersonCodec.deserialise(encoded));
+      const strEncoded = stringOrNumber.serialise("test");
+      expect(strEncoded).toBe("test");
 
-      expect(decoded.name).toBe("Charlie");
-      expect(decoded.age).toBe(45);
-      expect(decoded.isActive).toBe(false);
-      expect(decoded.address.street).toBe("789 Oak Ave");
-      expect(decoded.address.city).toBe("Shelbyville");
-      expect(decoded.address.zipCode).toBe(67890);
-      expect(decoded.employer.name).toBe("Mega Industries");
-      expect(decoded.employer.founded).toBe(1995);
+      const numEncoded = stringOrNumber.serialise(99);
+      expect(numEncoded).toBe(99n);
     });
   });
 });

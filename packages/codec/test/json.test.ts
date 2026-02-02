@@ -157,8 +157,7 @@ describe('JSON Codecs', () => {
 
   describe('alternative codec (string or number)', () => {
     const json2StringOrNumberCodec = altJsonCodecs(
-      json2StringCodec,
-      json2NumberCodec,
+      [json2StringCodec, json2NumberCodec],
       (serStr, serNum) => (value: string | number) => {
         return typeof value === 'string' ? serStr(value) : serNum(value);
       }
@@ -192,6 +191,32 @@ describe('JSON Codecs', () => {
     });
   });
 
+  describe('4 alternatives', () => {
+    const fourWayCodec = altJsonCodecs(
+      [json2StringCodec, json2NumberCodec, json2BooleanCodec, json2NullCodec] as const,
+      (serStr, serNum, serBool, serNull) => (value: string | number | boolean | null) => {
+        if (value === null) return serNull(value);
+        if (typeof value === 'string') return serStr(value);
+        if (typeof value === 'number') return serNum(value);
+        return serBool(value);
+      }
+    );
+
+    it('should decode all four alternatives', () => {
+      expect(expectOk(fourWayCodec.deserialise("text"))).toBe("text");
+      expect(expectOk(fourWayCodec.deserialise(100n))).toBe(100);
+      expect(expectOk(fourWayCodec.deserialise(false))).toBe(false);
+      expect(expectOk(fourWayCodec.deserialise(null))).toBe(null);
+    });
+
+    it('should serialize all types correctly', () => {
+      expect(fourWayCodec.serialise("abc")).toBe("abc");
+      expect(fourWayCodec.serialise(50)).toBe(50n);
+      expect(fourWayCodec.serialise(true)).toBe(true);
+      expect(fourWayCodec.serialise(null)).toBe(null);
+    });
+  });
+
   describe('complex object with optional and nullable fields', () => {
     it('optional codec should handle undefined as null in JSON', () => {
       const json2optionalStringCodec = optional(json2StringCodec);
@@ -215,8 +240,7 @@ describe('JSON Codecs', () => {
       const json2personCodec: JsonCodec<Person> = objectOf({
         name: json2StringCodec,
         nickname: altJsonCodecs(
-          json2NullCodec,
-          json2StringCodec,
+          [json2NullCodec, json2StringCodec],
           (serNull, serString) => (value: null | string) =>
             value === null ? serNull(value) : serString(value)
         ),

@@ -2,7 +2,7 @@ import { err, ok, type Result } from "neverthrow";
 import type { Json } from "../json";
 import { onBigInt, onBoolean, onArray, onObject, onNull, nullJson, onString, stringify } from "../json";
 import * as json from "../json";
-import { altCodec, type Codec, type Deserialiser, type Serialiser } from "../codec";
+import { altCodecs, type Codec, type Deserialiser, type ExtractCodecInput, type Serialiser, type UnionOfCodecsOutputs } from "../codec";
 
 // We actually represent parsing errors as JSON too :-P
 export type JsonError = Json;
@@ -83,24 +83,22 @@ export const json2ObjectCodec: JsonCodec<{ [key: string]: Json }> = {
   serialise: (value: { [key: string]: Json }) => value as Json
 };
 
-export const altJsonCodecs = <O1, O2>(
-  first: JsonCodec<O1>,
-  second: JsonCodec<O2>,
-  caseSerialisers: (serO1: JsonSerialiser<O1>, serO2: JsonSerialiser<O2>) => JsonSerialiser<O1 | O2>
-): JsonCodec<O1 | O2> => {
-  let
-    combineErrs = (err1: JsonError, err2: JsonError): JsonError => {
-      const arr1 = Array.isArray(err1) ? err1 : [err1];
-      const arr2 = Array.isArray(err2) ? err2 : [err2];
-      return [...arr1, ...arr2];
-    };
-  return altCodec<Json, O1, O2, JsonError>(
-    first,
-    second,
+// I'm not sure why but some parts of the original altCodecs type can be be unified with concrete parts of
+// the JsonCodec, but some not. So I'm leaving this mutant here to help the TS compiler a bit :-P
+export const altJsonCodecs = <Codecs extends readonly JsonCodec<any>[]>(
+  codecs: [...Codecs],
+  caseSerialisers: (
+    ...serialisers: { [K in keyof Codecs]: Codecs[K] extends Codec<Json, infer O, any> ? Serialiser<O, Json> : never }
+  ) => Serialiser<UnionOfCodecsOutputs<Codecs>, ExtractCodecInput<Codecs[number]>>
+): Codec<ExtractCodecInput<Codecs[number]>, UnionOfCodecsOutputs<Codecs>, JsonError> => {
+  const combineErrs = (...errors: JsonError[]): JsonError => errors;
+
+  return altCodecs(
+    codecs,
     caseSerialisers,
-    combineErrs
+    combineErrs as any
   );
-}
+};
 
 export const optional = <O>(codec: JsonCodec<O>): JsonCodec<O | undefined> => {
   return {
