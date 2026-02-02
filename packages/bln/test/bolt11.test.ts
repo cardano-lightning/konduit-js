@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { bolt11 } from "../src/index";
 import { hex } from "@scure/base";
-import { DecodedInvoice, FallbackAddress } from "../src/bolt11";
+import { DecodedInvoice, FallbackAddress } from "../src/invoice/bolt11";
 import * as bitcoinjs from "bitcoinjs-lib";
 
 const PAYMENT_SECRET = hex.decode(
@@ -38,7 +38,7 @@ function runParseURI(s: string): DecodedInvoice {
   return result.match(
     (res) => {
       expect(res).toBeDefined();
-      return res;
+      return res.decoded;
     },
     (err) => {
       throw err;

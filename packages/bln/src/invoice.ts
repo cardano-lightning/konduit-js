@@ -36,6 +36,7 @@ export const parse = (val: string) : Result<InvoiceInfo, InvoiceError> => {
         )
       });
   } catch (e) {
+    console.error("Failed to parse request:", e);
     // TODO: This should be reported to the server and presented as application error, not user error
     return err({ message: (e as Error).message || "Unknown error" });
   }
