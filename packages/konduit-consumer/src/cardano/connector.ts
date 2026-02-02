@@ -9,6 +9,7 @@ import { Lovelace, NetworkMagicNumber, TxHash } from "../cardano";
 import { stringifyAsyncThrowable } from "@konduit/codec/neverthrow";
 import type { JsonError } from "@konduit/codec/json/codecs";
 import { PositiveBigInt } from "@konduit/codec/integers/big";
+import type { Milliseconds } from "../time/duration";
 
 export const enableLogs = (level: wasm.LogLevel): void => {
   wasm.enableLogs(level);
@@ -26,8 +27,8 @@ export class Connector {
     this.networkMagicNumber = networkMagicNumber;
   }
 
-  static async new(backendUrl: string): Promise<Result<Connector, string>> {
-    const possibleConnector = await stringifyAsyncThrowable(async () => wasm.CardanoConnector.new(backendUrl));
+  static async new(backendUrl: string, httpTimeout?: Milliseconds): Promise<Result<Connector, string>> {
+    const possibleConnector = await stringifyAsyncThrowable(() => wasm.CardanoConnector.new(backendUrl, httpTimeout));
     return possibleConnector.andThen((connector: wasm.CardanoConnector) => {
       return PositiveBigInt.fromBigInt(connector.network_magic_number).match(
         (positive) => {

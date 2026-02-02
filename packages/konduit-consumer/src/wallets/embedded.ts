@@ -21,6 +21,8 @@ type WalletEvent<T> = CustomEvent<T>;
 export type WalletEvents<WalletBackend> = {
   "backend-changed": { oldBackend: WalletBackend; newBackend: WalletBackend };
   "balance-changed": { newBalance: Lovelace };
+  // Regardless of the change
+  "balance-fetched": { currentBalance: Lovelace };
   "balance-update-failed": { error: JsonError };
   "tx-submitted": { txHash: TxHash, context?: Json };
 };
@@ -35,12 +37,12 @@ export type WalletBackendBase = {
 
 export type SuccessfulFetch = {
   lovelace: Lovelace;
-  fetched: ValidDate;
+  fetchedAt: ValidDate;
 };
 
 export type FailedFetch = {
   error: JsonError;
-  fetched: ValidDate;
+  fetchedAt: ValidDate;
   previousSuccessfulFetch: SuccessfulFetch | null;
 };
 
@@ -51,16 +53,15 @@ export type BalanceFetch =
 export const json2BalanceFetchCodec: JsonCodec<BalanceFetch> = (() => {
   let json2SuccessfulFetchCodec: JsonCodec<SuccessfulFetch> = jsonCodecs.objectOf({
     lovelace: json2LovelaceCodec,
-    fetched: json2ValidDateCodec,
+    fetchedAt: json2ValidDateCodec,
   });
   let json2FailedFetchCodec: JsonCodec<FailedFetch> = jsonCodecs.objectOf({
     error: mkIdentityCodec(),
-    fetched: json2ValidDateCodec,
+    fetchedAt: json2ValidDateCodec,
     previousSuccessfulFetch: jsonCodecs.nullable(json2SuccessfulFetchCodec),
   });
   return jsonCodecs.altJsonCodecs(
-    json2SuccessfulFetchCodec,
-    json2FailedFetchCodec,
+    [json2SuccessfulFetchCodec, json2FailedFetchCodec],
     (serSuccess, serFailed) => (value: BalanceFetch) => {
       if ("lovelace" in value) {
         return serSuccess(value);
@@ -87,17 +88,24 @@ export class BalanceInfo {
     return null;
   }
 
+  public get successfulFetch(): SuccessfulFetch | null {
+    if ("lovelace" in this.lastFetch) {
+        return this.lastFetch;
+    }
+    return this.lastFetch.previousSuccessfulFetch;
+  }
+
   public static mkNew(result: Lovelace | JsonError): BalanceInfo {
     const now = ValidDate.now();
     if (typeof result === "bigint") {
       return new BalanceInfo({
         lovelace: result as Lovelace,
-        fetched: now,
+        fetchedAt: now,
       });
     } else {
       return new BalanceInfo({
         error: result,
-        fetched: now,
+        fetchedAt: now,
         previousSuccessfulFetch: null,
       });
     }
@@ -108,20 +116,20 @@ export class BalanceInfo {
     if (typeof result === "bigint") {
       return new BalanceInfo({
         lovelace: result as Lovelace,
-        fetched: now,
+        fetchedAt: now,
       });
     } else {
       const previousSuccessfulFetch = "lovelace" in this.lastFetch
         ? {
             lovelace: this.lastFetch.lovelace,
-            fetched: this.lastFetch.fetched,
+            fetchedAt: this.lastFetch.fetchedAt,
           }
         : ("previousSuccessfulFetch" in this.lastFetch
             ? this.lastFetch.previousSuccessfulFetch
             : null);
       return new BalanceInfo({
         error: result,
-        fetched: now,
+        fetchedAt: now,
         previousSuccessfulFetch,
       });
     }
@@ -247,10 +255,12 @@ export class Wallet<WalletBackend extends WalletBackendBase> {
   private async poll() {
     const result = await this.walletBackend.getBalance(this.vKey);
     const resultFlattened = result.match((lovelace) => lovelace, (error) => error);
+    this._balanceInfo = this._balanceInfo? this._balanceInfo.mkSuccessor(resultFlattened) : BalanceInfo.mkNew(resultFlattened);
+    console.log("Polled balance:", this._balanceInfo);
     result.match(
       (lovelace) => {
+        this.emit('balance-fetched', { currentBalance: lovelace });
         if(this.balance !== lovelace)
-          this._balanceInfo = this._balanceInfo? this._balanceInfo.mkSuccessor(resultFlattened) : BalanceInfo.mkNew(resultFlattened);
           this.emit('balance-changed', { newBalance: lovelace });
       },
       (error) => {
@@ -262,6 +272,7 @@ export class Wallet<WalletBackend extends WalletBackendBase> {
   // (Re)start polling
   public async startPolling(interval: Seconds) {
     let intervalMs = Milliseconds.fromSeconds(interval);
+    this.poll();
     if (this.pollingTimer) {
       if(this.pollingInterval !== intervalMs) {
         clearInterval(this.pollingTimer);
@@ -322,8 +333,8 @@ export namespace CardanoConnectorWallet {
     };
   }
 
-  export const createBackend = async (backendUrl: string): Promise<Result<WalletBackend, JsonError>> => {
-    const result = await Connector.new(backendUrl);
+  export const createBackend = async (backendUrl: string, httpTimeout?: Milliseconds): Promise<Result<WalletBackend, JsonError>> => {
+    const result = await Connector.new(backendUrl, httpTimeout);
     return result.map(mkWalletBackend);
   }
 

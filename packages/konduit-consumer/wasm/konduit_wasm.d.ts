@@ -1,34 +1,34 @@
 /* tslint:disable */
 /* eslint-disable */
-export function close(connector: CardanoConnector, tag: Uint8Array, consumer: Uint8Array, adaptor: Uint8Array, script_ref: string): Promise<TransactionReadyForSigning>;
-export function toVerificationKey(signing_key: Uint8Array): Uint8Array;
-export function enableLogs(level: LogLevel): void;
-export function open(connector: CardanoConnector, tag: Uint8Array, consumer: Uint8Array, adaptor: Uint8Array, close_period: bigint, amount: bigint): Promise<TransactionReadyForSigning>;
-export enum LogLevel {
-  Trace = 0,
-  Debug = 1,
-  Info = 2,
-  Warn = 3,
-  Error = 4,
-}
+
 export class CardanoConnector {
-  private constructor();
-  free(): void;
-  [Symbol.dispose](): void;
-  static new(base_url: string): Promise<CardanoConnector>;
-  signAndSubmit(transaction: TransactionReadyForSigning, signing_key: Uint8Array): Promise<Uint8Array>;
-  balance(verification_key: Uint8Array): Promise<bigint>;
-  readonly network_magic_number: bigint;
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+    balance(verification_key: Uint8Array): Promise<bigint>;
+    static new(base_url: string, http_timeout_ms?: number | null): Promise<CardanoConnector>;
+    signAndSubmit(transaction: TransactionReadyForSigning, signing_key: Uint8Array): Promise<Uint8Array>;
+    readonly network_magic_number: bigint;
 }
+
 /**
  * A reference to a past transaction output.
  */
 export class Input {
-  free(): void;
-  [Symbol.dispose](): void;
-  constructor(transaction_id: Uint8Array, output_index: bigint);
-  toString(): string;
+    free(): void;
+    [Symbol.dispose](): void;
+    constructor(transaction_id: Uint8Array, output_index: bigint);
+    toString(): string;
 }
+
+export enum LogLevel {
+    Trace = 0,
+    Debug = 1,
+    Info = 2,
+    Warn = 3,
+    Error = 4,
+}
+
 /**
  * A network identifier to protect misuses of addresses or transactions on a wrong network.
  *
@@ -49,13 +49,14 @@ export class Input {
  * A network identifier to protect misuses of addresses or transactions on a wrong network.
  */
 export class NetworkId {
-  private constructor();
-  free(): void;
-  [Symbol.dispose](): void;
-  static mainnet(): NetworkId;
-  static testnet(): NetworkId;
-  toString(): string;
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+    static mainnet(): NetworkId;
+    static testnet(): NetworkId;
+    toString(): string;
 }
+
 /**
  * A transaction output, which comprises of at least an [`Address`] and a [`Value<u64>`].
  *
@@ -70,65 +71,80 @@ export class NetworkId {
  * A transaction output, which comprises of at least an Address and a Value.
  */
 export class Output {
-  private constructor();
-  free(): void;
-  [Symbol.dispose](): void;
-  static new(address: string, amount: bigint): Output;
-  static to(address: string): Output;
-  withAssets(assets: OutputAssets): void;
-  toString(): string;
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+    static new(address: string, amount: bigint): Output;
+    static to(address: string): Output;
+    toString(): string;
+    withAssets(assets: OutputAssets): void;
 }
+
 export class OutputAssets {
-  private constructor();
-  free(): void;
-  [Symbol.dispose](): void;
-  static empty(): OutputAssets;
-  insert(script_hash: Uint8Array, asset_name: Uint8Array, quantity: bigint): void;
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+    static empty(): OutputAssets;
+    insert(script_hash: Uint8Array, asset_name: Uint8Array, quantity: bigint): void;
 }
+
 export class OutputValue {
-  private constructor();
-  free(): void;
-  [Symbol.dispose](): void;
-  static new(lovelace: bigint): OutputValue;
-  withLovelace(lovelace: bigint): void;
-  withAssets(assets: OutputAssets): void;
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+    static new(lovelace: bigint): OutputValue;
+    withAssets(assets: OutputAssets): void;
+    withLovelace(lovelace: bigint): void;
 }
+
 /**
  * Protocol parameters restricted to the set immediately useful to this library.
  */
 export class ProtocolParameters {
-  private constructor();
-  free(): void;
-  [Symbol.dispose](): void;
-  toString(): string;
-  static mainnet(): ProtocolParameters;
-  static preprod(): ProtocolParameters;
-  static preview(): ProtocolParameters;
-  withPlutusV3CostModel(cost_model: BigInt64Array): ProtocolParameters;
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+    static mainnet(): ProtocolParameters;
+    static preprod(): ProtocolParameters;
+    static preview(): ProtocolParameters;
+    toString(): string;
+    withPlutusV3CostModel(cost_model: BigInt64Array): ProtocolParameters;
 }
+
 export class ResolvedInput {
-  free(): void;
-  [Symbol.dispose](): void;
-  constructor(input: Input, output: Output);
-  toString(): string;
+    free(): void;
+    [Symbol.dispose](): void;
+    constructor(input: Input, output: Output);
+    toString(): string;
 }
+
 export class ResolvedInputs {
-  private constructor();
-  free(): void;
-  [Symbol.dispose](): void;
-  static empty(): ResolvedInputs;
-  append(resolved_input: ResolvedInput): ResolvedInputs;
-  toString(): string;
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+    append(resolved_input: ResolvedInput): ResolvedInputs;
+    static empty(): ResolvedInputs;
+    toString(): string;
 }
+
 export class StrError {
-  private constructor();
-  free(): void;
-  [Symbol.dispose](): void;
-  toString(): string;
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+    toString(): string;
 }
+
 export class TransactionReadyForSigning {
-  private constructor();
-  free(): void;
-  [Symbol.dispose](): void;
-  toString(): string;
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+    toString(): string;
 }
+
+export function close(connector: CardanoConnector, tag: Uint8Array, consumer: Uint8Array, adaptor: Uint8Array, script_ref: string): Promise<TransactionReadyForSigning>;
+
+export function enableLogs(level: LogLevel): void;
+
+export function open(connector: CardanoConnector, tag: Uint8Array, consumer: Uint8Array, adaptor: Uint8Array, close_period: bigint, amount: bigint): Promise<TransactionReadyForSigning>;
+
+export function toVerificationKey(signing_key: Uint8Array): Uint8Array;

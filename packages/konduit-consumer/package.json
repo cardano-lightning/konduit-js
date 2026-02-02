@@ -2,7 +2,8 @@
   "dependencies": {
     "@konduit/cardano-keys": "workspace:^",
     "@konduit/codec": "workspace:^",
-    "@scure/base": "^2.0.0"
+    "@scure/base": "^2.0.0",
+    "type-fest": "^5.4.3"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
@@ -25,6 +26,10 @@
     "./time/*": {
       "types": "./dist/time/*.d.ts",
       "default": "./dist/time/*.js"
+    },
+    "./cardano": {
+      "types": "./dist/cardano.d.ts",
+      "default": "./dist/cardano.js"
     },
     "./cardano/connector": {
       "types": "./dist/cardano/connector.d.ts",

@@ -35,22 +35,16 @@ export const json2ValidDateCodec:JsonCodec<ValidDate> = compose({
 // * NonNegativeInt range is different 0 to +9,007,199,254,740,991.
 export type POSIXMilliseconds = Tagged<NonNegativeInt, "POSIXMilliseconds">;
 export namespace POSIXMilliseconds {
-  export const fromDate = (date: Date): Result<POSIXMilliseconds, string> => {
-    let t = date.getTime();
-    if(isNaN(t)) {
-      return err("Invalid Date");
-    }
-    if(t < 0) {
-      return err("POSIXMilliseconds cannot be negative");
-    }
-    return ok(t as POSIXMilliseconds);
-  }
+  export const now = (): POSIXMilliseconds => Date.now() as POSIXMilliseconds;
   export const fromNonNegativeInt = (n: NonNegativeInt): POSIXMilliseconds => n as POSIXMilliseconds;
   export const fromPOSIXSeconds = (seconds: POSIXSeconds): POSIXMilliseconds => (seconds * 1000) as POSIXMilliseconds;
+  export const fromValidDate = (date: ValidDate): POSIXMilliseconds => date.getTime() as POSIXMilliseconds;
 }
 
 export type POSIXSeconds = Tagged<NonNegativeInt, "POSIXSeconds">;
 export namespace POSIXSeconds {
+  export const now = (): POSIXSeconds => Math.floor(Date.now() / 1000) as POSIXSeconds;
   export const fromNonNegativeInt = (n: NonNegativeInt): POSIXSeconds => n as POSIXSeconds;
   export const fromPOSIXMillisecondsFloor = (milliseconds: POSIXMilliseconds): POSIXSeconds => (milliseconds / 1000) as POSIXSeconds;
+  export const fromValidDate = (date: ValidDate): POSIXSeconds => (Math.floor(date.getTime() / 1000) as POSIXSeconds);
 }

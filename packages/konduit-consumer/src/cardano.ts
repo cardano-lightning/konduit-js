@@ -9,7 +9,7 @@ import { mkHexString2HashCodec } from "./cardano/codecs";
 import type { HexString } from "@konduit/codec/hexString";
 import * as hexString from "@konduit/codec/hexString";
 import type { Json } from "@konduit/codec/json";
-import type { Small } from "@konduit/codec/integers/smallish";
+import type { MinusNineToNine, Small, ZeroToNine } from "@konduit/codec/integers/smallish";
 
 // Lovelace upper limit is above the safe integer range
 export const LOVELACE_TOTAL_SUPPLY = 45_000_000_000_000_000n;
@@ -17,6 +17,14 @@ export const LOVELACE_TOTAL_SUPPLY = 45_000_000_000_000_000n;
 export type Lovelace = Tagged<bigint, "Lovelace">;
 export namespace Lovelace {
   export const fromBigInt = (v: bigint): Result<Lovelace, JsonError> => bigInt2LovelaceCodec.deserialise(v);
+  export const fromDigits = (n1: MinusNineToNine, n2?: ZeroToNine, n3?: ZeroToNine, n4?: ZeroToNine, n5?: ZeroToNine, n6?: ZeroToNine, n7?: ZeroToNine, n8?: ZeroToNine, n9?: ZeroToNine, n10?: ZeroToNine, n11?: ZeroToNine, n12?: ZeroToNine, n13?: ZeroToNine, n14?: ZeroToNine): Lovelace => {
+    let digits = [n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14].filter((d): d is ZeroToNine => d !== undefined);
+    let value = BigInt(n1);
+    for (let digit of digits) {
+      value = value * 10n + BigInt(digit);
+    }
+    return value as Lovelace;
+  }
   export const fromSmallNumber = (v: Small): Lovelace => BigInt(v) as Lovelace;
   export const fromJson = (v: Json) => json2LovelaceCodec.deserialise(v);
 }
