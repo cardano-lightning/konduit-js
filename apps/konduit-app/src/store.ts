@@ -3,13 +3,13 @@ import { Connector } from "@konduit/konduit-consumer/cardano/connector";
 import { ref, readonly, computed, watch } from 'vue'
 import type { Ref } from "vue";
 import { fromDb, toDb } from "./store/persistence";
-import { CardanoConnectorWallet } from "@konduit/konduit-consumer/wallets/embedded";
+import { BalanceInfo, CardanoConnectorWallet } from "@konduit/konduit-consumer/wallets/embedded";
 import { json2KonduitConsumerAsyncCodec, KonduitConsumer } from "@konduit/konduit-consumer";
 import { Seconds } from '@konduit/konduit-consumer/time/duration';
-import type { Lovelace } from '../../../paluh/key-management/packages/konduit-consumer/dist/cardano';
 import { err, ok, type Result } from 'neverthrow';
 import type { JsonError } from '@konduit/codec/json/codecs';
 import type { Json } from "@konduit/codec/json";
+import type { InvoiceInfo } from "@konduit/bln/invoice";
 
 export type AppPhase = "loading" | "launching" | "running";
 
@@ -40,8 +40,12 @@ watch(_cardanoConnector, async (curr, _prev) => {
   }
 });
 
-const _walletBalance = ref<Lovelace | null>(null);
-export const walletBalance = readonly(_walletBalance);
+const _walletBalanceInfo = ref<BalanceInfo | null>(null);
+export const walletBalanceInfo = readonly(_walletBalanceInfo);
+
+export const walletBalance = computed(() => {
+  return _walletBalanceInfo.value?.lovelace;
+});
 
 const _konduitConsumer = ref<KonduitConsumer | null>(null);
 export const konduitConsumer = readonly(_konduitConsumer);
@@ -58,8 +62,6 @@ const _saveKonduitConsumer = async () => {
 }
 
 export const loadKonduitConsumerFromJson = async (consumerJson: Json): Promise<Result<KonduitConsumer, JsonError>> => {
-  console.log("Loading KonduitConsumer from JSON");
-  console.log(consumerJson);
   const result = await json2KonduitConsumerAsyncCodec.deserialise(consumerJson);
   result.map((consumer) => _setupKonduitConsumer(consumer));
   return result;
@@ -76,12 +78,11 @@ const _setupKonduitConsumer = (consumer: KonduitConsumer): void => {
     forgetKonduitConsumer();
   }
   _konduitConsumer.value = consumer;
-
-  _subscriptions.push(consumer.wallet.subscribe('balance-changed', () => {
+  _subscriptions.push(consumer.wallet.subscribe('balance-fetched', () => {
     _saveKonduitConsumer();
-    _walletBalance.value = consumer.wallet.balance;
+    _walletBalanceInfo.value = consumer.wallet.balanceInfo;
   }));
-  _walletBalance.value = consumer.wallet.balance;
+  _walletBalanceInfo.value = consumer.wallet.balanceInfo;
 
   _subscriptions.push(consumer.wallet.subscribe('backend-changed', async ({ newBackend }) => {
     _saveKonduitConsumer();
@@ -89,7 +90,7 @@ const _setupKonduitConsumer = (consumer: KonduitConsumer): void => {
   }));
   _cardanoConnector.value = consumer.wallet.walletBackend.connector;
 
-  consumer.wallet.startPolling(Seconds.fromSmallNumber(30));
+  consumer.wallet.startPolling(Seconds.fromDigits(1, 2, 0));
   _wallet.value = consumer.wallet;
 }
 
@@ -129,6 +130,10 @@ export const forgetKonduitConsumer = (): void => {
 //   toDb(channelsLabel, curr);
 // }, { deep: true });
 
+// We keep the "current invoice" as the pay flow can be interrupted:
+// - User can be redirected to the adaptor and channel setup
+export const currentInvoice = ref<InvoiceInfo | null>(null);
+
 let initPromise: Promise<Result<null, string>> | null = null;
 
 export async function init(): Promise<Result<null, string>> {
@@ -149,77 +154,3 @@ export async function forget(): Promise<void> {
   forgetKonduitConsumer();
 }
 
-// const SettingsSchema = z.object({
-//   version: z.literal('0'),
-//   content: z.object({
-//     cardanoConnectorUrl: z.url().optional(),
-//     cardanoNetwork: z.enum(['mainnet', 'testnet']),
-//     signingKey: z.string(),
-//   }),
-// });
-// 
-// export type Settings = z.infer<typeof SettingsSchema>;
-// 
-// export type ImportSettingsResult =
-//   | { type: 'success'; data: Settings }
-//   | { type: 'error'; message: string };
-// 
-// export function importSettings(settings: unknown): ImportSettingsResult {
-//   const result = SettingsSchema.safeParse(settings);
-// 
-//   if (!result.success) {
-//     // Collect and display all errors (e.g., via alert or better UX like toasts)
-//     const errorMessages = result.error.issues.map(issue => {
-//       return `Field "${issue.path.join('.')}" is invalid: ${issue.message}`;
-//     }).join('\n');
-//     return { type: 'error', message: `Failed to import settings:\n${errorMessages}` };
-//   }
-// 
-//   if (result.data.content.cardanoConnectorUrl) {
-//     cardanoConnectorUrl.value = result.data.content.cardanoConnectorUrl;
-//   } else {
-//     cardanoConnectorUrl.value = null;
-//   }
-//   cardanoNetwork.value = result.data.content.cardanoNetwork;
-// 
-//   try {
-//     signingKey.value = hex.decode(result.data.content.signingKey);
-//   } catch (e) {
-//     // alert(`Failed to import settings: ${(e as Error).message}`);
-//     return { type: 'error', message: `Failed to import settings: ${(e as Error).message}` };
-//   }
-//   return { type: 'success', data: result.data };
-// }
-// 
-// export function exportSettings(): Settings {
-//   if(!signingKey.value) {
-//     throw new Error("No signing key to export");
-//   }
-//   return {
-//     version: '0',
-//     content: {
-//       cardanoConnectorUrl: cardanoConnectorUrl.value || undefined,
-//       cardanoNetwork: cardanoNetwork.value,
-//       signingKey: hex.encode(signingKey.value!),
-//     },
-//   };
-// }
-// 
-// // export const walletBalance = ref(Lovelace);
-// // 
-// // watch(walletBalance, async (curr, _prev) => {
-// //   if (appState.value != appStates.load) {
-// //     await toDb(walletBalanceLabel, curr);
-// //   }
-// // });
-// // 
-// // /** Poll the wallet balance at the specified interval (in seconds)
-// //  *  @param {number} interval - The polling interval in milliseconds.
-// //  *  @returns a handle to stop the polling.
-// //  */
-// // export const pollWalletBalance = (interval) => {
-// //   return setIntervalAsync(async () => {
-// //     let connector = await cardanoConnector.value;
-// //     walletBalance.value = await connector.balance(verificationKey.value);
-// //   }, interval * 1000);
-// // };

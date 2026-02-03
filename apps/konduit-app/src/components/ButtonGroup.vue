@@ -38,6 +38,5 @@ watch(() => props.buttons, (newVal: any) => {
   display: flex;
   flex-direction: row;
   justify-content: space-around;
-  padding: 1rem 0;
 }
 </style>

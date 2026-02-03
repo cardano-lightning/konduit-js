@@ -189,12 +189,12 @@ onUnmounted(() => {
   position: relative;
   aspect-ratio: 1 / 1;
   overflow: hidden;
-  border: 2px solid #d1d5db;
+  border: 2px solid var(--frame-border-color);
   /* I'm not sure if I understand the source of the possible gap between
      the video feed and the border, but we can have such a gap.
      As a workaround we use the same background color as the border so it
      blends in seamlessly. */
-  background-color: #d1d5db;
+  background-color: var(--frame-border-color);
 }
 
 .video-feed {
@@ -216,9 +216,9 @@ onUnmounted(() => {
 }
 
 .crosshair {
-  width: 75%;
-  height: 75%;
-  border: 4px dashed rgba(255, 255, 255, 0.5);
+  width: 83%;
+  height: 83%;
+  border: 3px dashed var(--frame-border-color);
 }
 
 .hidden-canvas {

@@ -6,10 +6,10 @@ import TheHeader from "../components/TheHeader.vue";
 import NavBar from "../components/NavBar.vue";
 import { computed } from "vue";
 import { cardanoConnector, wallet } from "../store";
-import { MISSING_PLACEHOLDER } from "../utils/formatters";
+import { MISSING_PLACEHOLDER, orPlaceholder } from "../utils/formatters";
 import { json2KonduitConsumerAsyncCodec, KonduitConsumer } from "@konduit/konduit-consumer";
 import { konduitConsumer, forget } from "../store";
-import { useAbbreviate } from "../composables/formatters";
+import { abbreviated } from "../composables/formatters";
 
 const notifications = useNotifications();
 
@@ -34,8 +34,8 @@ const writeSettings = () => {
   writeJson(json, "konduit.json");
 };
 
-const formattedConnector = useAbbreviate(computed(() => cardanoConnector.value?.backendUrl), 25, 20);
-const formattedAddress = useAbbreviate(computed(() => wallet.value?.addressBech32), 20, 10);
+const formattedConnector = abbreviated(() => cardanoConnector.value?.backendUrl, 25, 20);
+const formattedAddress = computed(() => orPlaceholder(wallet.value?.addressBech32));
 
 </script>
 

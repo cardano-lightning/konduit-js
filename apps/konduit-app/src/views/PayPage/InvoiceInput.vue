@@ -1,19 +1,19 @@
 <script setup lang="ts">
-import { type DecodedInvoice } from "@konduit/bln/bolt11";
+import type { InvoiceInfo, InvoiceError } from "@konduit/bln/invoice";
+import * as invoice from "@konduit/bln/invoice";
 import { computed, onMounted, ref, watch, type ComputedRef, type Ref } from "vue";
 import { type Props as ButtonProps } from "../../components/Button.vue";
 import ButtonGroup from "../../components/ButtonGroup.vue";
 import QrScan from "../../components/QrScan.vue";
-import * as bolt11 from "@konduit/bln/bolt11";
-import * as bip21 from "@konduit/bln/bip21";
-import { err, ok, Result } from "neverthrow";
+import { Result } from "neverthrow";
 
-const emit: ((event: "invoice", value: [string, DecodedInvoice]) => void) = defineEmits(["invoice"]);
+// InvoiceInfo is just a tuple of `[InvoiceString, DecodedInvoice]`
+const emit: ((event: "invoice", value: InvoiceInfo) => void) = defineEmits(["invoice"]);
 
 const useQrScan: Ref<boolean> = ref(true);
 
 // Both QR scan and manual input use the same decodedInvoice ref to emit results
-const decodedInvoice: Ref<[string, DecodedInvoice] | null> = ref(null);
+const decodedInvoice: Ref<InvoiceInfo | null> = ref(null);
 watch(decodedInvoice, (newVal) => {
   if (newVal !== null) {
     emit("invoice", newVal);
@@ -22,49 +22,20 @@ watch(decodedInvoice, (newVal) => {
 
 const validateInvoiceString = (
   raw: string,
-  resultRef: Ref<Result<[string, DecodedInvoice], InvoiceError> | null>
+  resultRef: Ref<Result<InvoiceInfo, InvoiceError> | null>
 ) => {
   let val = raw.trim();
   if (val === "") {
     resultRef.value = null;
     return;
   }
-  try {
-    // We either parse:
-    // * bech32 bolt11 request
-    // * or bolt11 URI (request prefixed with "lightning:")
-    // * or BIP21 URI with lightning parameter as a payment option
-    resultRef.value = bip21.parse(val)
-      .andThen(({ options }): Result<[string, DecodedInvoice], InvoiceError> => {
-        if (!options.lightning) {
-          return err({ message: "No invoice found in BIP21 string" });
-        }
-        return ok([val, options.lightning]);
-      })
-      .orElse((): Result<[string, DecodedInvoice], InvoiceError> => {
-        // Try to parse as raw invoice
-        return bolt11.parseURI(val).match(
-          (invoice) => ok([val, invoice]),
-          (error) => err(error as InvoiceError)
-        );
-      })
-      .orElse((_err: bip21.ParseError | { message: string }): Result<[string, DecodedInvoice], InvoiceError> => {
-        return bolt11.parse(val).match(
-          (invoice) => ok([val, invoice]),
-          (error) =>err(error as InvoiceError)
-        )
-      });
-  } catch (e) {
-    console.error("Failed to parse request:", e);
-    // TODO: This should be reported to the server and presented as application error, not user error
-    resultRef.value = err({ message: (e as Error).message || "Unknown error" });
-  }
+  return invoice.parse(raw);
 };
 
 
 // Debounce function (reusable utility)
 const debounce = (callback: (val: string) => void, delay: number) => {
-  let timeoutId: number | null = null;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
   return function(val: string) {
     if(timeoutId) clearTimeout(timeoutId);
     timeoutId = setTimeout(() => {
@@ -101,10 +72,8 @@ onMounted(() => {
   }
 });
 
-type InvoiceError = bip21.ParseError | bolt11.ParseURIError | { message: string };
-
 const invoiceInputContent: Ref<string | null> = ref(null);
-const invoiceInputValidationResult: Ref<Result<[string, DecodedInvoice], InvoiceError> | null> = ref(null);
+const invoiceInputValidationResult: Ref<Result<InvoiceInfo, InvoiceError> | null> = ref(null);
 watch(invoiceInputValidationResult, (newVal) => {
   newVal?.match(
     (invoiceInfo) => {
@@ -139,7 +108,7 @@ watch(invoiceInputContent, (val) => {
 });
 
 
-const qrPayloadValidationResult: Ref<Result<[string, DecodedInvoice], InvoiceError> | null> = ref(null);
+const qrPayloadValidationResult: Ref<Result<InvoiceInfo, InvoiceError> | null> = ref(null);
 
 const qrPayloadValidationError: ComputedRef<InvoiceError | null> = computed(() => {
   if(qrPayloadValidationResult.value === null) return null;
@@ -224,8 +193,7 @@ const manualButtons: ButtonProps[] = [
 }
 
 form {
-  background: #fff;
-  border: 2px solid #d1d5db;
+  border: 2px solid var(--frame-border-color);
   padding: 1rem;
 }
 

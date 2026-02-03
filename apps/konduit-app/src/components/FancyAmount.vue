@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { useDefaultFormatters } from '../composables/l10n';
+import { useCurrencyFormatter } from '../composables/l10n';
 import type { Lovelace } from "@konduit/konduit-consumer/cardano";
+import Decimal from 'decimal.js-i18n';
 import { computed } from 'vue';
 
 // Currencies like Lovelace is just bigint marked on the type level.
-// We require explicit tagging to avoid mistakes on the caller side.
+// We require explicit tagging in here to avoid mistakes on the caller side.
 export type Amount =
   | { currency: "Lovelace", value: Lovelace }
 
@@ -12,40 +13,42 @@ export type Props = {
   amount: Amount | null
 };
 
+// export const mkLovelaceAmount = (value: Lovelace): Amount => {
+//   return { currency: "Lovelace", value };
+// };
+
 const props = defineProps<Props>();
 
-const formatters = useDefaultFormatters();
+const adaFormatter = useCurrencyFormatter({
+  currency: { code: 'ADA', unit: 'lovelace', lovelaceDisplayThreshold: new Decimal('-1') }
+});
 
 const parts = computed(() => {
   if(props.amount === null) {
     return null;
   }
-  const _parts = formatters.adaFormatter.formatToParts(props.amount.value);
-  console.log(_parts);
-  return _parts;
+  if(props.amount.currency === "Lovelace") return adaFormatter.value.formatToParts(props.amount.value);
 });
 
 </script>
 <template>
 <!-- Let's check that is inside parts -->
 <span v-if="!parts">-</span>
-<div v-else class="fancy-currency">
+<span v-else class="fancy-currency">
   <span v-for="(part, _index) in parts" :class="part.type">{{ part.value }}</span>
-</div>
+</span>
 </template>
 
 <style scoped>
   .fancy-currency {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 1.5rem;
-    text-align: center;
   }
   .fancy-currency span {
     text-height: 1.4em;
   }
   .fancy-currency .currency {
     font-size: 1.4em;
-    font-style: normal;
+    font-weight: normal;
     margin: 0 0.2em;
     vertical-align: top;
   }
@@ -64,7 +67,7 @@ const parts = computed(() => {
     vertical-align: top;
   }
   .fancy-currency .fraction {
-    font-size: 1.0em;
+    font-size: 0.9em;
     opacity: 0.8;
     vertical-align: bottom;
   }

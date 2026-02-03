@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import TheHeader from "../components/TheHeader.vue";
 import { useRouter } from 'vue-router';
-import { computed, type ComputedRef } from 'vue';
+import { computed, ref, type ComputedRef } from 'vue';
 import { createRule, useRegle, type Maybe } from '@regle/core';
 import { cardanoConnector } from "../store";
 import * as rules from '@regle/rules';
@@ -55,10 +55,12 @@ const walletBackendRule = createRule({
   },
 });
 
+const formState = ref({
+  url: cardanoConnector.value.backendUrl || '',
+});
+
 const { r$ } = useRegle(
-  {
-    url: cardanoConnector.value.backendUrl || '',
-  },
+  formState.value,
   {
     url: {
       required: rules.required,

@@ -50,3 +50,9 @@ export function formatBytesAlphanumericOrHex(bytes: Uint8Array, hexPrefix: strin
   return `${hexPrefix}${hex.encode(bytes)}`;
 }
 
+export function orPlaceholder(value: string | null | undefined, placeholder: string = MISSING_PLACEHOLDER): string {
+  if(value == null || value === undefined || value === '') {
+    return placeholder;
+  }
+  return value;
+}

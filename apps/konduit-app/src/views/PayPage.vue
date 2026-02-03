@@ -1,47 +1,50 @@
 <script setup lang="ts">
-import { type DecodedInvoice } from "@konduit/bln/bolt11";
+import type { DecodedInvoice, InvoiceInfo } from "@konduit/bln/invoice";
 import { computed, ref, type ComputedRef} from "vue";
 import InvoiceInput from "./PayPage/InvoiceInput.vue";
 import TheHeader from "../components/TheHeader.vue";
 import NavBar from "../components/NavBar.vue";
 import * as l10n from "../composables/l10n";
-import { abbreviateHex } from "../utils/formatters";
+import { abbreviateHex, MISSING_PLACEHOLDER } from "../utils/formatters";
+import { ValidDate } from "@konduit/konduit-consumer/time/absolute";
 
 // Use title as subsection in TheHeader
 type Step
   = { index: "input-invoice"; title: string }
-  | { index: "invoice-details"; decodedInvoice: DecodedInvoice; rawInvoice: string, title: string; }
-  | { index: "quotes"; decodedInvoice: DecodedInvoice; rawInvoice: string, quoteInfo: any; title: string; }
-  | { index: "submit"; decodedInvoice: DecodedInvoice; rawInvoice: string, quoteInfo: any, pendingPay: any; title: string; };
+  | { index: "invoice-details"; invoiceInfo: InvoiceInfo, title: string; }
+  | { index: "quotes"; invoiceInfo: InvoiceInfo, quoteInfo: any; title: string; }
+  | { index: "submit"; invoiceInfo: InvoiceInfo, quoteInfo: any, pendingPay: any; title: string; };
 
 const currentStep = ref<Step>({ index: "input-invoice", title: "Input invoice" });
-const onInvoice = (value: [string, DecodedInvoice]): void => {
-  const [rawInvoice, decodedInvoice] = value;
-  currentStep.value = { index: 'invoice-details', decodedInvoice, rawInvoice, title: 'Invoice details' };
+const onInvoice = (invoiceInfo: InvoiceInfo): void => {
+  currentStep.value = { index: 'invoice-details', invoiceInfo, title: 'Invoice details' };
 }
 
 const invoice: ComputedRef<DecodedInvoice| null> = computed(() => {
   if(currentStep.value.index == "input-invoice") return null;
-  return currentStep.value.decodedInvoice;
+  return currentStep.value.invoiceInfo.decoded;
 });
 
 const formatters = l10n.useDefaultFormatters();
 
-type ExpiresAt = Date | 'never';
+type ExpiresAt = ValidDate | 'never';
 
 const expiresAt = computed((): ExpiresAt | null => {
   const inv = invoice.value;
   if(inv === null) return null;
   if(!inv.expiry) return 'never';
-  const invoiceCreation = new Date(inv.timestamp * 1000);
-  return new Date(invoiceCreation.getTime() + inv.expiry * 1000);
+  return ValidDate.fromDate(new Date((inv.timestamp + inv.expiry) * 1000)).match(
+    (vd) => vd,
+    // FIXME: This should be reported
+    () => null
+  );
 });
 
 const formattedExpiresAt = computed((): string => {
   const exp = expiresAt.value;
-  if(exp === null) return 'N/A';
+  if(exp === null) return MISSING_PLACEHOLDER;
   if(exp === 'never') return 'Never';
-  return formatters.shortDate(exp);
+  return formatters.formatShortDate(exp);
 });
 
 </script>
@@ -53,12 +56,12 @@ const formattedExpiresAt = computed((): string => {
       <dl id="invoice-details">
         <dt>Amount</dt>
         <dd class="detail-value amount">
-          {{ formatters.formatBtc(currentStep?.decodedInvoice?.amount) }}
+          {{ formatters.formatBtc(currentStep?.invoiceInfo?.decoded.amount) }}
         </dd>
 
         <dt>Description</dt>
         <dd class="detail-value description">
-          {{ currentStep.decodedInvoice.description || "No description provided" }}
+          {{ currentStep.invoiceInfo.decoded.description || "No description provided" }}
         </dd>
 
         <dt>Expires</dt>

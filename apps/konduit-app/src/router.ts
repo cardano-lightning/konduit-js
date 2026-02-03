@@ -14,7 +14,7 @@ import WalletPage from "./views/WalletPage.vue";
 const routes = [
   { name: "add-channel",
     path: "/add-channel",
-    component: () => AddChannelPage,
+    component: AddChannelPage,
     meta: { title: "Add Channel" },
   },
   {

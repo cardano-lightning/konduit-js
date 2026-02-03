@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
-    "erasableSyntaxOnly": true,
     "outDir": "./dist",
     "module": "ESNext",
     "rootDir": "./src",
