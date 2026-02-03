@@ -186,13 +186,14 @@ const manualButtons: ButtonProps[] = [
 <style scoped>
 .alternative {
   text-align: center;
-  margin: 1rem 0 0;
+  margin: 1rem 0;
   font-size: 0.9rem;
   color: #6b7280;
   width: 100%;
 }
 
 form {
+  background-color: white;
   border: 2px solid var(--frame-border-color);
   padding: 1rem;
 }
