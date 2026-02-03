@@ -76,7 +76,6 @@ body {
   margin: 0;
   max-width: 60vh;
   min-width: 320px;
-  padding: 0 1rem;
   width: calc(100vw - 2rem);
 }
 
@@ -87,8 +86,7 @@ body {
 }
 
 /* Should we keep this default style here? */
-#app #container {
-  padding: 1rem;
+#app #drop-all-the-extrnal-css-container {
   padding-bottom: calc(60px + env(safe-area-inset-bottom)); /* Navbar height + safe area */
 }
 

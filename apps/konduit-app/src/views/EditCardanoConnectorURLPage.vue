@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import TheHeader from "../components/TheHeader.vue";
+import Form from "../components/Form.vue";
+import * as TextField from "../components/Form/TextField.vue";
 import { useRouter } from 'vue-router';
 import { computed, ref, type ComputedRef } from 'vue';
 import { createRule, useRegle, type Maybe } from '@regle/core';
 import { cardanoConnector } from "../store";
 import * as rules from '@regle/rules';
 import { type Props as ButtonProps } from "../components/Button.vue";
-import ButtonGroup from "../components/ButtonGroup.vue";
 import { CardanoConnectorWallet } from "@konduit/konduit-consumer/wallets/embedded";
 import { wallet } from "../store";
 import { isEmpty } from "@regle/rules";
 import { Milliseconds } from "@konduit/konduit-consumer/time/duration";
+import { FieldWidth } from "../components/Form/core";
 
 const walletBackendRule = createRule({
   message: ({ backend }) => {
@@ -55,12 +57,12 @@ const walletBackendRule = createRule({
   },
 });
 
-const formState = ref({
-  url: cardanoConnector.value.backendUrl || '',
-});
+const formState = {
+  url: ref(cardanoConnector.value.backendUrl || ''),
+};
 
 const { r$ } = useRegle(
-  formState.value,
+  formState,
   {
     url: {
       required: rules.required,
@@ -76,6 +78,19 @@ const { r$ } = useRegle(
     },
   }
 );
+
+const fields = computed(() => {
+  return {
+    url: {
+      fieldWidth: FieldWidth.full,
+      isValid: null,
+      label: "Cardano Connector's URL",
+      type: TextField.url,
+      placeholder: "https://example-adaptor.com",
+      errors: r$.url.$errors,
+    }
+  };
+});
 
 const handleSubmit = () => {
   if (r$.$ready) {
@@ -105,49 +120,6 @@ const buttons: ComputedRef<ButtonProps[]> = computed(() => {
 
 <template>
   <TheHeader :back-page-name="'settings'" />
-  <form id="form-container" @submit.prevent="handleSubmit">
-    <div class="form-body">
-      <div class="field">
-        <legend>Cardano Connector URL</legend>
-        <input
-           v-model='r$.$value.url'
-          :class="{ error: r$.url.$error }"
-          type='text'
-          placeholder='https://cardano-lightning.org/konduit'
-        />
-        <!-- Let's rewrite this as a list
-        <span v-for="error of r$.url.$errors" :key='error'>
-          {{ error }}
-        </span>
-        -->
-        <ul class="errors" v-if="r$.url.$errors.length > 0">
-          <li v-for="error of r$.url.$errors" :key='error'>
-            {{ error }}
-          </li>
-        </ul>
-      </div>
-    </div>
-    <ButtonGroup :buttons="buttons" />
-  </form>
+  <Form :buttons="buttons" :fields="fields" :formState="formState" :handleSubmit="handleSubmit" />
 </template>
-
-<style scoped>
-#form-container {
-  align-content: space-between;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 1rem;
-  padding-bottom: calc(30% + env(safe-area-inset-bottom)); /* Navbar height + safe area */
-  height: 100%;
-}
-
-.form-body {
-  align-content: space-around;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  justify-content: space-around;
-}
-</style>
 

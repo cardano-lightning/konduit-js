@@ -4,12 +4,12 @@ import { useNotifications } from "../composables/notifications";
 import SettingRow from "./SettingsPage/SettingRow.vue";
 import TheHeader from "../components/TheHeader.vue";
 import NavBar from "../components/NavBar.vue";
-import { computed } from "vue";
+import Hr from "../components/Hr.vue";
 import { cardanoConnector, wallet } from "../store";
-import { MISSING_PLACEHOLDER, orPlaceholder } from "../utils/formatters";
 import { json2KonduitConsumerAsyncCodec, KonduitConsumer } from "@konduit/konduit-consumer";
 import { konduitConsumer, forget } from "../store";
 import { abbreviated } from "../composables/formatters";
+import { orPlaceholder } from "../utils/formatters";
 
 const notifications = useNotifications();
 
@@ -34,33 +34,22 @@ const writeSettings = () => {
   writeJson(json, "konduit.json");
 };
 
-const formattedConnector = abbreviated(() => cardanoConnector.value?.backendUrl, 25, 20);
-const formattedAddress = computed(() => orPlaceholder(wallet.value?.addressBech32));
+const formattedConnector = orPlaceholder(cardanoConnector.value?.backendUrl);
+const formattedAddress = abbreviated(() => wallet.value?.addressBech32, 25, 10);
 
 </script>
 
 <template>
   <TheHeader :back-page-name="'home'" />
   <dl id="container">
-    <SettingRow :label="'Cardano connector'" :formatted-value="formattedConnector || MISSING_PLACEHOLDER" :action="'edit-cardano-connector-url'" />
-    <hr />
+    <SettingRow :label="'Cardano connector'" :formatted-value="formattedConnector" :actions="[['edit-cardano-connector-url', 'pen']]" />
+    <Hr class="separator" />
     <SettingRow :label="'Embedded wallet address'" :formatted-value="formattedAddress" />
-    <SettingRow :label="'Export'" :formatted-value="''" :action="writeSettings" :action-icon="'download'" />
-    <SettingRow :label="'Forget'" :formatted-value="''" :action="forgetReload" :action-icon="'trash'" />
+    <SettingRow :label="'Export'" :formatted-value="''" :actions="[[writeSettings,'download']]" />
+    <SettingRow :label="'Forget'" :formatted-value="''" :actions="[[forgetReload, 'trash']]" />
   </dl>
   <NavBar />
 </template>
 
 <style scoped>
-#container {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 1rem;
-}
-
-hr {
-  color: var(--color-border);
-  margin: 1rem 0;
-}
 </style>

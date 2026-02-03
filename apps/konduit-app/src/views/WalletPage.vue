@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import qr from "qrcode";
+import Hr from "../components/Hr.vue";
+import SettingRow from "./SettingsPage/SettingRow.vue";
+import type { Action } from "./SettingsPage/SettingRow.vue";
 import NavBar from "../components/NavBar.vue";
-import Copy from "../components/icons/Copy.vue";
-import ExternalLink from "../components/icons/SquareArrowOutUpRight.vue";
 // import QrCode from "../components/icons/QrCode.vue";
 // import Share2 from "../components/icons/Share2.vue";
 import TheHeader from "../components/TheHeader.vue";
@@ -16,6 +17,7 @@ import { abbreviated } from "../composables/formatters";
 import { useClipboard } from "@vueuse/core";
 import { useNotifications } from "../composables/notifications";
 import { NetworkMagicNumber } from "@konduit/konduit-consumer/cardano";
+import { MISSING_PLACEHOLDER } from "../utils/formatters";
 
 const notifications = useNotifications();
 
@@ -64,7 +66,7 @@ const formattedSyncInfo = computed(() => {
 
 // Address section:
 // * Address display
-const formattedAddress = abbreviated((() => wallet.value?.addressBech32), 128, 10);
+const formattedAddress = abbreviated((() => wallet.value?.addressBech32), 20, 0);
 
 //* Copy button
 const clipboard = useClipboard();
@@ -77,7 +79,7 @@ function copyAddress() {
 
 //* Cardano scan link
 const cardanoScanLink = computed(() => {
-  if (!wallet.value) return;
+  if (!wallet.value) return null;
   let baseURL = (() => {
     switch (wallet.value.networkMagicNumber) {
       case NetworkMagicNumber.MAINNET:
@@ -129,6 +131,29 @@ const generateQR = async () => {
   }
 };
 
+const network = computed(() => {
+  if (!wallet.value) return MISSING_PLACEHOLDER;
+  const networkMagicNumber = wallet.value.networkMagicNumber;
+  if (networkMagicNumber === NetworkMagicNumber.MAINNET) {
+    return "Mainnet";
+  } else if (networkMagicNumber === NetworkMagicNumber.PREPROD) {
+    return "Preprod Testnet";
+  } else if (networkMagicNumber === NetworkMagicNumber.PREVIEW) {
+    return "Preview Testnet";
+  } else {
+    return `Cardano (Network Magic: ${networkMagicNumber})`;
+  }
+});
+
+const addressActions = computed((): Action[] => {
+  let actions: Action[] = [];
+  actions.push([copyAddress, "copy"]);
+  if (cardanoScanLink.value) {
+    actions.push([cardanoScanLink.value, "external-link"]);
+  }
+  return actions;
+});
+
 // This is side-effectful as it directly maniputes the DOM
 // that is why we watch instead of compute.
 watch(addressBech32, generateQR, {
@@ -144,7 +169,10 @@ watch(addressBech32, generateQR, {
       <span class="amount"><FancyAmount :amount="amount" /></span>
       <div class="synced-at">{{ formattedSyncInfo }}</div>
     </div>
-    <div id="address-row">
+    <Hr />
+    <SettingRow :label="'Cardano Network'" :formatted-value="network" />
+    <SettingRow :label="'Address'" :formatted-value="formattedAddress" :actions="addressActions" />
+    <!--
       <span class="address">{{ formattedAddress }}</span>
       <div class="buttons">
         <Copy
@@ -154,20 +182,23 @@ watch(addressBech32, generateQR, {
           title="Copy address"
         />
         <a v-if="cardanoScanLink" :href="cardanoScanLink" target="_blank" rel="noopener" class="button" title="View on CardanoScan" ><ExternalLink :size="16" /></a>
-        <!-- TODO: Bring back this functionality
-          <QrCode
-            class="button"
-            title="Show QR code"
-          />
-          <Share2
-            v-if="shareSupported"
-            class="button"
-            title="Share address"
-          />
-        -->
       </div>
     </div>
+    -->
+    <!-- TODO: Bring back this functionality
+      <QrCode
+        class="button"
+        title="Show QR code"
+      />
+      <Share2
+        v-if="shareSupported"
+        class="button"
+        title="Share address"
+      />
+    -->
+    <!--
     <div id="qr-container" v-html="qrSvg" ref="qrContainer"></div>
+    -->
   </div>
   <NavBar />
 </template>
@@ -190,6 +221,10 @@ h2 {
   color: var(--text-secondary);
   margin-top: 1rem;
   text-align: center;
+}
+
+hr {
+  margin: 2.5rem 0;
 }
 
 #address-row {

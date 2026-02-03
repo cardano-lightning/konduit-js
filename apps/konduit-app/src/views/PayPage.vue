@@ -96,7 +96,7 @@ const formattedExpiresAt = computed((): string => {
   <NavBar />
 </template>
 
-<style>
+<style scoped>
 #container {
   padding: 1rem;
 }
