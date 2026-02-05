@@ -584,21 +584,15 @@ if (Symbol.dispose) TransactionReadyForSigning.prototype[Symbol.dispose] = Trans
  * @param {CardanoConnector} connector
  * @param {Uint8Array} tag
  * @param {Uint8Array} consumer
- * @param {Uint8Array} adaptor
- * @param {string} script_ref
  * @returns {Promise<TransactionReadyForSigning>}
  */
-export function close(connector, tag, consumer, adaptor, script_ref) {
+export function close(connector, tag, consumer) {
     _assertClass(connector, CardanoConnector);
     const ptr0 = passArray8ToWasm0(tag, wasm.__wbindgen_malloc);
     const len0 = WASM_VECTOR_LEN;
     const ptr1 = passArray8ToWasm0(consumer, wasm.__wbindgen_malloc);
     const len1 = WASM_VECTOR_LEN;
-    const ptr2 = passArray8ToWasm0(adaptor, wasm.__wbindgen_malloc);
-    const len2 = WASM_VECTOR_LEN;
-    const ptr3 = passStringToWasm0(script_ref, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-    const len3 = WASM_VECTOR_LEN;
-    const ret = wasm.close(connector.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3);
+    const ret = wasm.close(connector.__wbg_ptr, ptr0, len0, ptr1, len1);
     return ret;
 }
 
@@ -711,10 +705,6 @@ export function __wbg_fetch_a9bc66c159c18e19(arg0) {
     const ret = fetch(arg0);
     return ret;
 }
-export function __wbg_getTime_1e3cd1391c5c3995(arg0) {
-    const ret = arg0.getTime();
-    return ret;
-}
 export function __wbg_info_148d043840582012(arg0) {
     console.info(arg0);
 }
@@ -760,10 +750,6 @@ export function __wbg_new_074b505417ada2d9() { return handleError(function () {
     const ret = new URLSearchParams();
     return ret;
 }, arguments); }
-export function __wbg_new_0_73afc35eb544e539() {
-    const ret = new Date();
-    return ret;
-}
 export function __wbg_new_361308b2356cecd0() {
     const ret = new Object();
     return ret;
@@ -933,12 +919,12 @@ export function __wbg_warn_f7ae1b2e66ccb930(arg0) {
     console.warn(arg0);
 }
 export function __wbindgen_cast_0000000000000001(arg0, arg1) {
-    // Cast intrinsic for `Closure(Closure { dtor_idx: 628, function: Function { arguments: [], shim_idx: 629, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+    // Cast intrinsic for `Closure(Closure { dtor_idx: 631, function: Function { arguments: [], shim_idx: 632, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
     const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__hb6d864c6f9d47eef, wasm_bindgen__convert__closures_____invoke__hfe5275c36a769c7e);
     return ret;
 }
 export function __wbindgen_cast_0000000000000002(arg0, arg1) {
-    // Cast intrinsic for `Closure(Closure { dtor_idx: 646, function: Function { arguments: [Externref], shim_idx: 647, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+    // Cast intrinsic for `Closure(Closure { dtor_idx: 649, function: Function { arguments: [Externref], shim_idx: 650, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
     const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__h773430c0ef9b0cff, wasm_bindgen__convert__closures_____invoke__h1f7b992ed16f23c5);
     return ret;
 }

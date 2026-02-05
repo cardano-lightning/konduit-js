@@ -1,16 +1,16 @@
 import * as codec from "@konduit/codec";
 import type { Result } from "neverthrow";
-import type { Tagged } from "type-fest";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
-import { json2MillisecondsCodec, type Milliseconds } from "./time/duration";
+import { json2MillisecondsCodec, type Milliseconds } from "../time/duration";
 import type { VKey } from "@konduit/cardano-keys";
-import { json2LovelaceCodec, json2ScriptHashCodec, type Lovelace, type ScriptHash } from "./cardano";
-import { json2IntCodec, type Int } from "@konduit/codec/integers/smallish";
-import { json2VKeyCodec } from "./cardano/codecs";
+import { json2LovelaceCodec, json2ScriptHashCodec, type Lovelace, type ScriptHash } from "../cardano";
+import { json2NonNegativeIntCodec, type NonNegativeInt } from "@konduit/codec/integers/smallish";
+import { json2VKeyCodec } from "../cardano";
 import type { Json } from "@konduit/codec/json";
-import * as http from "./http";
+import * as http from "../http";
+import { Tagged } from "type-fest";
 
-export type URLString = Tagged<string, "URLString">;
+export type AdaptorVKey = Tagged<VKey, "AdaptorVKey">;
 
 /**
  * Holds configuration information for an adaptor.
@@ -24,7 +24,7 @@ export class AdaptorInfo {
    * The adaptor's public key.
    * @type {Uint8Array}
    */
-  adaptorKey: VKey;
+  adaptorVKey: AdaptorVKey;
 
   /**
    * The close period.
@@ -42,11 +42,9 @@ export class AdaptorInfo {
    * The maximum tag length.
    * @type {number}
    */
-  maxTagLength: Int;
+  maxTagLength: NonNegativeInt;
 
-  /**
-   * The deployer's verification key.
-   * @type {Uint8Array}
+  /* FIXME: Do we really need this information?
    */
   deployerVkey: VKey;
 
@@ -56,32 +54,25 @@ export class AdaptorInfo {
    */
   scriptHash: ScriptHash;
 
-  /**
-   * The URL of the adaptor.
-   * @type {string}
-   */
-  url: URLString;
-
   constructor(
-    adaptorKey: VKey,
+    adaptorVKey: VKey,
     closePeriod: Milliseconds,
     fee: Lovelace,
-    maxTagLength: Int,
+    maxTagLength: NonNegativeInt,
     deployerVkey: VKey,
     scriptHash: ScriptHash,
-    url: URLString,
   ) {
-    this.adaptorKey = adaptorKey;
+    this.adaptorVKey = adaptorVKey;
     this.closePeriod = closePeriod;
     this.fee = fee;
     this.maxTagLength = maxTagLength;
     this.deployerVkey = deployerVkey;
     this.scriptHash = scriptHash;
-    this.url = url;
   }
 
-  static async fromAdaptorURL(url: string): Promise<Result<AdaptorInfo, http.GetDeserialiseError>> {
-    return http.getDeserialise(url, json2AdaptorInfoCodec.deserialise);
+  static async fromAdaptorUrl(baseUrl: string): Promise<Result<AdaptorInfo, http.GetDeserialiseError>> {
+    let infoUrl = `${baseUrl}/info`;
+    return http.getDeserialise(infoUrl, json2AdaptorInfoCodec.deserialise);
   }
 
   static deserialise(json: Json): Result<AdaptorInfo, jsonCodecs.JsonError> {
@@ -98,34 +89,31 @@ export const json2AdaptorInfoCodec: jsonCodecs.JsonCodec<AdaptorInfo> = (() => {
   // Define the intermediate codec for the snake_case object returned by the API
   // We will use it also as serialisation format.
   let adaptorRecordCodec = jsonCodecs.objectOf({
-    adaptor_key: json2VKeyCodec,
+    adaptor_vkey: json2VKeyCodec,
     close_period: json2MillisecondsCodec,
     fee: json2LovelaceCodec,
-    max_tag_length: json2IntCodec,
+    max_tag_length: json2NonNegativeIntCodec,
     deployer_vkey: json2VKeyCodec,
     script_hash: json2ScriptHashCodec,
-    url: jsonCodecs.json2StringCodec,
   });
   return codec.rmap(
     adaptorRecordCodec,
     (obj) =>
       new AdaptorInfo(
-        obj.adaptor_key,
+        obj.adaptor_vkey,
         obj.close_period,
         obj.fee,
         obj.max_tag_length,
         obj.deployer_vkey,
         obj.script_hash,
-        obj.url as URLString,
       ),
     (adaptorInfo) => ({
-      adaptor_key: adaptorInfo.adaptorKey,
+      adaptor_vkey: adaptorInfo.adaptorVKey,
       close_period: adaptorInfo.closePeriod,
       fee: adaptorInfo.fee,
       max_tag_length: adaptorInfo.maxTagLength,
       deployer_vkey: adaptorInfo.deployerVkey,
       script_hash: adaptorInfo.scriptHash,
-      url: adaptorInfo.url,
     }),
   );
 })();

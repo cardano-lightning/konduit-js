@@ -9,7 +9,7 @@ import { generateMnemonic, KeyIndex, KeyRole, RootPrivateKey, WalletIndex } from
 import { NonNegativeInt } from "@konduit/codec/integers/smallish";
 import { Milliseconds, type Seconds } from "../time/duration";
 import type { TransactionReadyForSigning } from "../../wasm/konduit_wasm";
-import { json2RootPrivateKeyCodec } from "../cardano/codecs";
+import { json2RootPrivateKeyCodec } from "../cardano/keys";
 import { Connector } from "../cardano/connector";
 import { hoistToResultAsync, resultAsyncToPromise } from "../neverthrow";
 import { rmap, mkIdentityCodec } from "@konduit/codec";
@@ -46,6 +46,8 @@ export type FailedFetch = {
   previousSuccessfulFetch: SuccessfulFetch | null;
 };
 
+// TODO: Refactor and xtract BalanceFetch
+// into something like `Cyclical<response>`
 export type BalanceFetch =
   | SuccessfulFetch
   | FailedFetch;
@@ -158,10 +160,9 @@ export class Wallet<WalletBackend extends WalletBackendBase> {
     role: KeyRole.External,
     addressIdx: KeyIndex.fromSmallInt(0),
   }
-  // Polling state
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
   private pollingInterval = Milliseconds.fromNonNegativeInt(NonNegativeInt.fromSmallNumber(0));
-  // Event handling
+
   private readonly eventTarget = new EventTarget();
 
   constructor(rootPrivateKey: RootPrivateKey, walletBackend: WalletBackend, balanceInfo?: BalanceInfo) {
@@ -254,13 +255,13 @@ export class Wallet<WalletBackend extends WalletBackendBase> {
 
   private async poll() {
     const result = await this.walletBackend.getBalance(this.vKey);
-    const resultFlattened = result.match((lovelace) => lovelace, (error) => error);
+    const resultFlattened = result.match((info) => info, (failure) => failure);
+    let origBalance = this.balance;
     this._balanceInfo = this._balanceInfo? this._balanceInfo.mkSuccessor(resultFlattened) : BalanceInfo.mkNew(resultFlattened);
-    console.log("Polled balance:", this._balanceInfo);
     result.match(
       (lovelace) => {
         this.emit('balance-fetched', { currentBalance: lovelace });
-        if(this.balance !== lovelace)
+        if(origBalance !== lovelace)
           this.emit('balance-changed', { newBalance: lovelace });
       },
       (error) => {

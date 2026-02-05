@@ -141,7 +141,7 @@ export class TransactionReadyForSigning {
     toString(): string;
 }
 
-export function close(connector: CardanoConnector, tag: Uint8Array, consumer: Uint8Array, adaptor: Uint8Array, script_ref: string): Promise<TransactionReadyForSigning>;
+export function close(connector: CardanoConnector, tag: Uint8Array, consumer: Uint8Array): Promise<TransactionReadyForSigning>;
 
 export function enableLogs(level: LogLevel): void;
 

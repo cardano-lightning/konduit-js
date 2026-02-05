@@ -35,13 +35,13 @@ export const mkStringifier = <T>(codec: JsonCodec<T>): (value: T) => string => {
 
 // Codec for bigint
 export const json2BigIntCodec: JsonCodec<bigint> = {
-  deserialise: onBigInt(err("Expected bigint") as Result<bigint, string>)(ok),
+  deserialise: onBigInt(val => err(`Expected bigint but got: ${String(val)}`) as Result<bigint, string>)(ok),
   serialise: (value: bigint) => value as Json
 };
 
 // Codec for number (checks safe integer range during deserialisation)
 export const json2NumberCodec: JsonCodec<number> = {
-  deserialise: onBigInt(err("Expected bigint (for number)") as Result<number, string>)((value: bigint) => {
+  deserialise: onBigInt(val => err(`Expected bigint (for number) but got: ${String(val)}`) as Result<number, string>)((value: bigint) => {
     const num = Number(value);
     if (num > Number.MAX_SAFE_INTEGER || num < Number.MIN_SAFE_INTEGER) {
       return err(`BigInt value ${value} is outside safe integer range [${Number.MIN_SAFE_INTEGER}, ${Number.MAX_SAFE_INTEGER}]`);
@@ -53,19 +53,19 @@ export const json2NumberCodec: JsonCodec<number> = {
 
 // Codec for boolean
 export const json2BooleanCodec: JsonCodec<boolean> = {
-  deserialise: onBoolean(err("Expected boolean") as Result<boolean, JsonError>)(ok),
+  deserialise: onBoolean(val => err(`Expected boolean but got: ${String(val)}`) as Result<boolean, JsonError>)(ok),
   serialise: (value: boolean) => value
 };
 
 // Codec for string
 export const json2StringCodec: JsonCodec<string> = {
-  deserialise: onString(err("Expected string") as Result<string, JsonError>)(ok),
+  deserialise: onString(val => err(`Expected string but got: ${String(val)}`) as Result<string, JsonError>)(ok),
   serialise: (value: string) => value
 };
 
 // Codec for null
 export const json2NullCodec: JsonCodec<null> = {
-  deserialise: onNull(err("Expected null") as Result<null, JsonError>)(() => ok(null)),
+  deserialise: onNull(val => err(`Expected null but got: ${String(val)}`) as Result<null, JsonError>)(() => ok(null)),
   serialise: () => nullJson
 };
 

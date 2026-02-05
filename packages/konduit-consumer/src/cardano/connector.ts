@@ -10,6 +10,9 @@ import { stringifyAsyncThrowable } from "@konduit/codec/neverthrow";
 import type { JsonError } from "@konduit/codec/json/codecs";
 import { PositiveBigInt } from "@konduit/codec/integers/big";
 import type { Milliseconds } from "../time/duration";
+import { ChannelTag } from "../channel/core";
+import { ConsumerVKey } from "../channel/l1Channel";
+import { AdaptorVKey } from "../adaptor/adaptorInfo";
 
 export const enableLogs = (level: wasm.LogLevel): void => {
   wasm.enableLogs(level);
@@ -46,27 +49,28 @@ export class Connector {
     return this._backendUrl;
   }
 
-// //   async open(
-// //     tag: ChannelTag,
-// //     consumer: VKey,
-// //     adaptor: VKey,
-// //     closePeriod: Milliseconds,
-// //     amount: Lovelace,
-// //   ): Promise<Result<wasm.TransactionReadyForSigning, ConnectorError>> {
-// //     try {
-// //       const tx = await wasm.open(
-// //         this.connector,
-// //         tag as Uint8Array,
-// //         consumer.getKey(),
-// //         adaptor.getKey(),
-// //         BigInt(closePeriod),
-// //         amount,
-// //       );
-// //       return ok(tx);
-// //     } catch (error) {
-// //       return err(wrapError(error));
-// //     }
-// //   };
+  async open(
+    tag: ChannelTag,
+    consumer: ConsumerVKey,
+    adaptor: AdaptorVKey,
+    closePeriod: Milliseconds,
+    amount: Lovelace,
+  ): Promise<Result<wasm.TransactionReadyForSigning, string>> {
+    try {
+      const tx = await wasm.open(
+        this.connector,
+        tag as Uint8Array,
+        consumer.getKey(),
+        adaptor.getKey(),
+        BigInt(closePeriod),
+        amount,
+      );
+      return ok(tx);
+    } catch (error) {
+      return err(error);
+    }
+  };
+
 // // 
 // //   async close(
 // //     tag: ChannelTag,

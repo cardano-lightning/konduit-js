@@ -4,9 +4,12 @@ import type { Small } from "@konduit/codec/integers/smallish";
 import { json2NonNegativeIntCodec, NonNegativeInt } from "@konduit/codec/integers/smallish";
 import type { POSIXMilliseconds, POSIXSeconds } from "./absolute";
 import { altJsonCodecs, JsonCodec } from "@konduit/codec/json/codecs";
+import { ok, err } from "neverthrow";
+import type { Result } from "neverthrow";
 
 export type Milliseconds = Tagged<NonNegativeInt, "Milliseconds">;
 export namespace Milliseconds {
+  export const zero = 0 as Milliseconds;
   export const fromNonNegativeInt = (n: NonNegativeInt): Milliseconds => n as Milliseconds;
   // Pass all the arguments to fromDigits of NonNegativeInt
   export const fromDigits = (...args: Parameters<typeof NonNegativeInt["fromDigits"]>): Milliseconds => NonNegativeInt.fromDigits(...args) as Milliseconds;
@@ -39,6 +42,7 @@ export const json2MillisecondsCodec = codec.rmap(json2NonNegativeIntCodec, (n) =
 
 export type Seconds = Tagged<NonNegativeInt, "Seconds">;
 export namespace Seconds {
+  export const zero = 0 as Seconds;
   export const fromNonNegativeInt = (n: NonNegativeInt): Seconds => n as Seconds;
   export const fromDigits = (...args: Parameters<typeof NonNegativeInt["fromDigits"]>): Seconds => NonNegativeInt.fromDigits(...args) as Seconds;
   export const fromSmallNumber = (n: Small) => NonNegativeInt.fromSmallNumber(n) as Seconds;
@@ -53,6 +57,7 @@ export const json2SecondsCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Sec
 
 export type Minutes = Tagged<NonNegativeInt, "Minutes">;
 export namespace Minutes {
+  export const zero = 0 as Minutes;
   export const fromNonNegativeInt = (n: NonNegativeInt): Minutes => n as Minutes;
   export const fromDigits = (...args: Parameters<typeof NonNegativeInt["fromDigits"]>): Minutes => NonNegativeInt.fromDigits(...args) as Minutes;
   export const fromSmallNumber = (n: Small) => NonNegativeInt.fromSmallNumber(n) as Minutes;
@@ -63,6 +68,7 @@ export const json2MinutesCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Min
 
 export type Hours = Tagged<NonNegativeInt, "Hours">;
 export namespace Hours {
+  export const zero = 0 as Hours;
   export const fromNonNegativeInt = (n: NonNegativeInt): Hours => n as Hours;
   export const fromDigits = (...args: Parameters<typeof NonNegativeInt["fromDigits"]>): Hours => NonNegativeInt.fromDigits(...args) as Hours;
   export const fromSmallNumber = (n: Small) => NonNegativeInt.fromSmallNumber(n) as Hours;
@@ -73,6 +79,7 @@ export const json2HoursCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Hours
 
 export type Days = Tagged<NonNegativeInt, "Days">;
 export namespace Days {
+  export const zero = 0 as Days;
   export const fromNonNegativeInt = (n: NonNegativeInt): Days => n as Days;
   export const fromDigits = (...args: Parameters<typeof NonNegativeInt["fromDigits"]>): Days => NonNegativeInt.fromDigits(...args) as Days;
   export const fromSmallNumber = (n: Small) => NonNegativeInt.fromSmallNumber(n) as Days;
@@ -83,6 +90,7 @@ export const json2DaysCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Days.f
 
 export type Weeks = Tagged<NonNegativeInt, "Weeks">;
 export namespace Weeks {
+  export const zero = 0 as Weeks;
   export const fromNonNegativeInt = (n: NonNegativeInt): Weeks => n as Weeks;
   export const fromDigits = (...args: Parameters<typeof NonNegativeInt["fromDigits"]>): Weeks => NonNegativeInt.fromDigits(...args) as Weeks;
   export const fromSmallNumber = (n: Small) => NonNegativeInt.fromSmallNumber(n) as Weeks;
@@ -93,6 +101,7 @@ export const json2WeeksCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Weeks
 // Non precise unit. TODO: Provide some helpers to work with that as well.
 export type Months = Tagged<NonNegativeInt, "Months">;
 export namespace Months {
+  export const zero = 0 as Months;
   export const fromNonNegativeInt = (n: NonNegativeInt): Months => n as Months;
   export const fromDigits = (...args: Parameters<typeof NonNegativeInt["fromDigits"]>): Months => NonNegativeInt.fromDigits(...args) as Months;
   export const fromSmallNumber = (n: Small) => NonNegativeInt.fromSmallNumber(n) as Months;
@@ -102,6 +111,7 @@ export const json2MonthsCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Mont
 // This precise unit. TODO: Provide some helpers to work with that as well.
 export type Years = Tagged<NonNegativeInt, "Years">;
 export namespace Years {
+  export const zero = 0 as Years;
   export const fromNonNegativeInt = (n: NonNegativeInt): Years => n as Years;
   export const fromDigits = (...args: Parameters<typeof NonNegativeInt["fromDigits"]>): Years => NonNegativeInt.fromDigits(...args) as Years;
   export const fromSmallNumber = (n: Small) => NonNegativeInt.fromSmallNumber(n) as Years;
@@ -153,7 +163,7 @@ export const json2AnyPreciseDurationCodec: JsonCodec<AnyPreciseDuration> = altJs
   }
 );
 
-export type NormalizedDuration = {
+export type NormalisedDuration = {
   milliseconds: Milliseconds;
   seconds: Seconds;
   minutes: Minutes;
@@ -162,12 +172,38 @@ export type NormalizedDuration = {
   weeks: Weeks;
 };
 
-export namespace NormalizedDuration {
-  export const create = ( weeks: Weeks, days: Days, hours: Hours, minutes: Minutes, seconds: Seconds, milliseconds: Milliseconds): NormalizedDuration => {
-    return { weeks, days, hours, minutes, seconds, milliseconds };
+export namespace NormalisedDuration {
+  export const create = (initial: { weeks?: Weeks, days?: Days, hours?: Hours, minutes?: Minutes, seconds?: Seconds, milliseconds?: Milliseconds }): Result<NormalisedDuration, string> => {
+    if((initial.days ?? 0 < 7)
+        && (initial.hours ?? 0 < 24)
+        && (initial.minutes ?? 0 < 60)
+        && (initial.seconds ?? 0 < 60)
+        && (initial.milliseconds ?? 0 < 1000)) {
+      return ok({
+        weeks: initial.weeks ?? Weeks.zero,
+        days: initial.days ?? Days.zero,
+        hours: initial.hours ?? Hours.zero,
+        minutes: initial.minutes ?? Minutes.zero,
+        seconds: initial.seconds ?? Seconds.zero,
+        milliseconds: initial.milliseconds ?? Milliseconds.zero,
+      });
+    } else {
+      return err("Invalid NormalisedDuration: one or more components are out of range");
+    }
+  }
+  export const fromComponentsNormalization = (initial: { weeks?: Weeks, days?: Days, hours?: Hours, minutes?: Minutes, seconds?: Seconds, milliseconds?: Milliseconds }): NormalisedDuration => {
+    const totalMilliseconds = (
+      initial.milliseconds ?? Milliseconds.zero
+      + Milliseconds.fromSeconds(initial.seconds ?? Seconds.zero)
+      + Milliseconds.fromSeconds(Seconds.fromMinutes(initial.minutes ?? Minutes.zero))
+      + Milliseconds.fromSeconds(Seconds.fromMinutes(Minutes.fromHours(initial.hours ?? Hours.zero)))
+      + Milliseconds.fromSeconds(Seconds.fromMinutes(Minutes.fromHours(Hours.fromDays(initial.days ?? Days.zero))))
+      + Milliseconds.fromSeconds(Seconds.fromMinutes(Minutes.fromHours(Hours.fromDays(Days.fromWeeks(initial.weeks ?? Weeks.zero)))))
+    ) as Milliseconds;
+    return fromAnyPreciseDuration({ type: "milliseconds", value: totalMilliseconds });
   };
 
-  export const fromAnyPreciseDuration = (duration: AnyPreciseDuration): NormalizedDuration => {
+  export const fromAnyPreciseDuration = (duration: AnyPreciseDuration): NormalisedDuration => {
     const totalMilliseconds = Milliseconds.fromAnyPreciseDuration(duration);
     const totalSeconds = Seconds.fromMillisecondsFloor(totalMilliseconds);
     const totalMinutes = Minutes.fromSecondsFloor(totalSeconds);
@@ -190,5 +226,19 @@ export namespace NormalizedDuration {
       days,
       weeks,
     };
+  }
+  export const zero: NormalisedDuration = fromAnyPreciseDuration({ type: "milliseconds", value: Milliseconds.zero });
+}
+
+export namespace Milliseconds {
+  export const fromNormalisedDuration = (duration: NormalisedDuration): Milliseconds => {
+    return (
+      duration.milliseconds
+      + Milliseconds.fromSeconds(duration.seconds)
+      + Milliseconds.fromSeconds(Seconds.fromMinutes(duration.minutes))
+      + Milliseconds.fromSeconds(Seconds.fromMinutes(Minutes.fromHours(duration.hours)))
+      + Milliseconds.fromSeconds(Seconds.fromMinutes(Minutes.fromHours(Hours.fromDays(duration.days))))
+      + Milliseconds.fromSeconds(Seconds.fromMinutes(Minutes.fromHours(Hours.fromDays(Days.fromWeeks(duration.weeks)))))
+    ) as Milliseconds;
   }
 }

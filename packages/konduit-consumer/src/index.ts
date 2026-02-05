@@ -4,12 +4,16 @@ import type { Result } from "neverthrow";
 import { Mnemonic } from "@konduit/cardano-keys";
 import * as asyncCodec from "@konduit/codec/async";
 import * as jsonAsyncCodecs from "@konduit/codec/json/async";
+import { Adaptor, AdaptorUrl } from "./adaptor";
+import { ChannelTag } from "./channel/core";
 
 export class KonduitConsumer {
   private _wallet: CardanoConnectorWallet;
+  private _adaptors: Map<AdaptorUrl, Adaptor>;
 
-  constructor(wallet: CardanoConnectorWallet) {
+  constructor(wallet: CardanoConnectorWallet, adaptors: Map<AdaptorUrl, Adaptor> = new Map()) {
     this._wallet = wallet;
+    this._adaptors = adaptors;
   }
 
   public async create(
@@ -35,6 +39,10 @@ export class KonduitConsumer {
 
   public get wallet() {
     return this._wallet;
+  }
+
+  public get adaptors() {
+    return this._adaptors;
   }
 }
 

@@ -78,9 +78,12 @@ export const onArray = <T>(def: T | ((json: Json) => T)) => (handle: ((value: Js
 export const onObject = <T>(def: T | ((json: Json) => T)) => (handle: ((value: { [key: string]: Json }) => T)) =>
   onType((j) => typeof j === "object" && j !== null && !Array.isArray(j), def, handle);
 
-export const onNull = <T>(def: T) => (handle: (() => T)) => (json: Json): T => {
+export const onNull = <T>(def: T | ((json: Json) => T)) => (handle: (() => T)) => (json: Json): T => {
   if (json === null) {
     return handle();
+  }
+  if (typeof def === "function") {
+    return (def as (json: Json) => T)(json);
   }
   return def;
 }

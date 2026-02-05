@@ -67,7 +67,7 @@ describe('Wallet Events', () => {
     await wallet.startPolling(pollingInterval);
 
     // Wait for first poll
-    let pollingCheckDelay = Milliseconds.fromSeconds(pollingInterval) + 100;
+    let pollingCheckDelay = 2 * Milliseconds.fromSeconds(pollingInterval);
     await new Promise(resolve => setTimeout(resolve, pollingCheckDelay));
 
     // Change balance

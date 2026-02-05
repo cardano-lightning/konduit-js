@@ -34,6 +34,10 @@
     "./cardano/connector": {
       "types": "./dist/cardano/connector.d.ts",
       "default": "./dist/cardano/connector.js"
+    },
+    "./adaptor": {
+      "types": "./dist/adaptor.d.ts",
+      "default": "./dist/adaptor.js"
     }
   },
   "files": [

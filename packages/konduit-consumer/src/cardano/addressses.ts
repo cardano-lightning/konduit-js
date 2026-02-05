@@ -5,7 +5,7 @@ import type { Ed25519Pub, VKey } from "@konduit/cardano-keys";
 import * as uint8Array from "@konduit/cardano-keys/uint8Array";
 import * as hexString from "@konduit/codec/hexString";
 import * as codec from "@konduit/codec";
-import { mkHexString2HashCodec } from "./codecs";
+import { mkHexString2HashCodec } from "./keys";
 import type { HexString } from "@konduit/codec/hexString";
 import { json2StringCodec, type JsonError, type JsonCodec } from "@konduit/codec/json/codecs";
 import { blake2b } from "@noble/hashes/blake2.js";
