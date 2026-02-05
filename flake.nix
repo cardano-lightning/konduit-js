@@ -52,6 +52,7 @@
               #!/usr/bin/env bash
               root=$(git rev-parse --show-toplevel)
               node $root/node_modules/vitest/vitest.mjs $@
+            '';
           vue-language-server =
             pkgs.writeShellScriptBin "vue-language-server"
             ''

@@ -21,6 +21,7 @@ export type UnboundProps = BaseFieldProps & {
 export type Props = UnboundProps & {
   name: string;
   state: Ref<string>;
+  touch: () => void;
 }
 
 const props = defineProps<Props>();
@@ -32,7 +33,8 @@ const props = defineProps<Props>();
     v-model="props.state.value"
     :type="props.type || 'text'"
     :placeholder="props.placeholder || ''"
-    :class="{ error: props.isValid === false || (props.errors?.length || 0) > 0 }"
+    :class="{ error: props.isValid === false || (props.errors?.length || 0) > 0, success: props.isValid === true }"
+    @blur="props.touch()"
   />
 </template>
 
@@ -61,8 +63,17 @@ input:focus {
 }
 
 input.error {
-  background-color: var(--error-background-color);
+  /* background-color: var(--error-background-color); */
   border-color: var(--error-border-color);
-  color: var(--error-color);
+  /* color: var(--error-color); */
 }
+
+/* FIXME: This requires more debugging. The success state seems to toggle
+* between two error states (`isValid` seems to be flipping to `true` during validation).
+*/
+/*
+input.success {
+  border-color: var(--success-border-color);
+}
+*/
 </style>

@@ -4,10 +4,8 @@ import { type Props as ButtonProps } from "../components/Button.vue";
 import ButtonGroup from "../components/ButtonGroup.vue";
 import TheHeader from "../components/TheHeader.vue";
 import { HexString } from "@konduit/codec/hexString";
-import { useRouter } from "vue-router";
 import { walletBalance } from "../store";
-
-const router = useRouter();
+import Link from "../components/Link.vue";
 
 let channels: { keytag: Uint8Array }[] = [];
 
@@ -23,11 +21,11 @@ let channelButtons: ButtonProps[] = [
       <div v-if="channels.length === 0" class="missing">
         <div v-if="!walletBalance">
           <p>No open channels found and your wallet seems to be empty.</p>
-          <p>Please <a href="/wallet" @click.prevent.self="router.push('wallet')">fund your wallet</a> first, then <a href="/add-channel" @click.prevent.self="router.push('add-channel')">add a channel</a> to get started.</p>
+          <p>Please <Link href="/wallet" :click="'wallet'">fund your wallet</Link> first, then <Link href="/add-channel" :click="'add-channel'">add a channel</Link> to get started.</p>
         </div>
         <div v-else>
           <p>No open channels found.</p>
-          <p><a href="/add-channel" @click.prevent.self="router.push('add-channel')">Add a channel</a> to get started.</p>
+          <p><Link href="/add-channel" :click="'add-channel'">Add a channel</Link> to get started.</p>
         </div>
         <!-- Let's put this into a tooltip: In order to start using Konduit, you need to add at least one channel. -->
       </div>

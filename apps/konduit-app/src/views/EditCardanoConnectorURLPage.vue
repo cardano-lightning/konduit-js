@@ -33,7 +33,6 @@ const walletBackendRule = createRule({
     return createResult.match(
       (newBackend) => {
         if (wallet.value && wallet.value.networkMagicNumber === newBackend.networkMagicNumber) {
-          console.log("Succeeding");
           return {
             backendUrl,
             backend: newBackend,
@@ -101,6 +100,19 @@ const handleSubmit = () => {
 
 const router = useRouter();
 
+const isFormFieldName = (name: string): name is ("url") => {
+  return ["url"].includes(name);
+};
+
+const touch = (fieldName: string) => {
+  if(isFormFieldName(fieldName)) {
+    const field = r$[fieldName];
+    if(field && !field.$dirty) {
+      field.$touch();
+    }
+  }
+};
+
 const buttons: ComputedRef<ButtonProps[]> = computed(() => {
   return [
     {
@@ -120,6 +132,6 @@ const buttons: ComputedRef<ButtonProps[]> = computed(() => {
 
 <template>
   <TheHeader :back-page-name="'settings'" />
-  <Form :buttons="buttons" :fields="fields" :formState="formState" :handleSubmit="handleSubmit" />
+  <Form :buttons="buttons" :fields="fields" :formState="formState" :handleSubmit="handleSubmit" :touch="touch" />
 </template>
 

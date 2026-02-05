@@ -4,11 +4,11 @@ import Pen from "../../components/icons/Pen.vue";
 import Copy from "../../components/icons/Copy.vue";
 import ExternalLink from "../../components/icons/SquareArrowOutUpRight.vue";
 import Trash from "../../components/icons/Trash.vue";
-import { useRouter, type RouteLocationRaw } from 'vue-router';
+import Link from "../../components/Link.vue";
+import type { OnClick } from "../../components/Link.vue";
 
-export type ActionHandler = string | RouteLocationRaw | (() => void);
 export type ActionIcon = "pen" | "download" | "trash" | "copy" | "external-link";
-export type Action = [ActionHandler, ActionIcon];
+export type Action = [OnClick, ActionIcon];
 
 interface Props {
   actions?: Action[];
@@ -17,21 +17,6 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-const router = useRouter();
-const handleClick = (fullAction: Action, event: MouseEvent) => {
-  event.preventDefault();
-  const action = fullAction[0];
-  console.log("Action clicked:", action);
-  if (typeof action === "function") {
-    action();
-  } else if (typeof action == "string") {
-    if(action.startsWith("http://") || action.startsWith("https://") || action.startsWith("mailto:")) {
-      window.open(action, "_blank");
-    } else {
-      router.push({ name: action });
-    }
-  }
-};
 </script>
 
 <template>
@@ -41,19 +26,19 @@ const handleClick = (fullAction: Action, event: MouseEvent) => {
       <dd>{{ props.formattedValue }}</dd>
     </div>
     <div v-if="props.actions">
-      <a
+      <Link
         v-for="(action, index) in props.actions"
         :key="index"
         class="edit"
         :href="typeof action[0] === 'string' ? action[0] : '#'"
-        @click="handleClick(action, $event)"
+        :click="action[0]"
       >
         <Pen v-if="action[1] === 'pen' || !action[1]" />
         <Download v-else-if="action[1] === 'download'" />
         <Trash v-else-if="action[1] === 'trash'" />
         <Copy v-else-if="action[1] === 'copy'" />
         <ExternalLink v-else-if="action[1] === 'external-link'" />
-      </a>
+      </Link>
     </div>
   </div>
 </template>

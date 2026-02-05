@@ -19,6 +19,7 @@ export type Props<Keys extends string = string> = {
   handleSubmit: () => void;
   fields: Record<Keys, FieldProps>;
   formState: Record<Keys, Ref<string>>;
+  touch: (fieldName: Keys) => void;
 };
 
 const props = defineProps<Props>();
@@ -84,6 +85,7 @@ const groupedFields = computed((): { fields: {name: string, field: FieldProps}[]
               :name="name"
               :placeholder="field.placeholder"
               :state="props.formState[name] as Ref<string>"
+              :touch="() => props.touch(name)"
               :type="field.type"
             />
 
@@ -97,6 +99,7 @@ const groupedFields = computed((): { fields: {name: string, field: FieldProps}[]
               :name="name"
               :options="field.options"
               :state="props.formState[name] as Ref<string>"
+              :touch="() => props.touch(name)"
               :type="field.type"
             />
           </div>

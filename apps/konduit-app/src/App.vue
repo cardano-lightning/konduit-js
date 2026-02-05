@@ -8,15 +8,14 @@ import '@formatjs/intl-durationformat/polyfill-force.js';
   <RouterView />
 </template>
 
-// We keep all the css embedded in JS for simplicity.
-// The only external CSS is normalize.css loaded in main.ts.
 <style>
+/* The **only** global styles should only reference
+ * the html and body elements, and #app container.
+ * Everything else should be scoped to the component.
+ *
+ * Exception to the rule is overwrite of the notification styles.
+ */
 :root {
-  font-family: monospace, Lucida Console, Courier New;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  color-scheme: light dark;
-
   /* FIXME: The theming should be reorganized properly - it is still messy
    * as we use it for buttons and text etc. without distinction.
    */
@@ -30,19 +29,14 @@ import '@formatjs/intl-durationformat/polyfill-force.js';
   --error-color: #e57373;
   --error-border-color: var(--error-color);
 
+  --success-background-color: #f4fbf8; /* #f0f8f2 #e6f4ea; */
+  --success-color: #4caf50;
+  --success-border-color: var(--success-color);
+
   /* Inputs, frames around qr codes, video preview etc. */
   --frame-border-color: #d1d5db;
 
-  /* A padding which should be applied to the botton of the main container
-   * to avoid content being hidden under the navbar.
-   */
   --navbar-padding-bottom: calc(60px + env(safe-area-inset-bottom)); /* Navbar height + safe area */
-
-  background-color: var(--primary-background-color);
-  color: var(--primary-color);
-
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 @media (prefers-color-scheme: light) {
@@ -56,6 +50,16 @@ import '@formatjs/intl-durationformat/polyfill-force.js';
 }
 
 html, body {
+  background-color: var(--primary-background-color);
+  color: var(--primary-color);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  font-family: monospace, Lucida Console, Courier New;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  color-scheme: light dark;
+
   height: 100vh; /* Or 100% */
   margin: 0;
   padding: 0;
@@ -63,6 +67,7 @@ html, body {
 }
 
 
+/* Center the app column */
 body {
   display: flex;
   flex-direction: column;
@@ -77,17 +82,6 @@ body {
   max-width: 60vh;
   min-width: 320px;
   width: calc(100vw - 2rem);
-}
-
-#app a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: none;
-}
-
-/* Should we keep this default style here? */
-#app #drop-all-the-extrnal-css-container {
-  padding-bottom: calc(60px + env(safe-area-inset-bottom)); /* Navbar height + safe area */
 }
 
 /*

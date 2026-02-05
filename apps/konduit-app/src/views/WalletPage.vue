@@ -12,7 +12,7 @@ import { wallet, walletBalance, walletBalanceInfo } from "../store";
 import FancyAmount from "../components/FancyAmount.vue";
 import { useDefaultFormatters } from "../composables/l10n";
 import { POSIXSeconds } from "@konduit/konduit-consumer/time/absolute";
-import { AnyPreciseDuration, NormalizedDuration, Seconds } from "@konduit/konduit-consumer/time/duration";
+import { AnyPreciseDuration, NormalisedDuration, Seconds } from "@konduit/konduit-consumer/time/duration";
 import { abbreviated } from "../composables/formatters";
 import { useClipboard } from "@vueuse/core";
 import { useNotifications } from "../composables/notifications";
@@ -52,7 +52,7 @@ const formattedSyncInfo = computed(() => {
     if(secondsSinceLastSync == 0) return "Synced just now";
 
     let normalized = (() => {
-      let normalized = NormalizedDuration.fromAnyPreciseDuration(AnyPreciseDuration.fromSeconds(secondsSinceLastSync));
+      let normalized = NormalisedDuration.fromAnyPreciseDuration(AnyPreciseDuration.fromSeconds(secondsSinceLastSync));
       if(secondsSinceLastSync < 60) {
         return normalized;
       }
