@@ -1,18 +1,13 @@
 import type { Tagged } from "type-fest";
+import type { Result } from "neverthrow";
 import { VKey } from "@konduit/cardano-keys";
 import { TxCbor, TxHash } from "../cardano/tx";
 import { POSIXSeconds, ValidDate } from "../time/absolute";
 import { ChannelTag } from "./core";
 import { AdaptorVKey } from "../adaptor/adaptorInfo";
-import { Hours, Milliseconds, Seconds } from "../time/duration";
+import { Milliseconds, Seconds } from "../time/duration";
 import { Lovelace } from "../cardano";
 
-// TODO:
-//
-// Probably we should use two measures of confirmation here:
-// - One is approval from the adaptor for `open` and `add`.
-// - Another is internal treshold for `close` which can be different.
-//
 export type TxBase = {
   // Useful for debugging
   txCbor: TxCbor;
@@ -33,24 +28,24 @@ export type CloseTx = TxBase & {
   type: "CloseTx";
 };
 
-// export type TxBuilder = {
-//   buildOpenTx: (
-//     tag: ChannelTag,
-//     consumer: ConsumerVKey,
-//     adaptor: AdaptorVKey,
-//     closePeriod: Milliseconds,
-//     amount: Lovelace,
-//     fundingUtxos: UnspentTransactionOutput[],
-//   ) => TxCbor;
-// 
-//   buildCloseTx: (
-//     tag: ChannelTag,
-// };
+export type TxBuilder = {
+  buildOpenTx: (
+    tag: ChannelTag,
+    consumer: ConsumerVKey,
+    adaptor: AdaptorVKey,
+    closePeriod: Milliseconds,
+    amount: Lovelace,
+  ) => Promise<Result<TxCbor, string>>;
+
+  buildCloseTx: (
+    tag: ChannelTag,
+    consumer: ConsumerVKey,
+  ) => Promise<Result<TxCbor, string>>;
+};
 
 
 export type ChannelTx = OpenTx | CloseTx;
 
-// Simplified volatility check
 const isTxVolatile = (tx: ChannelTx, txVolatilityTreshold: TxVolatilityThreshold, closeVolatilityTreshold: CloseVolatilityThreshold): boolean => {
   if (tx.submitted == null) {
     return true;

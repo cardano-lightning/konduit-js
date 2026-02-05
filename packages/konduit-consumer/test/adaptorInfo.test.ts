@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { AdaptorInfo } from "../src/adaptor/adaptorInfo";
+import { AdaptorInfo, AdaptorVKey } from "../src/adaptor/adaptorInfo";
 import { generateMnemonic, KeyIndex, KeyRole, RootPrivateKey, WalletIndex } from "@konduit/cardano-keys";
 import { Days, Milliseconds, NormalisedDuration } from "../src/time/duration";
 import { Ada, Lovelace, ScriptHash } from "../src/cardano";
@@ -15,7 +15,7 @@ const mkSKey = async () => {
 
 describe("AdaptorInfo serialization/deserialization", () => {
   const createValidAdaptorInfo = async () => {
-    const adaptorVKey = (await mkSKey()).toVKey();
+    const adaptorVKey = (await mkSKey()).toVKey() as AdaptorVKey;
     const closePeriod = Milliseconds.fromNormalisedDuration(NormalisedDuration.fromComponentsNormalization({ days: Days.fromSmallNumber(2) }));
     const fee = Lovelace.fromAda(Ada.fromSmallNumber(1));
     const maxTagLength = NonNegativeInt.fromSmallNumber(64);

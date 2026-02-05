@@ -55,7 +55,7 @@ export class AdaptorInfo {
   scriptHash: ScriptHash;
 
   constructor(
-    adaptorVKey: VKey,
+    adaptorVKey: AdaptorVKey,
     closePeriod: Milliseconds,
     fee: Lovelace,
     maxTagLength: NonNegativeInt,
@@ -100,7 +100,7 @@ export const json2AdaptorInfoCodec: jsonCodecs.JsonCodec<AdaptorInfo> = (() => {
     adaptorRecordCodec,
     (obj) =>
       new AdaptorInfo(
-        obj.adaptor_vkey,
+        obj.adaptor_vkey as AdaptorVKey,
         obj.close_period,
         obj.fee,
         obj.max_tag_length,

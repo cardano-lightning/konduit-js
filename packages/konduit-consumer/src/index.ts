@@ -5,9 +5,12 @@ import { Mnemonic } from "@konduit/cardano-keys";
 import * as asyncCodec from "@konduit/codec/async";
 import * as jsonAsyncCodecs from "@konduit/codec/json/async";
 import { Adaptor, AdaptorUrl } from "./adaptor";
-import { ChannelTag } from "./channel/core";
 
 export class KonduitConsumer {
+  // TODO: remove wallet from here. It should be replaced by:
+  // * L2 signer interface
+  // * L2 signer can be either a private key (ideally valut) or possibly a...
+  // CIP-30 wallet if we agree on some extension to the L1 cheque standard.
   private _wallet: CardanoConnectorWallet;
   private _adaptors: Map<AdaptorUrl, Adaptor>;
 

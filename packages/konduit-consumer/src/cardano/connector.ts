@@ -49,7 +49,8 @@ export class Connector {
     return this._backendUrl;
   }
 
-  async open(
+  // Tx builder API
+  async buildOpenTx(
     tag: ChannelTag,
     consumer: ConsumerVKey,
     adaptor: AdaptorVKey,
@@ -71,48 +72,35 @@ export class Connector {
     }
   };
 
-// // 
-// //   async close(
-// //     tag: ChannelTag,
-// //     consumer: Ed25519VKey,
-// //     adaptor: Ed25519VKey,
-// //     scriptRef: string,
-// //   ): Promise<Result<wasm.TransactionReadyForSigning, string>> {
-// //     return close(this.cardanoConnector, tag, consumer, adaptor, scriptRef);
-// // 
-// //     stringifyAsyncThrowable(async () => await wasm.close(
-// //         this.connector,
-// //         tag as Uint8Array,
-// //         consumer as Uint8Array,
-// //         adaptor as Uint8Array,
-// //         scriptRef,
-// //       )
-// //     );
-// // 
-// // 
-// //   }
-// // 
-// // 
-// // 
-// //   }
+  async buildCloseTx(
+    tag: ChannelTag,
+    consumer: ConsumerVKey,
+  ): Promise<Result<wasm.TransactionReadyForSigning, string>> {
+    return stringifyAsyncThrowable(async () => await wasm.close(
+      this.connector,
+      tag,
+      consumer.getKey()
+    ));
+  }
 
-    async signAndSubmit(
-      transaction: wasm.TransactionReadyForSigning,
-      sKey: SKey,
-    ): Promise<Result<TxHash, string>> {
-      const keyScalar: Ed25519PrvScalar = extractPrvScalar(sKey.getKey());
-      const possibleTxHashBytes = await stringifyAsyncThrowable(async () => this.connector.signAndSubmit(transaction, keyScalar));
-      return possibleTxHashBytes.andThen(
-        (txHashBytes) => TxHash.fromBytes(txHashBytes),
-      );
-    }
+  // Wallet API:
+  async signAndSubmit(
+    transaction: wasm.TransactionReadyForSigning,
+    sKey: SKey,
+  ): Promise<Result<TxHash, string>> {
+    const keyScalar: Ed25519PrvScalar = extractPrvScalar(sKey.getKey());
+    const possibleTxHashBytes = await stringifyAsyncThrowable(async () => this.connector.signAndSubmit(transaction, keyScalar));
+    return possibleTxHashBytes.andThen(
+      (txHashBytes) => TxHash.fromBytes(txHashBytes),
+    );
+  }
 
-    async balance(vkey: VKey): Promise<Result<Lovelace, JsonError>> {
-      const result = await stringifyAsyncThrowable(async () => {
-         return await this.connector.balance(vkey.getKey());
-      });
-      return result.andThen((balance: bigint) => {
-        return Lovelace.fromBigInt(balance);
-      });
-    }
+  async balance(vkey: VKey): Promise<Result<Lovelace, JsonError>> {
+    const result = await stringifyAsyncThrowable(async () => {
+       return await this.connector.balance(vkey.getKey());
+    });
+    return result.andThen((balance: bigint) => {
+      return Lovelace.fromBigInt(balance);
+    });
+  }
 }
