@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { parse, stringify, type Json } from '../src/json';
 import { json2StringCodec, json2NumberCodec, json2BooleanCodec, json2NullCodec, objectOf, altJsonCodecs, optional, type JsonCodec } from '../src/json/codecs';
 import * as json from '../src/json';
-import { expectOk, expectErr } from './assertions';
+import { unwrapOk, unwrapErr } from './assertions';
 
 describe('JSON Codecs', () => {
   describe('basic codecs', () => {
@@ -10,40 +10,40 @@ describe('JSON Codecs', () => {
       expect(json.nullJson).toBeNull();
       const encoded = null;
       expect(encoded).toBeNull();
-      const decoded = expectOk(json2NullCodec.deserialise(encoded));
+      const decoded = unwrapOk(json2NullCodec.deserialise(encoded));
       expect(decoded).toBeNull();
     });
     it('should encode and decode strings', () => {
       const original = "hello world";
       const encoded = json2StringCodec.serialise(original);
-      const decoded = expectOk(json2StringCodec.deserialise(encoded));
+      const decoded = unwrapOk(json2StringCodec.deserialise(encoded));
       expect(decoded).toBe(original);
     });
 
     it('should encode and decode numbers', () => {
       const original = 42;
       const encoded = json2NumberCodec.serialise(original);
-      const decoded = expectOk(json2NumberCodec.deserialise(encoded));
+      const decoded = unwrapOk(json2NumberCodec.deserialise(encoded));
       expect(decoded).toBe(original);
     });
 
     it('should encode and decode booleans', () => {
       const original = true;
       const encoded = json2BooleanCodec.serialise(original);
-      const decoded = expectOk(json2BooleanCodec.deserialise(encoded));
+      const decoded = unwrapOk(json2BooleanCodec.deserialise(encoded));
       expect(decoded).toBe(original);
     });
 
     it('should encode and decode null', () => {
       const value = null;
       const encoded = json2NullCodec.serialise(value);
-      const decoded = expectOk(json2NullCodec.deserialise(encoded));
+      const decoded = unwrapOk(json2NullCodec.deserialise(encoded));
       expect(decoded).toBe(value);
     });
 
     it('should reject number outside safe integer range', () => {
       const tooBig = BigInt(Number.MAX_SAFE_INTEGER) + 100n;
-      expectErr(json2NumberCodec.deserialise(tooBig as Json));
+      unwrapErr(json2NumberCodec.deserialise(tooBig as Json));
     });
   });
 
@@ -63,7 +63,7 @@ describe('JSON Codecs', () => {
     it('should encode and decode simple objects', () => {
       const original = { name: "Alice", age: 30, active: true };
       const encoded = json2personCodec.serialise(original);
-      const decoded = expectOk(json2personCodec.deserialise(encoded));
+      const decoded = unwrapOk(json2personCodec.deserialise(encoded));
       expect(decoded).toEqual(original);
     });
 
@@ -71,8 +71,8 @@ describe('JSON Codecs', () => {
       const original = { name: "Bob", age: 25, active: false };
       const encoded = json2personCodec.serialise(original);
       const jsonStr = stringify(encoded);
-      const parsed = expectOk(parse(jsonStr));
-      const decoded = expectOk(json2personCodec.deserialise(parsed));
+      const parsed = unwrapOk(parse(jsonStr));
+      const decoded = unwrapOk(json2personCodec.deserialise(parsed));
       expect(decoded).toEqual(original);
     });
 
@@ -83,7 +83,7 @@ describe('JSON Codecs', () => {
       });
       const incomplete = { name: "Charlie" };
       const result = json2personCodec.deserialise(incomplete);
-      expectErr(result);
+      unwrapErr(result);
     });
 
     it('should collect errors for wrong field types', () => {
@@ -97,7 +97,7 @@ describe('JSON Codecs', () => {
         age: "not a number"
       };
       const result = json2personCodec.deserialise(wrongType);
-      expectErr(result);
+      unwrapErr(result);
     });
   });
   
@@ -127,7 +127,7 @@ describe('JSON Codecs', () => {
       };
 
       const encoded = json2personCodec.serialise(person);
-      const decoded = expectOk(json2personCodec.deserialise(encoded));
+      const decoded = unwrapOk(json2personCodec.deserialise(encoded));
       expect(decoded).toStrictEqual(person);
     });
 
@@ -140,7 +140,7 @@ describe('JSON Codecs', () => {
         }
       };
       const result = json2personCodec.deserialise(invalidPerson);
-      const errorJson = expectErr(result);
+      const errorJson = unwrapErr(result);
       expect(typeof errorJson).toBe("object");
       // The error should be something like:
       // {"address":{"street":"Expected string"}}
@@ -165,19 +165,19 @@ describe('JSON Codecs', () => {
 
     it('should decode first alternative successfully', () => {
       const strValue = "test";
-      const decoded = expectOk(json2StringOrNumberCodec.deserialise(strValue));
+      const decoded = unwrapOk(json2StringOrNumberCodec.deserialise(strValue));
       expect(decoded).toBe("test");
     });
 
     it('should decode second alternative when first fails', () => {
       const numValue = 42n;
-      const decoded = expectOk(json2StringOrNumberCodec.deserialise(numValue));
+      const decoded = unwrapOk(json2StringOrNumberCodec.deserialise(numValue));
       expect(decoded).toBe(42);
     });
 
     it('should fail when both alternatives fail', () => {
       const boolValue = true;
-      const error = expectErr(json2StringOrNumberCodec.deserialise(boolValue));
+      const error = unwrapErr(json2StringOrNumberCodec.deserialise(boolValue));
       expect(Array.isArray(error)).toBe(true);
       expect((error as Json[]).length).toBe(2);
     });
@@ -195,7 +195,7 @@ describe('JSON Codecs', () => {
     const fourWayCodec = altJsonCodecs(
       [json2StringCodec, json2NumberCodec, json2BooleanCodec, json2NullCodec] as const,
       (serStr, serNum, serBool, serNull) => (value: string | number | boolean | null) => {
-        if (value === null) return serNull(value);
+        if (value === null) return serNull(null);
         if (typeof value === 'string') return serStr(value);
         if (typeof value === 'number') return serNum(value);
         return serBool(value);
@@ -203,10 +203,10 @@ describe('JSON Codecs', () => {
     );
 
     it('should decode all four alternatives', () => {
-      expect(expectOk(fourWayCodec.deserialise("text"))).toBe("text");
-      expect(expectOk(fourWayCodec.deserialise(100n))).toBe(100);
-      expect(expectOk(fourWayCodec.deserialise(false))).toBe(false);
-      expect(expectOk(fourWayCodec.deserialise(null))).toBe(null);
+      expect(unwrapOk(fourWayCodec.deserialise("text"))).toBe("text");
+      expect(unwrapOk(fourWayCodec.deserialise(100n))).toBe(100);
+      expect(unwrapOk(fourWayCodec.deserialise(false))).toBe(false);
+      expect(unwrapOk(fourWayCodec.deserialise(null))).toBe(null);
     });
 
     it('should serialize all types correctly', () => {
@@ -222,11 +222,11 @@ describe('JSON Codecs', () => {
       const json2optionalStringCodec = optional(json2StringCodec);
 
       const encoded1 = json2optionalStringCodec.serialise("hello");
-      const decoded1 = expectOk(json2optionalStringCodec.deserialise(encoded1));
+      const decoded1 = unwrapOk(json2optionalStringCodec.deserialise(encoded1));
       expect(decoded1).toBe("hello");
 
       const encoded2 = json2optionalStringCodec.serialise(undefined);
-      const decoded2 = expectOk(json2optionalStringCodec.deserialise(encoded2));
+      const decoded2 = unwrapOk(json2optionalStringCodec.deserialise(encoded2));
       expect(decoded2).toBeUndefined();
       expect(encoded2).toBeNull();
     });
@@ -242,7 +242,7 @@ describe('JSON Codecs', () => {
         nickname: altJsonCodecs(
           [json2NullCodec, json2StringCodec],
           (serNull, serString) => (value: null | string) =>
-            value === null ? serNull(value) : serString(value)
+            value === null ? serNull(null) : serString(value)
         ),
         age: optional(json2NumberCodec)
       });
@@ -255,7 +255,7 @@ describe('JSON Codecs', () => {
           age: 30
         };
         const encoded1 = json2personCodec.serialise(fullPerson);
-        const decoded1 = expectOk(json2personCodec.deserialise(encoded1));
+        const decoded1 = unwrapOk(json2personCodec.deserialise(encoded1));
         expect(decoded1).toEqual(fullPerson);
       });
 
@@ -267,7 +267,7 @@ describe('JSON Codecs', () => {
           age: 25
         };
         const encoded2 = json2personCodec.serialise(personWithNullNickname);
-        const decoded2 = expectOk(json2personCodec.deserialise(encoded2));
+        const decoded2 = unwrapOk(json2personCodec.deserialise(encoded2));
         expect(decoded2).toEqual(personWithNullNickname);
       });
 
@@ -279,7 +279,7 @@ describe('JSON Codecs', () => {
           age: undefined
         };
         const encoded3 = json2personCodec.serialise(personWithoutAge);
-        const decoded3 = expectOk(json2personCodec.deserialise(encoded3));
+        const decoded3 = unwrapOk(json2personCodec.deserialise(encoded3));
         expect(decoded3.name).toBe("Charlie");
         expect(decoded3.nickname).toBe("Chuck");
         expect(decoded3.age).toBeUndefined();
@@ -293,7 +293,7 @@ describe('JSON Codecs', () => {
           age: undefined,
         };
         const encoded4 = json2personCodec.serialise(minimalPerson);
-        const decoded4 = expectOk(json2personCodec.deserialise(encoded4));
+        const decoded4 = unwrapOk(json2personCodec.deserialise(encoded4));
         expect(decoded4.name).toBe("Dave");
         expect(decoded4.nickname).toBeNull();
         expect(decoded4.age).toBeUndefined();
@@ -306,8 +306,8 @@ describe('JSON Codecs', () => {
         };
         const encoded = json2personCodec.serialise(original);
         const jsonStr = stringify(encoded);
-        const parsed = expectOk(parse(jsonStr));
-        const decoded = expectOk(json2personCodec.deserialise(parsed));
+        const parsed = unwrapOk(parse(jsonStr));
+        const decoded = unwrapOk(json2personCodec.deserialise(parsed));
         expect(decoded.name).toBe("Eve");
         expect(decoded.nickname).toBeNull();
         expect(decoded.age).toBeUndefined();
@@ -319,7 +319,7 @@ describe('JSON Codecs', () => {
           age: "not a number" // invalid type
         };
         const result = json2personCodec.deserialise(invalidPerson);
-        const errorJson = expectErr(result);
+        const errorJson = unwrapErr(result);
         expect(typeof errorJson).toBe("object");
         // The error should be something like:
         //{"name":"Expected string","nickname":["Expected null","Expected string"],"age":"Expected bigint (for number)"}

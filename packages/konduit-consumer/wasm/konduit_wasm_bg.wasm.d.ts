@@ -1,8 +1,8 @@
 /* tslint:disable */
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
-export const enableLogs: (a: number) => void;
 export const close: (a: number, b: number, c: number, d: number, e: number) => any;
+export const toVerificationKey: (a: number, b: number) => [number, number, number, number];
 export const __wbg_resolvedinput_free: (a: number, b: number) => void;
 export const resolvedinput_new: (a: number, b: number) => number;
 export const resolvedinput_toString: (a: number) => [number, number];
@@ -10,10 +10,10 @@ export const __wbg_resolvedinputs_free: (a: number, b: number) => void;
 export const resolvedinputs_empty: () => number;
 export const resolvedinputs_append: (a: number, b: number) => number;
 export const resolvedinputs_toString: (a: number) => [number, number];
-export const toVerificationKey: (a: number, b: number) => [number, number];
+export const enableLogs: (a: number) => [number, number];
 export const open: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: bigint, i: bigint) => any;
 export const __wbg_cardanoconnector_free: (a: number, b: number) => void;
-export const cardanoconnector_new: (a: number, b: number, c: number) => any;
+export const cardanoconnector_new: (a: number, b: number, c: number, d: bigint) => any;
 export const cardanoconnector_signAndSubmit: (a: number, b: number, c: number, d: number) => any;
 export const cardanoconnector_balance: (a: number, b: number, c: number) => any;
 export const cardanoconnector_network_magic_number: (a: number) => bigint;
@@ -46,6 +46,7 @@ export const protocolparameters_preview: () => number;
 export const protocolparameters_withPlutusV3CostModel: (a: number, b: number, c: number) => number;
 export const __wbg_transactionreadyforsigning_free: (a: number, b: number) => void;
 export const transactionreadyforsigning_toString: (a: number) => [number, number];
+export const transactionreadyforsigning_toCbor: (a: number) => [number, number];
 export const wasm_bindgen__closure__destroy__hb6d864c6f9d47eef: (a: number, b: number) => void;
 export const wasm_bindgen__closure__destroy__h773430c0ef9b0cff: (a: number, b: number) => void;
 export const wasm_bindgen__convert__closures_____invoke__h048a54d84a001304: (a: number, b: number, c: any, d: any) => void;
@@ -57,4 +58,5 @@ export const __wbindgen_exn_store: (a: number) => void;
 export const __externref_table_alloc: () => number;
 export const __wbindgen_externrefs: WebAssembly.Table;
 export const __wbindgen_free: (a: number, b: number, c: number) => void;
+export const __externref_table_dealloc: (a: number) => void;
 export const __wbindgen_start: () => void;

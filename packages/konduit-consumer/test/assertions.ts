@@ -50,3 +50,10 @@ export const expectToEqual = <T>(a: T, b: T): void => {
 export const expectToStrictEqual = <T>(a: T, b: T): void => {
   return expect(a).toStrictEqual(b);
 }
+
+export const expectNotNull = <T>(value: T | null): T => {
+  if (value === null) {
+    throw new Error("Expected value to be not null, but it was null");
+  }
+  return value;
+}

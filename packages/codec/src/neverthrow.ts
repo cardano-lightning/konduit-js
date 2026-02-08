@@ -31,3 +31,12 @@ export const resultToResultAsync = <T, E>(result: Result<T, E>): ResultAsync<T, 
   );
 }
 
+export const unsafeUnwrap = <T, E>(result: Result<T, E>): T => {
+  return result.match(
+    (value) => value,
+    (error) => {
+      throw new Error(`Attempted to unwrap an Err result: ${String(error)}`);
+    }
+  );
+}
+

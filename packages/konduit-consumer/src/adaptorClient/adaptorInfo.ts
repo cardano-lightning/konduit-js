@@ -7,9 +7,9 @@ import { json2LovelaceCodec, json2ScriptHashCodec, type Lovelace, type ScriptHas
 import { json2NonNegativeIntCodec, type NonNegativeInt } from "@konduit/codec/integers/smallish";
 import { json2VKeyCodec } from "../cardano";
 import type { Json } from "@konduit/codec/json";
-import * as http from "../http";
 import { Tagged } from "type-fest";
 
+// Created from info endpoint or deserialisation
 export type AdaptorVKey = Tagged<VKey, "AdaptorVKey">;
 
 /**
@@ -68,11 +68,6 @@ export class AdaptorInfo {
     this.maxTagLength = maxTagLength;
     this.deployerVkey = deployerVkey;
     this.scriptHash = scriptHash;
-  }
-
-  static async fromAdaptorUrl(baseUrl: string): Promise<Result<AdaptorInfo, http.GetDeserialiseError>> {
-    let infoUrl = `${baseUrl}/info`;
-    return http.getDeserialise(infoUrl, json2AdaptorInfoCodec.deserialise);
   }
 
   static deserialise(json: Json): Result<AdaptorInfo, jsonCodecs.JsonError> {

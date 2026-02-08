@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { expectOk, expectErr } from './assertions';
+import { unwrapOk, unwrapErr } from './assertions';
 import { altCodecs } from '../src/codec';
 import {
   json2StringCodec,
@@ -19,19 +19,19 @@ describe('altCodecs - Generalized N-way Alternative Codec', () => {
 
     it('should decode first alternative', () => {
       const result = stringOrNumberCodec.deserialise("hello");
-      const decoded = expectOk(result);
+      const decoded = unwrapOk(result);
       expect(decoded).toBe("hello");
     });
 
     it('should decode second alternative', () => {
       const result = stringOrNumberCodec.deserialise(42n);
-      const decoded = expectOk(result);
+      const decoded = unwrapOk(result);
       expect(decoded).toBe(42);
     });
 
     it('should fail when all alternatives fail', () => {
       const result = stringOrNumberCodec.deserialise(true);
-      expectErr(result);
+      unwrapErr(result);
     });
 
     it('should serialize correctly', () => {
@@ -51,22 +51,22 @@ describe('altCodecs - Generalized N-way Alternative Codec', () => {
     );
 
     it('should decode first alternative', () => {
-      const decoded = expectOk(stringOrNumberOrBoolCodec.deserialise("hello"));
+      const decoded = unwrapOk(stringOrNumberOrBoolCodec.deserialise("hello"));
       expect(decoded).toBe("hello");
     });
 
     it('should decode second alternative', () => {
-      const decoded = expectOk(stringOrNumberOrBoolCodec.deserialise(42n));
+      const decoded = unwrapOk(stringOrNumberOrBoolCodec.deserialise(42n));
       expect(decoded).toBe(42);
     });
 
     it('should decode third alternative', () => {
-      const decoded = expectOk(stringOrNumberOrBoolCodec.deserialise(true));
+      const decoded = unwrapOk(stringOrNumberOrBoolCodec.deserialise(true));
       expect(decoded).toBe(true);
     });
 
     it('should fail when all alternatives fail', () => {
-      expectErr(stringOrNumberOrBoolCodec.deserialise(null));
+      unwrapErr(stringOrNumberOrBoolCodec.deserialise(null));
     });
 
     it('should serialize all types correctly', () => {
@@ -80,7 +80,7 @@ describe('altCodecs - Generalized N-way Alternative Codec', () => {
     const fourWayCodec = altCodecs(
       [json2StringCodec, json2NumberCodec, json2BooleanCodec, json2NullCodec] as const,
       (serStr, serNum, serBool, serNull) => (value: string | number | boolean | null) => {
-        if (value === null) return serNull(value);
+        if (value === null) return serNull(null);
         if (typeof value === 'string') return serStr(value);
         if (typeof value === 'number') return serNum(value);
         return serBool(value);
@@ -88,10 +88,10 @@ describe('altCodecs - Generalized N-way Alternative Codec', () => {
     );
 
     it('should decode all four alternatives', () => {
-      expect(expectOk(fourWayCodec.deserialise("text"))).toBe("text");
-      expect(expectOk(fourWayCodec.deserialise(100n))).toBe(100);
-      expect(expectOk(fourWayCodec.deserialise(false))).toBe(false);
-      expect(expectOk(fourWayCodec.deserialise(null))).toBe(null);
+      expect(unwrapOk(fourWayCodec.deserialise("text"))).toBe("text");
+      expect(unwrapOk(fourWayCodec.deserialise(100n))).toBe(100);
+      expect(unwrapOk(fourWayCodec.deserialise(false))).toBe(false);
+      expect(unwrapOk(fourWayCodec.deserialise(null))).toBe(null);
     });
 
     it('should serialize all types correctly', () => {

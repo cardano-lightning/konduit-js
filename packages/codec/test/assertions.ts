@@ -1,7 +1,9 @@
 import { Result } from 'neverthrow';
 import { onString } from '../src/json';
+import { JsonError } from '../src/json/codecs';
+import { Assertion, expect } from 'vitest';
 
-export const expectOk = <T, Err>(result: Result<T, Err>, msgTemplate?: string): T => {
+export const unwrapOk = <T, Err>(result: Result<T, Err>, msgTemplate?: string): T => {
   const mkMessage = (err: any) => {
     const tpl = msgTemplate || "Expected Ok result, got Err: ERROR_STR"
     return tpl.replace("ERROR_STR", String(err));
@@ -12,7 +14,7 @@ export const expectOk = <T, Err>(result: Result<T, Err>, msgTemplate?: string): 
   );
 }
 
-const expectErrWith = <T, E>(result: Result<T, E>, onErr: (error: E) => boolean): E => {
+const unwrapErrWith = <T, E>(result: Result<T, E>, onErr: (error: E) => boolean): E => {
   return result.match(
     (value) => { throw new Error(`Expected Err result, got Ok: ${value}`); },
     (error) => {
@@ -24,15 +26,23 @@ const expectErrWith = <T, E>(result: Result<T, E>, onErr: (error: E) => boolean)
   );
 }
 
-export const expectErrWithSubstring = <T, E>(result: Result<T, E>, substring: string): E => {
-  return expectErrWith(result, (error) => {
+export const unwrapErrWithSubstring = <T>(result: Result<T, JsonError>, substring: string): JsonError => {
+  return unwrapErrWith(result, (error) => {
     return onString((_) => false)((errStr: string) => {
       return errStr.includes(substring);
     })(error);
   });
 }
 
-export const expectErr = <T, E>(result: Result<T, E>): E => {
-  return expectErrWith(result, (_error) => true);
+export const unwrapErr = <T, E>(result: Result<T, E>): E => {
+  return unwrapErrWith(result, (_error) => true);
 }
 
+export const expectOk = <T, E>(result: Result<T, E>): Assertion<T> => {
+  return result.match(
+    (value) => expect(value),
+    (error) => {
+      throw new Error(`Expected Ok result, got Err: ${error}`)
+    }
+  );
+}

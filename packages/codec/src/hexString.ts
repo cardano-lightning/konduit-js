@@ -6,6 +6,21 @@ import type { JsonCodec } from "./json/codecs";
 // String which is a valid hex representation
 export type HexString = Tagged<string, "HexString">;
 export namespace HexString {
+  export const fromString = (str: string): Result<HexString, string> => {
+    const hexRegex = /^[0-9a-fA-F]*$/;
+    if (str.length % 2 !== 0) {
+      return err(`Invalid length: expected even length but got ${str.length}`);
+    }
+    if (!hexRegex.test(str)) {
+      for (let i = 0; i < str.length; i++) {
+        const char = str[i];
+        if (!hexRegex.test(char)) {
+          return err(`Invalid character '${char}' at position ${i}`);
+        }
+      }
+    }
+    return ok(str as HexString);
+  }
   export const fromUint8Array = (arr: Uint8Array): HexString => {
     let str = "";
     for (let i = 0; i < arr.length; i++) {
@@ -35,20 +50,7 @@ export const jsonCodec: JsonCodec<HexString> = {
     if (typeof data !== "string") {
       return err(`Invalid type: expected string but got ${typeof data}`);
     }
-    const str = data as string;
-    const hexRegex = /^[0-9a-fA-F]*$/;
-    if (str.length % 2 !== 0) {
-      return err(`Invalid length: expected even length but got ${str.length}`);
-    }
-    if (!hexRegex.test(str)) {
-      for (let i = 0; i < str.length; i++) {
-        const char = str[i];
-        if (!hexRegex.test(char)) {
-          return err(`Invalid character '${char}' at position ${i}`);
-        }
-      }
-    }
-    return ok(str as HexString);
+    return HexString.fromString(data);
   },
   serialise: (hexStr: HexString): Json => {
     return hexStr;

@@ -1,47 +1,44 @@
 import type { Tagged } from "type-fest";
 import type { Result } from "neverthrow";
 import { ok, err } from "neverthrow";
-import { AdaptorInfo } from "./adaptor/adaptorInfo";
-import { GetDeserialiseError } from "./http";
-import { ChannelTag } from "./channel/core";
-import { Channel } from "./channel";
+import { AdaptorInfo, json2AdaptorInfoCodec } from "./adaptorClient/adaptorInfo";
+import { getDeserialise, GetDeserialiseError } from "./http";
 
-export { AdaptorInfo } from "./adaptor/adaptorInfo";
+export { AdaptorInfo } from "./adaptorClient/adaptorInfo";
+
 export type AdaptorUrl = Tagged<string, "AdaptorUrl">;
-export namespace AdaptorUrl {
-  export const fromStringWithInfo = async (url: string): Promise<Result<[AdaptorUrl, AdaptorInfo], GetDeserialiseError>> => {
-    const normalisedUrl = url.endsWith("/") ? url.slice(0, -1) : url;
-    const possibleAdaptorInfo = await AdaptorInfo.fromAdaptorUrl(normalisedUrl);
-    return possibleAdaptorInfo.map((adaptorInfo) => [normalisedUrl as AdaptorUrl, adaptorInfo]);
-  }
 
-  export const fromString = async (url: string): Promise<Result<AdaptorUrl, GetDeserialiseError>> => {
-    return (await fromStringWithInfo(url)).map(([adaptorUrl, _adaptorInfo]) => adaptorUrl);
+export type AdaptorFullInfo = Tagged<[AdaptorUrl, AdaptorInfo], "AdaptorFullInfo">;
+export namespace AdaptorFullInfo {
+  export const fromString = async (url: string): Promise<Result<AdaptorFullInfo, GetDeserialiseError>> => {
+    const normalisedUrl = url.endsWith("/") ? url.slice(0, -1) : url as AdaptorUrl;
+    let infoUrl = `${normalisedUrl}/info`;
+    let possibleAdaptorInfo = await getDeserialise(infoUrl, json2AdaptorInfoCodec.deserialise);
+    return possibleAdaptorInfo.map((adaptorInfo) => [normalisedUrl, adaptorInfo] as AdaptorFullInfo);
   }
 }
 
-export class Adaptor {
+//  web::scope("/ch")
+//      .wrap(middleware::KeytagAuth::new("KONDUIT"))
+//      .route("/squash", web::post().to(handlers::squash))
+//      .route("/quote", web::post().to(handlers::quote))
+//      .route("/pay", web::post().to(handlers::pay)),
+//
+export class AdaptorClient {
   public readonly baseUrl: AdaptorUrl;
-  private _channels: Map<ChannelTag, Channel>;
 
-  constructor(url: AdaptorUrl, channels: Map<ChannelTag, Channel> = new Map()) {
+  constructor(url: AdaptorUrl) {
     this.baseUrl = url;
-    this._channels = channels;
   }
 
-  public static async fromUrlString(url: string): Promise<Result<Adaptor, GetDeserialiseError>> {
-    const possibleAdaptorUrl = await AdaptorUrl.fromString(url);
-    return possibleAdaptorUrl.map((adaptorUrl) => new Adaptor(adaptorUrl));
+  public static async fromUrlString(url: string): Promise<Result<AdaptorClient, GetDeserialiseError>> {
+    const possibleAdaptorFullInfo = await AdaptorFullInfo.fromString(url);
+    return possibleAdaptorFullInfo.map(([adaptorUrl, _]) => new AdaptorClient(adaptorUrl));
   }
-
-  public static async fromUrl(url: AdaptorUrl): Promise<Adaptor> {
-    return new Adaptor(url);
-  }
-
-  public get channels(): Map<ChannelTag, Channel> { return this._channels; }
 
   async info(): Promise<Result<AdaptorInfo, GetDeserialiseError>> {
-    const possibleAdaptorInfo = await AdaptorInfo.fromAdaptorUrl(this.baseUrl);
+    let infoUrl = `${this.baseUrl}/info`;
+    let possibleAdaptorInfo = await getDeserialise(infoUrl, json2AdaptorInfoCodec.deserialise);
     return possibleAdaptorInfo.match(
       (adaptorInfo) => {
         return ok(adaptorInfo);

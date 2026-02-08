@@ -12,7 +12,7 @@ import { PositiveBigInt } from "@konduit/codec/integers/big";
 import type { Milliseconds } from "../time/duration";
 import { ChannelTag } from "../channel/core";
 import { ConsumerVKey } from "../channel/l1Channel";
-import { AdaptorVKey } from "../adaptor/adaptorInfo";
+import { AdaptorVKey } from "../adaptorClient/adaptorInfo";
 
 export const enableLogs = (level: wasm.LogLevel): void => {
   wasm.enableLogs(level);
@@ -31,7 +31,8 @@ export class Connector {
   }
 
   static async new(backendUrl: string, httpTimeout?: Milliseconds): Promise<Result<Connector, string>> {
-    const possibleConnector = await stringifyAsyncThrowable(() => wasm.CardanoConnector.new(backendUrl, httpTimeout));
+    const timeout = httpTimeout != null? BigInt(httpTimeout) : null;
+    const possibleConnector = await stringifyAsyncThrowable(() => wasm.CardanoConnector.new(backendUrl, timeout));
     return possibleConnector.andThen((connector: wasm.CardanoConnector) => {
       return PositiveBigInt.fromBigInt(connector.network_magic_number).match(
         (positive) => {

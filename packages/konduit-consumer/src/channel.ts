@@ -1,6 +1,8 @@
-import { Adaptor } from "./adaptor";
-import type { L1Channel } from "./channel/l1Channel";
-import { CardanoConnectorWallet } from "./wallets/embedded";
+// import { AdaptorUrl } from "./adaptor";
+import { AdaptorUrl } from "./adaptorClient";
+import { L1Channel, OpenTx } from "./channel/l1Channel";
+// import { CardanoConnectorWallet } from "./wallets/embedded";
+
 // import type { Tagged } from "type-fest";
 // import { ok, Result } from "neverthrow";
 // import { VKey } from "@konduit/cardano-keys";
@@ -23,19 +25,22 @@ import { CardanoConnectorWallet } from "./wallets/embedded";
 // // type ChequeBody = any;
 // // type Adaptor = any;
 // // type QuoteResponse = any;
-// 
-// /**
-//  * Manages the state of a channel, including L1 and L2 information.
-//  * Designed to be storable in IndexedDB via serialisation.
-//  */
+
+export * from "./channel/l1Channel";
+export * from "./channel/core";
+
 export class Channel {
   public readonly l1: L1Channel;
-  public readonly adaptor: Adaptor;
-  public readonly wallet: CardanoConnectorWallet;
+  public readonly adaptorUrl: AdaptorUrl;
 
-  constructor(l1: L1Channel, adaptor: Adaptor) {
+  constructor(l1: L1Channel, adaptorUrl: AdaptorUrl) {
     this.l1 = l1;
-    this.adaptor = adaptor;
+    this.adaptorUrl = adaptorUrl;
+  }
+
+  public static create(openTx: OpenTx, adaptorUrl: AdaptorUrl): Channel {
+    const l1Channel = L1Channel.create(openTx);
+    return new Channel(l1Channel, adaptorUrl);
   }
 
 //   vKey: VKey;

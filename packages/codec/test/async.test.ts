@@ -1,15 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { fromSync, pipe, compose, rmapSync, lmapSync, rmap, mapErr, altCodec } from '../src/codec/async';
-import { json2StringCodec, json2NumberCodec, json2BooleanCodec, type JsonCodec } from '../src/json/codecs';
+import { json2StringCodec, json2NumberCodec, type JsonCodec } from '../src/json/codecs';
 import type { Json } from '../src/json';
-import { expectOk, expectErr } from './assertions';
+import { unwrapOk, unwrapErr } from './assertions';
 
 describe('Async Codecs', () => {
   describe('fromSync', () => {
     it('should lift a sync codec to async', async () => {
       const asyncStringCodec = fromSync(json2StringCodec);
       const result = await asyncStringCodec.deserialise("hello");
-      const decoded = expectOk(result);
+      const decoded = unwrapOk(result);
       expect(decoded).toBe("hello");
     });
 
@@ -42,7 +42,7 @@ describe('Async Codecs', () => {
       const composed = pipe(asyncStringCodec, asyncStringToNumber);
 
       const result = await composed.deserialise("123");
-      const decoded = expectOk(result);
+      const decoded = unwrapOk(result);
       expect(decoded).toBe(123);
 
       const encoded = composed.serialise(456);
@@ -72,7 +72,7 @@ describe('Async Codecs', () => {
       const composed = compose(asyncStringToNumber, asyncStringCodec);
 
       const result = await composed.deserialise("789");
-      const decoded = expectOk(result);
+      const decoded = unwrapOk(result);
       expect(decoded).toBe(789);
     });
   });
@@ -87,7 +87,7 @@ describe('Async Codecs', () => {
       );
 
       const result = await doubled.deserialise(21n);
-      const decoded = expectOk(result);
+      const decoded = unwrapOk(result);
       expect(decoded).toBe(42);
 
       const encoded = doubled.serialise(100);
@@ -105,7 +105,7 @@ describe('Async Codecs', () => {
       );
 
       const result = await stringInput.deserialise("42");
-      const decoded = expectOk(result);
+      const decoded = unwrapOk(result);
       expect(decoded).toBe(42);
 
       const encoded = stringInput.serialise(123);
@@ -126,7 +126,7 @@ describe('Async Codecs', () => {
       );
 
       const result = await asyncDoubled.deserialise(21n);
-      const decoded = expectOk(result);
+      const decoded = unwrapOk(result);
       expect(decoded).toBe(42);
 
       const encoded = asyncDoubled.serialise(100);
@@ -143,7 +143,7 @@ describe('Async Codecs', () => {
       );
 
       const result = await withMappedErr.deserialise(123n);
-      const error = expectErr(result);
+      const error = unwrapErr(result);
       expect(typeof error === 'string' && error.startsWith('Mapped:')).toBe(true);
     });
   });
@@ -160,15 +160,15 @@ describe('Async Codecs', () => {
       );
 
       const strResult = await stringOrNumber.deserialise("hello");
-      const strDecoded = expectOk(strResult);
+      const strDecoded = unwrapOk(strResult);
       expect(strDecoded).toBe("hello");
 
       const numResult = await stringOrNumber.deserialise(42n);
-      const numDecoded = expectOk(numResult);
+      const numDecoded = unwrapOk(numResult);
       expect(numDecoded).toBe(42);
 
       const boolResult = await stringOrNumber.deserialise(true);
-      expectErr(boolResult);
+      unwrapErr(boolResult);
     });
 
     it('should serialize using correct case', async () => {

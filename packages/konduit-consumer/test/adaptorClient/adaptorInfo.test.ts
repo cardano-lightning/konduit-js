@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { AdaptorInfo, AdaptorVKey } from "../src/adaptor/adaptorInfo";
+import { AdaptorInfo, AdaptorVKey } from "../../src/adaptorClient/adaptorInfo";
 import { generateMnemonic, KeyIndex, KeyRole, RootPrivateKey, WalletIndex } from "@konduit/cardano-keys";
-import { Days, Milliseconds, NormalisedDuration } from "../src/time/duration";
-import { Ada, Lovelace, ScriptHash } from "../src/cardano";
+import { Days, Milliseconds, NormalisedDuration } from "../../src/time/duration";
+import { Ada, Lovelace, ScriptHash } from "../../src/cardano";
 import { NonNegativeInt } from "@konduit/codec/integers/smallish";
 import { HexString } from "@konduit/codec/hexString";
 

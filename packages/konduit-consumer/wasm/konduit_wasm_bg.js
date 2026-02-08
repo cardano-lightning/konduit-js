@@ -35,13 +35,13 @@ export class CardanoConnector {
     }
     /**
      * @param {string} base_url
-     * @param {number | null} [http_timeout_ms]
+     * @param {bigint | null} [http_timeout_ms]
      * @returns {Promise<CardanoConnector>}
      */
     static new(base_url, http_timeout_ms) {
         const ptr0 = passStringToWasm0(base_url, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.cardanoconnector_new(ptr0, len0, isLikeNone(http_timeout_ms) ? 0x100000001 : (http_timeout_ms) >>> 0);
+        const ret = wasm.cardanoconnector_new(ptr0, len0, !isLikeNone(http_timeout_ms), isLikeNone(http_timeout_ms) ? BigInt(0) : http_timeout_ms);
         return ret;
     }
     /**
@@ -563,6 +563,15 @@ export class TransactionReadyForSigning {
         wasm.__wbg_transactionreadyforsigning_free(ptr, 0);
     }
     /**
+     * @returns {Uint8Array}
+     */
+    toCbor() {
+        const ret = wasm.transactionreadyforsigning_toCbor(this.__wbg_ptr);
+        var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        return v1;
+    }
+    /**
      * @returns {string}
      */
     toString() {
@@ -600,7 +609,10 @@ export function close(connector, tag, consumer) {
  * @param {LogLevel} level
  */
 export function enableLogs(level) {
-    wasm.enableLogs(level);
+    const ret = wasm.enableLogs(level);
+    if (ret[1]) {
+        throw takeFromExternrefTable0(ret[0]);
+    }
 }
 
 /**
@@ -632,6 +644,9 @@ export function toVerificationKey(signing_key) {
     const ptr0 = passArray8ToWasm0(signing_key, wasm.__wbindgen_malloc);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.toVerificationKey(ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
     var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
     wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
     return v2;
@@ -800,6 +815,10 @@ export function __wbg_new_with_str_and_init_a61cbc6bdef21614() { return handleEr
     const ret = new Request(getStringFromWasm0(arg0, arg1), arg2);
     return ret;
 }, arguments); }
+export function __wbg_now_a3af9a2f4bbaa4d1() {
+    const ret = Date.now();
+    return ret;
+}
 export function __wbg_ok_87f537440a0acf85(arg0) {
     const ret = arg0.ok;
     return ret;
@@ -919,12 +938,12 @@ export function __wbg_warn_f7ae1b2e66ccb930(arg0) {
     console.warn(arg0);
 }
 export function __wbindgen_cast_0000000000000001(arg0, arg1) {
-    // Cast intrinsic for `Closure(Closure { dtor_idx: 631, function: Function { arguments: [], shim_idx: 632, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+    // Cast intrinsic for `Closure(Closure { dtor_idx: 622, function: Function { arguments: [], shim_idx: 623, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
     const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__hb6d864c6f9d47eef, wasm_bindgen__convert__closures_____invoke__hfe5275c36a769c7e);
     return ret;
 }
 export function __wbindgen_cast_0000000000000002(arg0, arg1) {
-    // Cast intrinsic for `Closure(Closure { dtor_idx: 649, function: Function { arguments: [Externref], shim_idx: 650, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+    // Cast intrinsic for `Closure(Closure { dtor_idx: 640, function: Function { arguments: [Externref], shim_idx: 641, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
     const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__h773430c0ef9b0cff, wasm_bindgen__convert__closures_____invoke__h1f7b992ed16f23c5);
     return ret;
 }
@@ -1205,6 +1224,12 @@ function passStringToWasm0(arg, malloc, realloc) {
 
     WASM_VECTOR_LEN = offset;
     return ptr;
+}
+
+function takeFromExternrefTable0(idx) {
+    const value = wasm.__wbindgen_externrefs.get(idx);
+    wasm.__externref_table_dealloc(idx);
+    return value;
 }
 
 let cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });

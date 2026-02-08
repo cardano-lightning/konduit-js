@@ -7,6 +7,7 @@ import { mkHexString2HashCodec } from "./keys";
 import type { HexString } from "@konduit/codec/hexString";
 import * as hexString from "@konduit/codec/hexString";
 import type { Json } from "@konduit/codec/json";
+import { TransactionReadyForSigning } from "../../wasm/konduit_wasm";
 
 export const TX_HASH_LEN = 32;
 export type TxHash = typeFest.Tagged<Uint8Array, "TxHash">;
@@ -27,6 +28,9 @@ export const json2TxHashCodec = codec.pipe(hexString.jsonCodec, hexString2TxHash
 
 // We do not provide validation for TxCbor and TxBodyCbor here. Please use it when you can trust the source of the CBOR.
 export type TxCbor = typeFest.Tagged<Uint8Array, "TxCbor">;
+export namespace TxCbor {
+  export const fromTxReadyForSigning = (txReadyForSigning: TransactionReadyForSigning) => txReadyForSigning.toCbor() as TxCbor;
+}
 export const unsafeTxCbor = (cbor: Uint8Array): TxCbor => cbor as TxCbor;
 
 export type TxBodyCbor = typeFest.Tagged<Uint8Array, "TxBodyCbor">;

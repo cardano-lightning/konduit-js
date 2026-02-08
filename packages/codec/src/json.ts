@@ -92,7 +92,7 @@ export const nullJson = null! as Json;
 
 export const toJson = (data: any): Result<Json, string> => {
   if (isJson(data)) {
-    return ok(data as Json);
+    return ok(data);
   } else {
     return err("Data is not valid JSON");
   }
@@ -100,7 +100,7 @@ export const toJson = (data: any): Result<Json, string> => {
 
 // This traversal avoids whole structure re-allocation.
 // Should we use `stringify` and `parse` roundtrip instead?
-export const isJson = (data: any): boolean => {
+export const isJson = (data: any): data is Json => {
   switch (typeof data) {
     case "bigint":
     case "boolean":
