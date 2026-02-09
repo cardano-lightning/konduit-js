@@ -7,7 +7,6 @@ import {
   cbor2NullCodec,
   cbor2StringCodec,
   cbor2UndefinedCodec,
-  cbor2UnsignedIntCodec,
   definiteLength,
   deserialiseCbor,
   dictOf,
@@ -16,10 +15,10 @@ import {
   indefiniteLength,
   serialiseCbor,
   tupleOf,
-} from "../../src/cbor/sync";
-import { Cbor, Indefinite, isIndefiniteMap } from "../../src/cbor/core";
-import { unwrapOk, unwrapErr, expectOk } from "../assertions";
-import { HexString } from "../../src/hexString";
+} from "../../../src/cbor/codecs/sync";
+import { Cbor, Indefinite, isIndefiniteArray, isIndefiniteMap } from "../../../src/cbor/core";
+import { unwrapOk, unwrapErr, expectOk } from "../../assertions";
+import { HexString } from "../../../src/hexString";
 
 describe("CBOR primitive codecs", () => {
   describe("cbor2BooleanCodec", () => {
@@ -62,35 +61,31 @@ describe("CBOR primitive codecs", () => {
     });
   });
 
-  describe("cbor2UnsignedIntCodec", () => {
+  describe("cbor2IntCodec", () => {
     it("deserialises non-negative bigints", () => {
-      const resultZero = cbor2UnsignedIntCodec.deserialise(0n);
-      const resultPos = cbor2UnsignedIntCodec.deserialise(123n);
+      const resultZero = cbor2IntCodec.deserialise(0n);
+      const resultPos = cbor2IntCodec.deserialise(123n);
 
       expectOk(resultZero).toBe(0n);
       expectOk(resultPos).toBe(123n);
     });
 
-    it("fails on negative bigints", () => {
-      unwrapErr(cbor2UnsignedIntCodec.deserialise(-1n));
-      unwrapErr(cbor2UnsignedIntCodec.deserialise(-100n));
-    });
 
     it("fails on non-bigint types", () => {
-      unwrapErr(cbor2UnsignedIntCodec.deserialise(1 as any));
-      unwrapErr(cbor2UnsignedIntCodec.deserialise("1" as any));
-      unwrapErr(cbor2UnsignedIntCodec.deserialise(true as any));
+      unwrapErr(cbor2IntCodec.deserialise(1 as any));
+      unwrapErr(cbor2IntCodec.deserialise("1" as any));
+      unwrapErr(cbor2IntCodec.deserialise(true as any));
     });
 
     it("serialises non-negative bigints unchanged", () => {
-      expect(cbor2UnsignedIntCodec.serialise(0n)).toBe(0n);
-      expect(cbor2UnsignedIntCodec.serialise(42n)).toBe(42n);
+      expect(cbor2IntCodec.serialise(0n)).toBe(0n);
+      expect(cbor2IntCodec.serialise(42n)).toBe(42n);
     });
 
     it("cannot serialise negative values as unsigned", () => {
       // serialise is typed to return Cbor but implementation returns err(any) for negative;
       // we just ensure it doesn't silently produce a bigint
-      const result = cbor2UnsignedIntCodec.serialise(-1n as any);
+      const result = cbor2IntCodec.serialise(-1n as any);
       expect(typeof result === "bigint" && result >= 0n).toBe(false);
     });
   });
@@ -168,7 +163,7 @@ describe("CBOR array codec", () => {
 
 describe("tupleOf codec", () => {
   it("deserialises and serialises a simple fixed-length tuple", () => {
-    const codec = tupleOf(cbor2IntCodec, cbor2StringCodec, cbor2BooleanCodec);
+    const codec = tupleOf(definiteLength, cbor2IntCodec, cbor2StringCodec, cbor2BooleanCodec);
 
     const cborTuple: Cbor = [1n, "hi", true];
     const decoded = unwrapOk(codec.deserialise(cborTuple));
@@ -183,14 +178,14 @@ describe("tupleOf codec", () => {
   });
 
   it("fails when input is not an array", () => {
-    const codec = tupleOf(cbor2IntCodec, cbor2StringCodec);
+    const codec = tupleOf(definiteLength, cbor2IntCodec, cbor2StringCodec);
     unwrapErr(codec.deserialise(1n as Cbor));
     unwrapErr(codec.deserialise("x" as Cbor));
     unwrapErr(codec.deserialise(true as Cbor));
   });
 
   it("fails when array length does not match tuple arity", () => {
-    const codec = tupleOf(cbor2IntCodec, cbor2StringCodec);
+    const codec = tupleOf(definiteLength, cbor2IntCodec, cbor2StringCodec);
 
     // too short
     unwrapErr(codec.deserialise([1n] as Cbor));
@@ -200,10 +195,10 @@ describe("tupleOf codec", () => {
   });
 
   it("supports nested tuples", () => {
-    const inner = tupleOf(cbor2IntCodec, cbor2BooleanCodec);
-    const outer = tupleOf(cbor2StringCodec, inner);
+    const inner = tupleOf(indefiniteLength, cbor2IntCodec, cbor2BooleanCodec);
+    const outer = tupleOf(definiteLength, cbor2StringCodec, inner);
 
-    const cborValue: Cbor = ["key", [5n, false] as Cbor];
+    const cborValue: Cbor = ["key", new Indefinite([5n, false])];
     const decoded = unwrapOk(outer.deserialise(cborValue));
     expect(decoded[0]).toBe("key");
     expect(decoded[1]).toEqual([5n, false]);
@@ -212,23 +207,23 @@ describe("tupleOf codec", () => {
     expect(Array.isArray(reEncoded)).toBe(true);
     const arr = reEncoded as Cbor[];
     expect(arr[0]).toBe("key");
-    expect(Array.isArray(arr[1])).toBe(true);
-    const innerArr = arr[1] as Cbor[];
-    expect(innerArr[0]).toBe(5n);
-    expect(innerArr[1]).toBe(false);
+    let innerOut = arr[1];
+    if(!isIndefiniteArray(innerOut)) throw new Error("expected indefinite array");
+    expect(innerOut.items[0]).toBe(5n);
+    expect(innerOut.items[1]).toBe(false);
   });
 
   it("works with arrays inside tuple elements via cbor2ArrayCodec", () => {
-    const codec = tupleOf(cbor2StringCodec, cbor2ArrayCodec);
+    const codec = tupleOf(indefiniteLength, cbor2StringCodec, cbor2ArrayCodec);
 
-    const cborValue: Cbor = ["nums", [1n, 2n, 3n] as Cbor];
+    const cborValue: Cbor = new Indefinite(["nums", [1n, 2n, 3n] as Cbor]);
     const decoded = unwrapOk(codec.deserialise(cborValue));
     expect(decoded[0]).toBe("nums");
     expect(decoded[1]).toEqual([1n, 2n, 3n]);
 
     const reEncoded = codec.serialise(decoded);
-    expect(Array.isArray(reEncoded)).toBe(true);
-    const arr = reEncoded as Cbor[];
+    if(!isIndefiniteArray(reEncoded)) throw new Error("expected indefinite array");
+    const arr = reEncoded.items;
     expect(arr[0]).toBe("nums");
     expect(Array.isArray(arr[1])).toBe(true);
     expect(arr[1]).toEqual([1n, 2n, 3n]);
@@ -240,30 +235,17 @@ describe("CBOR dictOf and homogeneousMapOf codecs", () => {
     it("deserialises a definite map into a dict with typed fields", () => {
       const codec = dictOf(definiteLength, {
         name: cbor2StringCodec,
-        age: cbor2UnsignedIntCodec,
+        age: cbor2IntCodec,
       });
       const map = codec.serialise({ name: "Alice", age: 30n });
       const result = unwrapOk(codec.deserialise(map));
       expect(result).toEqual({ name: "Alice", age: 30n });
     });
 
-    it("ignores unknown keys", () => {
-      const codec = dictOf(definiteLength, {
-        known: cbor2StringCodec,
-      });
-
-      const map = new Map<Cbor, Cbor>();
-      map.set("known", "value");
-      map.set("unknown", 123n);
-
-      const result = unwrapOk(codec.deserialise(map));
-      expect(result).toEqual({ known: "value" });
-    });
-
     it("collects field errors into a JSON object", () => {
       const codec = dictOf(definiteLength, {
         name: cbor2StringCodec,
-        age: cbor2UnsignedIntCodec,
+        age: cbor2IntCodec,
       });
 
       const map = new Map<Cbor, Cbor>();
@@ -277,7 +259,7 @@ describe("CBOR dictOf and homogeneousMapOf codecs", () => {
     it("serialises to a definite-length map when definiteLength flag used", () => {
       const codec = dictOf(definiteLength, {
         name: cbor2StringCodec,
-        age: cbor2UnsignedIntCodec,
+        age: cbor2IntCodec,
       });
 
       const value = { name: "Bob", age: 40n };
@@ -375,7 +357,7 @@ describe("CBOR end-to-end roundtrip with mixed/nested codecs", () => {
     };
     const codec = dictOf(definiteLength, {
       name: cbor2StringCodec,
-      age: cbor2UnsignedIntCodec,
+      age: cbor2IntCodec,
     });
     const cborIn = codec.serialise({ name: "Alice", age: 30n } as Person);
     const bytes = serialiseCbor(cborIn);
@@ -388,7 +370,7 @@ describe("CBOR end-to-end roundtrip with mixed/nested codecs", () => {
   });
 
   it("rountrips a simple triple", () => {
-    const codec = tupleOf(cbor2IntCodec, cbor2StringCodec, cbor2BooleanCodec);
+    const codec = tupleOf(definiteLength, cbor2IntCodec, cbor2StringCodec, cbor2BooleanCodec);
     const cborIn = codec.serialise([42n, "hello", true]);
     const bytes = serialiseCbor(cborIn);
     console.log(`${HexString.fromUint8Array(bytes)}`);
@@ -401,7 +383,7 @@ describe("CBOR end-to-end roundtrip with mixed/nested codecs", () => {
 
   it("roundtrips a heterogeneous map with mixed key/value types", () => {
     const codec = heterogeneousMapOf(definiteLength,
-      [cbor2StringCodec, tupleOf(cbor2IntCodec, cbor2BooleanCodec)],
+      [cbor2StringCodec, tupleOf(definiteLength, cbor2IntCodec, cbor2BooleanCodec)],
       [cbor2IntCodec, cbor2BooleanCodec]
     );
     let pairs: [[string, [bigint, boolean]], [bigint, boolean]] = [["key", [42n, false]], [28n, true]];

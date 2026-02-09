@@ -112,7 +112,11 @@ export const int2NonNegativeIntCodec: Codec<Int, NonNegativeInt, JsonError> = {
     }
     return ok(value as NonNegativeInt);
   },
-  serialise: (tagged: NonNegativeInt): Int => tagged as Int
+  serialise: (tagged: NonNegativeInt) => tagged as Int
 };
 
 export const json2NonNegativeIntCodec: JsonCodec<NonNegativeInt> = codec.pipe(json2IntCodec, int2NonNegativeIntCodec);
+export const bigInt2NonNegativeIntCodec: Codec<bigint, NonNegativeInt, JsonError> = codec.pipe(
+  bigInt2IntCodec,
+  int2NonNegativeIntCodec,
+);

@@ -1,18 +1,18 @@
 import { err, ok, Result } from "neverthrow";
 import type { Tagged } from "type-fest";
-import type { Cbor } from "./core";
+import type { Cbor } from "../core";
 import {
   Indefinite,
   isCborNull,
   isCborUndefined,
   isIndefiniteArray,
   isIndefiniteMap,
-} from "./core";
-import { CborTag, CborSimpleValue, cborUndefined, cborNull } from "./core";
-import { CborReader, CborReaderState } from "./CborReader";
-import { CborWriter } from "./CborWriter";
-import type { Codec, Deserialiser, Serialiser } from "../codec";
-import type { JsonError } from "../json/codecs";
+} from "../core";
+import { CborTag, CborSimpleValue, cborUndefined, cborNull } from "../core";
+import { CborReader, CborReaderState } from "../CborReader";
+import { CborWriter } from "../CborWriter";
+import type { Codec, Deserialiser, Serialiser } from "../../codec";
+import type { JsonError } from "../../json/codecs";
 
 export type CborCodec<O> = Codec<Cbor, O, JsonError>;
 
@@ -21,8 +21,7 @@ export type CborSerialiser<O> = Serialiser<O, Cbor>;
 export type CborDeserialiser<O> = Deserialiser<Cbor, O, JsonError>;
 
 export type CborMatcher<T> = {
-  onUnsignedInteger: (value: bigint) => T;
-  onNegativeInteger: (value: bigint) => T;
+  onInteger: (value: bigint) => T;
   onByteString: (value: Uint8Array) => T;
   onTextString: (value: string) => T;
 
@@ -47,12 +46,7 @@ export type CborMatcher<T> = {
 
 export const matchCbor = <T>(cbor: Cbor, matcher: CborMatcher<T>): T => {
   if (typeof cbor === "bigint") {
-    // Distinguish positive and negative bigints for unsigned/negative ints.
-    if (cbor >= 0n) {
-      return matcher.onUnsignedInteger(cbor);
-    } else {
-      return matcher.onNegativeInteger(cbor);
-    }
+      return matcher.onInteger(cbor);
   }
 
   if (cbor instanceof Uint8Array) {
@@ -363,25 +357,6 @@ export const cbor2StringCodec: CborCodec<string> = {
 };
 
 /**
- * Codec for unsigned integers.
- * Accepts non-negative bigint and rejects negative or non-integer values.
- */
-export const cbor2UnsignedIntCodec: CborCodec<bigint> = {
-  deserialise: (data: Cbor) => {
-    if (typeof data === "bigint" && data >= 0n) {
-      return ok(data);
-    }
-    return err(`Expected non-negative CBOR integer but got: ${String(data)}`);
-  },
-  serialise: (value: bigint): Cbor => {
-    if (value < 0n) {
-      return err(`Cannot serialise negative value ${value} as unsigned integer`) as any;
-    }
-    return value;
-  },
-};
-
-/**
  * Codec for signed integers (CBOR major types 0 and 1).
  * Accepts any bigint and rejects non-bigint.
  */
@@ -496,12 +471,15 @@ export const dictOf = <T extends DictFieldCodecs>(
 ): CborCodec<DictOfOutput<T>> => {
   return {
     deserialise: (data: Cbor) => {
-      const map: Map<Cbor, Cbor> | undefined =
-        data instanceof Map
-          ? data
-          : isIndefiniteMap(data)
-          ? data.items
-          : undefined;
+      const map: Map<Cbor, Cbor> | undefined = (() => {
+        if (!indefinite && data instanceof Map) {
+          return data;
+        }
+        if (indefinite && isIndefiniteMap(data)) {
+          return data.items;
+        }
+        return undefined;
+      })();
 
       if (!map) {
         return err(`Expected CBOR map for dictOf but got: ${String(data)}`);
@@ -511,11 +489,18 @@ export const dictOf = <T extends DictFieldCodecs>(
       const errors: Record<string, JsonError> = {};
       let hasErrors = false;
 
-      for (const [rawKey, rawVal] of map.entries()) {
-        const key = typeof rawKey === "string" ? rawKey : String(rawKey);
+      for (const [key, rawVal] of map.entries()) {
+
+        if(typeof key !== "string") {
+          hasErrors = true;
+          errors[String(key)] = `Expected string keys in dictOf but got: ${String(key)}`;
+          continue;
+        }
         const codec = fieldCodecs[key];
         if (!codec) {
-          continue; // ignore unknown keys
+          hasErrors = true;
+          errors[key] = `Unexpected key in dictOf: ${key}`;
+          continue;
         }
         codec.deserialise(rawVal).match(
           (val) => {
@@ -560,12 +545,15 @@ export const homogeneousMapOf = <K, V>(
 ): CborCodec<Map<K, V>> => {
   return {
     deserialise: (data: Cbor) => {
-      const src: Map<Cbor, Cbor> | undefined =
-        data instanceof Map
-          ? data
-          : isIndefiniteMap(data)
-          ? data.items
-          : undefined;
+      const src: Map<Cbor, Cbor> | undefined = (() => {
+        if (!indefinite && data instanceof Map) {
+          return data;
+        }
+        if (indefinite && isIndefiniteMap(data)) {
+          return data.items;
+        }
+        return undefined;
+      })();
 
       if (!src) {
         return err(`Expected CBOR map for mapOf but got: ${String(data)}`);
@@ -643,12 +631,15 @@ export const heterogeneousMapOf = <
 
   return {
     deserialise: (data: Cbor) => {
-      const src: Map<Cbor, Cbor> | undefined =
-        data instanceof Map
-          ? data
-          : isIndefiniteMap(data)
-          ? data.items
-          : undefined;
+      const src: Map<Cbor, Cbor> | undefined = (() => {
+        if (!indefinite && data instanceof Map) {
+          return data;
+        }
+        if (indefinite && isIndefiniteMap(data)) {
+          return data.items;
+        }
+        return undefined;
+      })();
 
       if (!src) {
         return err(
@@ -706,6 +697,7 @@ export const heterogeneousMapOf = <
 };
 
 export const tupleOf = <Codecs extends readonly CborCodec<any>[]>(
+  indefinite: IsIndefinite,
   ...codecs: Codecs
 ): CborCodec<{ [K in keyof Codecs]: Codecs[K] extends CborCodec<infer O> ? O : never }> => {
   type TupleOut = { [K in keyof Codecs]: Codecs[K] extends CborCodec<infer O> ? O : never };
@@ -715,18 +707,18 @@ export const tupleOf = <Codecs extends readonly CborCodec<any>[]>(
       // Accept both definite arrays and Indefinite<Cbor[]>
       let items: Cbor[] | undefined;
 
-      if (Array.isArray(data)) {
+      if (!indefinite && Array.isArray(data)) {
         items = data;
-      } else if (isIndefiniteArray(data)) {
+      } else if (indefinite && isIndefiniteArray(data)) {
         items = data.items;
-      }
-
-      if (!items) {
-        return err(`Expected CBOR array for tupleOf but got: ${String(data)}`);
+      } else {
+        return err(`Expecting ${indefinite ? "indefinite" : "definite"} CBOR array for tupleOf but got: ${String(data)}`);
       }
 
       if (items.length !== codecs.length) {
-        return err(`Expected tuple of length ${codecs.length} but got array of length ${items.length}`);
+        return err(
+          `Expected tuple of length ${codecs.length} but got array of length ${items.length}`
+        );
       }
 
       const result: any[] = [];
@@ -759,7 +751,57 @@ export const tupleOf = <Codecs extends readonly CborCodec<any>[]>(
         arr.push(codec.serialise(v));
       });
 
-      // We always produce a definite-length array here.
+      return indefinite ? new Indefinite(arr as Cbor[]) : arr;
+    },
+  };
+};
+
+export const arrayOf = <T>(
+  indefinite: IsIndefinite,
+  itemCodec: CborCodec<T>
+): CborCodec<T[]> => {
+  return {
+    deserialise: (data: Cbor) => {
+      let items: Cbor[] | undefined;
+
+      if (!indefinite && Array.isArray(data)) {
+        items = data;
+      } else if (indefinite && isIndefiniteArray(data)) {
+        items = data.items;
+      } else {
+        return err(`Expecting ${indefinite ? "indefinite" : "definite"} CBOR array for arrayOf but got: ${String(data)}`);
+      }
+
+      const result: T[] = [];
+      const errors: JsonError[] = [];
+      let hasErrors = false;
+
+      for (const item of items) {
+        const decoded = itemCodec.deserialise(item);
+        if (decoded.isOk()) {
+          result.push(decoded.value);
+        } else {
+          errors.push(decoded.error);
+          hasErrors = true;
+        }
+      }
+
+      if (hasErrors) {
+        return err(errors as unknown as JsonError);
+      }
+
+      return ok(result);
+    },
+
+    serialise: (value: T[]): Cbor => {
+      const arr: Cbor[] = [];
+      for (const v of value) {
+        arr.push(itemCodec.serialise(v));
+      }
+
+      if (indefinite) {
+        return new Indefinite(arr as Cbor[]);
+      }
       return arr;
     },
   };

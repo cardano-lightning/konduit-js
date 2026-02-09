@@ -12,7 +12,7 @@ const validateSha256 = (arr: Uint8Array): boolean => {
   return arr.length === 32;
 };
 
-const sha256Codec: JsonCodec<Sha256> = uint8Array.mkTaggedJsonCodec<Sha256>(validateSha256, "Sha256");
+const sha256Codec: JsonCodec<Sha256> = uint8Array.mkTaggedJsonCodec<Sha256>("Sha256", validateSha256);
 
 describe('Uint8Array codec', () => {
   describe('basic Uint8Array encoding/decoding', () => {

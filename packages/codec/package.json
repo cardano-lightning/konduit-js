@@ -48,6 +48,14 @@
       "types": "./dist/json/async.d.ts",
       "default": "./dist/json/async.js"
     },
+    "./cbor/core": {
+      "types": "./dist/cbor/core.d.ts",
+      "default": "./dist/cbor/core.js"
+    },
+    "./cbor/codecs/sync": {
+      "types": "./dist/cbor/codecs/sync.d.ts",
+      "default": "./dist/cbor/codecs/sync.js"
+    },
     "./neverthrow": {
       "types": "./dist/neverthrow.d.ts",
       "default": "./dist/neverthrow.js"

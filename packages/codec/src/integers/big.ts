@@ -21,6 +21,10 @@ export namespace PositiveBigInt {
   }
   export const fromBigInt = (n: bigint) => bigInt2PositiveBigIntCodec.deserialise(n);
   export const fromJson = (n: Json) => json2PositiveBigIntCodec.deserialise(n);
+  export const successor = (n: PositiveBigInt): PositiveBigInt => (n + 1n) as PositiveBigInt;
+  export const add = (a: PositiveBigInt, b: PositiveBigInt): PositiveBigInt => (a + b) as PositiveBigInt;
+  export const one = 1n as PositiveBigInt;
+  export const multiply = (a: PositiveBigInt, b: PositiveBigInt): PositiveBigInt => (a * b) as PositiveBigInt;
 }
 
 export const bigInt2PositiveBigIntCodec: Codec<bigint, PositiveBigInt, JsonError> = {
@@ -50,6 +54,12 @@ export namespace NonNegativeBigInt {
   export const fromBigInt = (n: bigint) => bigInt2NonNegativeBigIntCodec.deserialise(n);
   export const fromAbs = (n: bigint) => (n < 0n ? -n : n) as PositiveBigInt;
   export const fromJson = (n: Json) => json2NonNegativeBigIntCodec.deserialise(n);
+  export const successor = (n: NonNegativeBigInt): NonNegativeBigInt => (n + 1n) as NonNegativeBigInt;
+  export const zero = 0n as NonNegativeBigInt;
+  export const add = (a: NonNegativeBigInt, b: NonNegativeBigInt): NonNegativeBigInt => (a + b) as NonNegativeBigInt;
+  export const one = 1n as NonNegativeBigInt;
+  export const multiply = (a: NonNegativeBigInt, b: NonNegativeBigInt): NonNegativeBigInt => (a * b) as NonNegativeBigInt;
+  export const distance = (a: NonNegativeBigInt, b: NonNegativeBigInt): NonNegativeBigInt => (a >= b ? a - b : b - a) as NonNegativeBigInt;
 }
 
 export const bigInt2NonNegativeBigIntCodec: Codec<bigint, NonNegativeBigInt, JsonError> = {

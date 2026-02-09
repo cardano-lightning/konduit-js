@@ -9,6 +9,7 @@ import type { Int, MinusNineToNine, Small, ZeroToNine } from "@konduit/codec/int
 // Lovelace upper limit is above the safe integer range
 export const LOVELACE_TOTAL_SUPPLY = 45_000_000_000_000_000n;
 
+// This represents arbitrary Lovelace value. We can introduce `LovelaceAmount` if we want to enforce non-negativity.
 export type Lovelace = Tagged<bigint, "Lovelace">;
 export namespace Lovelace {
   export const fromBigInt = (v: bigint): Result<Lovelace, JsonError> => bigInt2LovelaceCodec.deserialise(v);
@@ -22,6 +23,10 @@ export namespace Lovelace {
   }
   export const fromSmallNumber = (v: Small): Lovelace => BigInt(v) as Lovelace;
   export const fromJson = (v: Json) => json2LovelaceCodec.deserialise(v);
+  export const zero = 0n as Lovelace;
+  export const add = (a: Lovelace, b: Lovelace): Lovelace => a + b as Lovelace;
+  export const subtract = (a: Lovelace, b: Lovelace): Lovelace => a - b as Lovelace;
+  export const scalarMultiply = (a: Lovelace, scalar: bigint): Lovelace => a * scalar as Lovelace;
 }
 export const bigInt2LovelaceCodec: codec.Codec<bigint, Lovelace, JsonError> = {
   deserialise: (value: bigint): Result<Lovelace, JsonError> => {

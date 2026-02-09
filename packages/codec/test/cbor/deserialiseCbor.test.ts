@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { CborWriter } from "../../src/cbor/CborWriter";
-import { deserialiseCbor } from "../../src/cbor/sync";
+import { deserialiseCbor } from "../../src/cbor/codecs/sync";
 import { isCborNull, isCborUndefined, isIndefiniteArray, isIndefiniteMap } from "../../src/cbor/core";
 import { unwrapOk } from "../assertions";
 
