@@ -1,3 +1,7 @@
-export { RootPrivateKey, VKey, SKey, type Signature, KeyIndex, WalletIndex, KeyRole } from "./cip1852";
-export { type Ed25519XPrv, type Ed25519XPub, type Ed25519Prv, type Ed25519PrvScalar, type Ed25519Pub, type ChainCode, NonHardenedIdx, HardenedIdx, extractPrv, extractPub, extractChainCode, extractPrvScalar } from "./bip32Ed25519";
-export { deriveEd25519XPrv, generateMnemonic, type MnemonicStrength, type Mnemonic } from "./cip3";
+export { Ed25519SigningKey, Ed25519VerificationKey, Ed25519PrivateKey } from "./rfc8032";
+export type { Ed25519Signature } from "./rfc8032";
+export { KeyIndex, WalletIndex, KeyRole, Ed25519RootPrivateKey } from "./cip1852";
+export { Mnemonic, generateMnemonic } from "./bip39";
+export type { MnemonicStrength } from "./bip39";
+export { deriveEd25519XPrv } from "./cip3";
+

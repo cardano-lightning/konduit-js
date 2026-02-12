@@ -19,6 +19,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./rfc8032": {
+      "types": "./dist/rfc8032.d.ts",
+      "default": "./dist/rfc8032.js"
+    },
     "./cip3": {
       "types": "./dist/cip3.d.ts",
       "default": "./dist/cip3.js"
