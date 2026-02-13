@@ -3,32 +3,46 @@ import * as uint8Array from './uint8Array';
 import type { Tagged } from "type-fest";
 import type { Mnemonic } from "./bip39";
 import * as bip39 from "./bip39";
+import { err, ok, Result } from 'neverthrow';
 
 // RFC 8032 calls a private key the 32 bytes used to derive
 // the secret scalar (kl) and the 32 bytes used as "nonce prefix" (kr).
 export type Ed25519Secret = Tagged<Uint8Array, "Ed25519Secret">;
 
 export namespace Ed25519Secret {
-  export const fromBytes = (bytes: Uint8Array): Ed25519Secret => {
-    if (bytes.length !== 32) {
-      throw new Error("Invalid secret length, expected 32 bytes");
+  export const LENGTH = 32;
+  export const fromBytes = (bytes: Uint8Array): Result<Ed25519Secret, string> => {
+    if (bytes.length !== LENGTH) {
+      return err("Invalid secret length, expected ${LENGTH} bytes");
     }
-    return bytes as Ed25519Secret;
+    return ok(bytes as Ed25519Secret);
   }
 
   export const fromRandomBytes = (): Ed25519Secret => {
     const randomBytes = sodium.randombytes_buf(32) as Uint8Array;
-    return fromBytes(randomBytes);
+    return randomBytes as Ed25519Secret;
   }
 }
 
 // 64 bytes - two 32 bytes parts:
 // kl - key material used for signing (RFC's secret scalar)
 // kr - "nonce prefix" used as extra input to HMAC during hardened derivation (RFC's "prefix")
-// This is derived from private key through expand procedure.
-// BIP32-Ed25519 calls this "extended private key"
-export type Ed25519ExpandedSecret = Tagged<Uint8Array, "Ed25519PrvExtended">;
+//
+// This is derived from private key through secret expanding procedure or through
+// BIP32-Ed25519 derivation.
+export type Ed25519ExpandedSecret = Tagged<Uint8Array, "Ed25519ExpandedSecret">;
 export namespace Ed25519ExpandedSecret {
+  export const LENGTH = 64;
+  export function fromBytes(raw: Uint8Array): Result<Ed25519ExpandedSecret, string> {
+    if (raw.length !== LENGTH) return err(`Invalid expanded secret length, expected ${LENGTH} bytes`);
+    const kl = raw.subarray(0, 32);
+    const isValidScalar =
+      (kl[0] & 0b0000_0111) === 0 && // Lowest 3 bits cleared
+      (kl[31] & 0b1100_0000) === 0b0100_0000 // highest 2 bits cleared BUT bit 254 == 1
+    ;
+    if (!isValidScalar) return err("Invalid scalar: bits do not match required clamping pattern");
+    return ok(raw as Ed25519ExpandedSecret);
+  }
   // RFC 8032 example:
   // ```python
   // def secret_expand(secret):
@@ -56,13 +70,15 @@ const expandSecret = Ed25519ExpandedSecret.fromSecret;
 // kl part described above
 export type Ed25519SecretScalar = Tagged<Uint8Array, "Ed25519SecretScalar">;
 export namespace Ed25519SecretScalar {
-  export const fromExpandedSecret = (expanded: Ed25519ExpandedSecret): Ed25519SecretScalar => expanded.subarray(0, 32) as Ed25519SecretScalar;
+  export const LENGTH = 32;
+  export const fromExpandedSecret = (expanded: Ed25519ExpandedSecret): Ed25519SecretScalar => expanded.subarray(0, LENGTH) as Ed25519SecretScalar;
   export const fromSecret = (secret: Ed25519Secret): Ed25519SecretScalar => fromExpandedSecret(expandSecret(secret));
 }
 
 // kr part described above
 export type Ed25519NoncePrefix = Tagged<Uint8Array, "Ed25519NoncePrefix">;
 export namespace Ed25519NoncePrefix {
+  export const LENGTH = 32;
   export const fromExpandedSecret = (expanded: Ed25519ExpandedSecret): Ed25519NoncePrefix => expanded.subarray(32, 64) as Ed25519NoncePrefix;
   export const fromSecret = (secret: Ed25519Secret): Ed25519NoncePrefix => fromExpandedSecret(expandSecret(secret));
 }
@@ -124,6 +140,7 @@ export const sign = (message: Uint8Array, secret: Ed25519Secret): Ed25519Signatu
 // 32 bytes public key (a * G)
 export type Ed25519PublicKey = Tagged<Uint8Array, "Ed25519PublicKey">;
 export namespace Ed25519PublicKey {
+  export const LENGTH = 32;
   export const fromExpandedSecret = (expanded: Ed25519ExpandedSecret): Ed25519PublicKey => {
     const scalar = Ed25519SecretScalar.fromExpandedSecret(expanded);
     return sodium.crypto_scalarmult_ed25519_base_noclamp(scalar, "uint8array") as Ed25519PublicKey;
@@ -144,7 +161,15 @@ export const verify = (message: Uint8Array, signature: Ed25519Signature, publicK
   return sodium.crypto_sign_verify_detached(signature, message, publicKey);
 }
 
+export const unsafeUnwrap = <T, E>(res: Result<T, E>): T => {
+  return res.match(
+    (val) => val,
+    (err) => { throw new Error(`Unexpected error: ${err}`); }
+  );
+}
+
 export class Ed25519PrivateKey {
+  static readonly LENGTH = 32;
   public readonly secret: Ed25519Secret;
 
   constructor(secret: Ed25519Secret) {
@@ -158,7 +183,7 @@ export class Ed25519PrivateKey {
 
   static fromMnemonic(mnemonic: Mnemonic): Ed25519PrivateKey {
     const seed = bip39.mnemonicToEntropy(mnemonic);
-    const secret = Ed25519Secret.fromBytes(seed);
+    const secret = unsafeUnwrap(Ed25519Secret.fromBytes(seed));
     return new Ed25519PrivateKey(secret);
   }
 
@@ -169,6 +194,7 @@ export class Ed25519PrivateKey {
 }
 
 export class Ed25519SigningKey {
+  static readonly LENGTH = 64;
   public readonly key: Ed25519ExpandedSecret;
 
   constructor(key: Ed25519ExpandedSecret) {
@@ -186,6 +212,7 @@ export class Ed25519SigningKey {
 }
 
 export class Ed25519VerificationKey {
+  static readonly LENGTH = 32;
   public readonly key: Ed25519PublicKey;
 
   constructor(key: Ed25519PublicKey) {

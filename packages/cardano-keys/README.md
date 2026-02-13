@@ -1,6 +1,6 @@
 # cardano-keys
 
-An implementation of:
+An implementation or at least typing of (as we heavily rely on other giants):
 
 * rfc8032 - ed25519 signature scheme plus simple key pair (and "nonce prefix") derivation based on a single secret.
 * bip32-ed25519 - ed25519 derivation compatible with bip32 which builds on top of rfc8032.
@@ -74,3 +74,7 @@ export const readmeExample = async () => {
   assert(isValid);
 }
 ```
+
+## Credits
+
+Large portions of the key derivation code was copied and adapted from [cardan-js-sdk](https://github.com/input-output-hk/cardano-js-sdk).

@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import * as english from "@scure/bip39/wordlists/english.js";
 import testVectors from './test-vectors.json';
-import { Ed25519RootPrivateKey, Ed25519SigningKey, KeyIndex, KeyRole, unsafeUnwrap, WalletIndex } from '../src/cip1852';
+import { Ed25519RootPrivateKey, Ed25519SigningKey, KeyIndex, KeyRole, WalletIndex } from '../src/cip1852';
 import { DerivationIdx, Ed25519XPrv, Ed25519XPub, extractExpandedSecret, HardenedIdx, NonHardenedIdx } from '../src/bip32Ed25519';
 import { readmeExample as readmeExample1 } from './readme-example-1';
 import { readmeExample as readmeExample2 } from './readme-example-2';
 import { deriveEd25519XPrv, Mnemonic } from "../src/index";
-import { Ed25519PublicKey, Ed25519Signature } from '../src/rfc8032';
+import { Ed25519PublicKey, Ed25519Signature, unsafeUnwrap } from '../src/rfc8032';
 
 type DerivationPath = { type: "custom", indices: DerivationIdx[] } | { type: "cip1852", walletIdx: WalletIndex, role: KeyRole, keyIdx: KeyIndex };
 

@@ -1,8 +1,9 @@
 import type { Tagged } from "type-fest";
 import { err, ok, type Result } from "neverthrow";
 import { derivePrivate, derivePublic, Ed25519XPrv, extractExpandedSecret, HardenedIdx, NonHardenedIdx, type DerivationIdx, type Ed25519XPub, type SmallInt } from "./bip32Ed25519";
-import { deriveEd25519XPrv, type Mnemonic } from "./cip3";
-import { Ed25519SigningKey } from "./rfc8032";
+import { deriveEd25519XPrv } from "./cip3";
+import { Mnemonic } from "./bip39";
+import { Ed25519SigningKey, unsafeUnwrap } from "./rfc8032";
 
 export function derivePrivatePath(
   parent: Ed25519XPrv,
@@ -55,13 +56,6 @@ export namespace KeyIndex {
       (_) => ok(n as KeyIndex),
       (e) => err(e)
     );
-}
-
-export const unsafeUnwrap = <T, E>(res: Result<T, E>): T => {
-  return res.match(
-    (val) => val,
-    (err) => { throw new Error(`Unexpected error: ${err}`); }
-  );
 }
 
 const unsafeHarden = (n: number): HardenedIdx => {

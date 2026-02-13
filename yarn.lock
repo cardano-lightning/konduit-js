@@ -1918,38 +1918,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@konduit/codec@workspace:packages/codec":
-  version: 0.0.0-use.local
-  resolution: "@konduit/codec@workspace:packages/codec"
-  dependencies:
-    "@types/json-bigint": "npm:^1"
-    "@types/node": "npm:^24.10.1"
-    json-bigint: "npm:^1.0.0"
-    neverthrow: "npm:^8.2.0"
-    typescript: "npm:~5.9.3"
-    vite: "npm:^7.2.4"
-    vite-plugin-dts: "npm:^4.5.4"
-    vitest: "npm:^4.0.17"
-  languageName: unknown
-  linkType: soft
-
-"@konduit/key-manager@workspace:packages/key-manager":
-  version: 0.0.0-use.local
-  resolution: "@konduit/key-manager@workspace:packages/key-manager"
-  dependencies:
-    "@noble/ciphers": "npm:^2.1.1"
-    "@noble/hashes": "npm:^2.0.1"
-    "@scure/bip39": "npm:^2.0.1"
-    "@types/node": "npm:^24.10.1"
-    libsodium-wrappers-sumo: "npm:^0.8.1"
-    neverthrow: "npm:^8.2.0"
-    typescript: "npm:~5.9.3"
-    vite: "npm:^7.2.4"
-    vite-plugin-dts: "npm:^4.5.4"
-    vitest: "npm:^4.0.14"
-  languageName: unknown
-  linkType: soft
-
 "@microsoft/api-extractor-model@npm:7.32.2":
   version: 7.32.2
   resolution: "@microsoft/api-extractor-model@npm:7.32.2"
@@ -2508,13 +2476,6 @@ __metadata:
   version: 1.0.8
   resolution: "@types/estree@npm:1.0.8"
   checksum: 10c0/39d34d1afaa338ab9763f37ad6066e3f349444f9052b9676a7cc0252ef9485a41c6d81c9c4e0d26e9077993354edf25efc853f3224dd4b447175ef62bdcc86a5
-  languageName: node
-  linkType: hard
-
-"@types/json-bigint@npm:^1":
-  version: 1.0.4
-  resolution: "@types/json-bigint@npm:1.0.4"
-  checksum: 10c0/bb567bac8d64f541abb3cb716d5c699c460b9aa4a9fc5fc81a3cee9cb57fe8c03914022049dcdadff213972979a5d08267405d55d2ed6aa95d3558f08347008a
   languageName: node
   linkType: hard
 
@@ -3415,13 +3376,6 @@ __metadata:
   version: 2.0.0
   resolution: "bech32@npm:2.0.0"
   checksum: 10c0/45e7cc62758c9b26c05161b4483f40ea534437cf68ef785abadc5b62a2611319b878fef4f86ddc14854f183b645917a19addebc9573ab890e19194bc8f521942
-  languageName: node
-  linkType: hard
-
-"bignumber.js@npm:^9.0.0":
-  version: 9.3.1
-  resolution: "bignumber.js@npm:9.3.1"
-  checksum: 10c0/61342ba5fe1c10887f0ecf5be02ff6709271481aff48631f86b4d37d55a99b87ce441cfd54df3d16d10ee07ceab7e272fc0be430c657ffafbbbf7b7d631efb75
   languageName: node
   linkType: hard
 
@@ -5270,15 +5224,6 @@ __metadata:
   bin:
     jsesc: bin/jsesc
   checksum: 10c0/531779df5ec94f47e462da26b4cbf05eb88a83d9f08aac2ba04206508fc598527a153d08bd462bae82fc78b3eaa1a908e1a4a79f886e9238641c4cdefaf118b1
-  languageName: node
-  linkType: hard
-
-"json-bigint@npm:^1.0.0":
-  version: 1.0.0
-  resolution: "json-bigint@npm:1.0.0"
-  dependencies:
-    bignumber.js: "npm:^9.0.0"
-  checksum: 10c0/e3f34e43be3284b573ea150a3890c92f06d54d8ded72894556357946aeed9877fd795f62f37fe16509af189fd314ab1104d0fd0f163746ad231b9f378f5b33f4
   languageName: node
   linkType: hard
 
