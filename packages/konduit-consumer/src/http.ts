@@ -1,4 +1,4 @@
-// A rather systematic approach for making HTTP requests/clients.
+ // A rather systematic approach for making HTTP requests/clients.
 import type { Result } from "neverthrow";
 import { err } from "neverthrow";
 import type { JsonDeserialiser, JsonError, JsonSerialiser } from "@konduit/codec/json/codecs";
@@ -35,6 +35,7 @@ export namespace DecodedErrorBody {
       }
     }
     try {
+      console.debug(`Decoded error response body as text: ${text}`);
       const json = parse(text);
       return DecodedErrorBody.fromJson(json.unwrapOr(text), bodyBytes);
     } catch {
@@ -48,20 +49,21 @@ export type HttpEndpointError =
   | { type: "NetworkError"; message: string }
   | { type: "DeserialisationError"; message: JsonError; body: DecodedErrorBody; decodingError?: JsonError };
 
-export type Body =
-  | { type: "text"; value: string }
-  | { type: "json"; value: Json }
-  | { type: "cbor"; value: Cbor };
-export namespace Body {
-  export const fromText = (value: string): Body => ({ type: "text", value });
-  export const fromJson = (value: Json): Body => ({ type: "json", value });
-  export const fromCbor = (value: Cbor): Body => ({ type: "cbor", value });
-}
+// TODO: migrate to an even more generic API - something like this:
+//
+// export type ContentType = "application/json" | "application/cbor" | "text/plain";
+// export type RequestSerialiser<T> = T => { contentType: ContentType, body: ArrayBuffer | string, headers?: [string, string][], path: string }
+// export type ResponseDeserialiser<T> = { statusCode: number, headers?: [string, string][], contentType: ContentType, body: ArrayBuffer | string } => Result<T, HttpEndpointError>
 
 export type RequestSerialiser<T> =
+  | { type: "other", contentType: string, serialiser: (value: T) => ArrayBuffer | string }
   | { type: "json"; serialiser: JsonSerialiser<T> }
-  | { type: "text" }
   | { type: "cbor"; serialiser: CborSerialiser<T> };
+export namespace RequestSerialiser {
+  export const fromJsonSerialiser = <T>(serialiser: JsonSerialiser<T>): RequestSerialiser<T> => ({ type: "json", serialiser });
+  export const fromCborSerialiser = <T>(serialiser: CborSerialiser<T>): RequestSerialiser<T> => ({ type: "cbor", serialiser });
+  export const fromOtherSerialiser = <T>(contentType: string, serialiser: (value: T) => ArrayBuffer | string): RequestSerialiser<T> => ({ type: "other", contentType, serialiser });
+}
 
 export type ResponseDeserialiser<T> =
   | { type: "json"; deserialiser: JsonDeserialiser<T> }
@@ -71,18 +73,27 @@ export namespace ResponseDeserialiser {
   export const fromCborDeserialiser = <T>(deserialiser: CborDeserialiser<T>): ResponseDeserialiser<T> => ({ type: "cbor", deserialiser });
 }
 
+// TODO: add URL path and query serialiser
 export const mkPostEndpoint = <Req, Res>(url: Url, requestSerialiser: RequestSerialiser<Req>, responseDeserialiser: ResponseDeserialiser<Res>) => {
   return async (requestBody: Req, headers: [string, string][] = []): Promise<Result<Res, HttpEndpointError>> => {
     const contentTypeHeader = (() => {
       switch (requestSerialiser.type) {
         case "json": return "application/json";
         case "cbor": return "application/cbor";
+        case "other": return requestSerialiser.contentType;
       }
     })();
     const payload = (() => {
       switch (requestSerialiser.type) {
         case "json": return stringify(requestBody as unknown as Json);
-        case "cbor": return serialiseCbor(requestBody as unknown as Cbor);
+        case "cbor": {
+          let uint8Array = serialiseCbor(requestBody as unknown as Cbor);
+          return uint8Array.buffer.slice(
+            uint8Array.byteOffset,
+            uint8Array.byteOffset + uint8Array.byteLength,
+          ) as ArrayBuffer;
+        }
+        case "other": return requestSerialiser.serialiser(requestBody);
       }
     })();
     const acceptHeader = (() => {
@@ -165,8 +176,12 @@ export const mkPostEndpoint = <Req, Res>(url: Url, requestSerialiser: RequestSer
   }
 }
 
-export const mkGetEndpoint = <Res>(url: Url, responseDeserialiser: ResponseDeserialiser<Res>) => {
-  return async (headers: [string, string][] = []): Promise<Result<Res, HttpEndpointError>> => {
+export type TextSerialiser<T> = (value: T) => string;
+
+// TODO: add URL path and query serialiser
+export const mkGetEndpoint = <Req, Res>(baseUrl: Url, pathSerialiser: TextSerialiser<Req>, responseDeserialiser: ResponseDeserialiser<Res>) => {
+  const normalisedBaseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+  return async (req: Req, headers: [string, string][] = []): Promise<Result<Res, HttpEndpointError>> => {
     const acceptHeader = (() => {
       switch (responseDeserialiser.type) {
         case "json": return "application/json";
@@ -175,8 +190,14 @@ export const mkGetEndpoint = <Res>(url: Url, responseDeserialiser: ResponseDeser
     })();
 
     let httpResponse: Response;
+    let normalisedPath = (() => {
+      const path = pathSerialiser(req);
+      return path.startsWith("/") ? path.slice(1) : path;
+    })();
+    let fullUrl = `${normalisedBaseUrl}/${normalisedPath}`;
     try {
-      httpResponse = await fetch(url, {
+      console.debug(`Making GET request to ${fullUrl} with headers:`, headers);
+      httpResponse = await fetch(fullUrl, {
         method: "GET",
         headers: [...headers, ["Accept", acceptHeader]],
       });
@@ -254,3 +275,12 @@ export const mkGetEndpoint = <Res>(url: Url, responseDeserialiser: ResponseDeser
     }
   };
 };
+
+export const mkGetStaticEndpoint = <Res>(baseUrl: Url, path: string, responseDeserialiser: ResponseDeserialiser<Res>) => {
+  const endpoint = mkGetEndpoint(
+    baseUrl,
+    () => path,
+    responseDeserialiser
+  );
+  return () => endpoint(null);
+}

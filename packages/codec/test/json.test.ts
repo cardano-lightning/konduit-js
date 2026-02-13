@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parse, stringify, type Json } from '../src/json';
-import { json2StringCodec, json2NumberCodec, json2BooleanCodec, json2NullCodec, objectOf, altJsonCodecs, optional, type JsonCodec } from '../src/json/codecs';
+import { json2StringCodec, json2NumberCodec, json2BooleanCodec, json2NullCodec, objectOf, altJsonCodecs, optional, type JsonCodec, arrayOf } from '../src/json/codecs';
 import * as json from '../src/json';
 import { unwrapOk, unwrapErr } from './assertions';
 
@@ -335,6 +335,25 @@ describe('JSON Codecs', () => {
       });
     });
   });
+
+  describe('arrayOf helper', () => {
+    const json2StringArrayCodec = arrayOf(json2StringCodec);
+
+    it('should encode and decode empty arrays', () => {
+      const original: string[] = [];
+      const encoded = json2StringArrayCodec.serialise(original);
+      expect(Array.isArray(encoded)).toBe(true);
+      expect((encoded as Json[]).length).toBe(0);
+
+      const decoded = unwrapOk(json2StringArrayCodec.deserialise(encoded));
+      expect(decoded).toEqual(original);
+    });
+
+    it('should encode and decode non-empty arrays', () => {
+      const original = ["a", "b", "c"];
+      const encoded = json2StringArrayCodec.serialise(original);
+      const decoded = unwrapOk(json2StringArrayCodec.deserialise(encoded));
+      expect(decoded).toEqual(original);
+    });
+  });
 });
-
-

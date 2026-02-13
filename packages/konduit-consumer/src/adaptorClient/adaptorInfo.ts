@@ -2,15 +2,16 @@ import * as codec from "@konduit/codec";
 import type { Result } from "neverthrow";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import { json2MillisecondsCodec, type Milliseconds } from "../time/duration";
-import type { VKey } from "@konduit/cardano-keys";
+import type { Ed25519VerificationKey } from "@konduit/cardano-keys";
 import { json2LovelaceCodec, json2ScriptHashCodec, type Lovelace, type ScriptHash } from "../cardano";
 import { json2NonNegativeIntCodec, type NonNegativeInt } from "@konduit/codec/integers/smallish";
-import { json2VKeyCodec } from "../cardano";
+import { json2Ed25519VerificationKeyCodec } from "../cardano";
 import type { Json } from "@konduit/codec/json";
 import { Tagged } from "type-fest";
 
 // Created from info endpoint or deserialisation
-export type AdaptorVKey = Tagged<VKey, "AdaptorVKey">;
+export type AdaptorEd25519VerificationKey = Tagged<Ed25519VerificationKey, "AdaptorEd25519VerificationKey">;
+export const json2AdaptorEd25519VerificationKeyCodec = json2Ed25519VerificationKeyCodec as jsonCodecs.JsonCodec<AdaptorEd25519VerificationKey>;
 
 /**
  * Holds configuration information for an adaptor.
@@ -24,7 +25,7 @@ export class AdaptorInfo {
    * The adaptor's public key.
    * @type {Uint8Array}
    */
-  adaptorVKey: AdaptorVKey;
+  adaptorEd25519VerificationKey: AdaptorEd25519VerificationKey;
 
   /**
    * The close period.
@@ -46,7 +47,7 @@ export class AdaptorInfo {
 
   /* FIXME: Do we really need this information?
    */
-  deployerVkey: VKey;
+  deployerVkey: Ed25519VerificationKey;
 
   /**
    * The script hash.
@@ -55,14 +56,14 @@ export class AdaptorInfo {
   scriptHash: ScriptHash;
 
   constructor(
-    adaptorVKey: AdaptorVKey,
+    adaptorEd25519VerificationKey: AdaptorEd25519VerificationKey,
     closePeriod: Milliseconds,
     fee: Lovelace,
     maxTagLength: NonNegativeInt,
-    deployerVkey: VKey,
+    deployerVkey: Ed25519VerificationKey,
     scriptHash: ScriptHash,
   ) {
-    this.adaptorVKey = adaptorVKey;
+    this.adaptorEd25519VerificationKey = adaptorEd25519VerificationKey;
     this.closePeriod = closePeriod;
     this.fee = fee;
     this.maxTagLength = maxTagLength;
@@ -84,18 +85,18 @@ export const json2AdaptorInfoCodec: jsonCodecs.JsonCodec<AdaptorInfo> = (() => {
   // Define the intermediate codec for the snake_case object returned by the API
   // We will use it also as serialisation format.
   let adaptorRecordCodec = jsonCodecs.objectOf({
-    adaptor_vkey: json2VKeyCodec,
+    adaptor_key: json2Ed25519VerificationKeyCodec,
     close_period: json2MillisecondsCodec,
     fee: json2LovelaceCodec,
     max_tag_length: json2NonNegativeIntCodec,
-    deployer_vkey: json2VKeyCodec,
+    deployer_vkey: json2Ed25519VerificationKeyCodec,
     script_hash: json2ScriptHashCodec,
   });
   return codec.rmap(
     adaptorRecordCodec,
     (obj) =>
       new AdaptorInfo(
-        obj.adaptor_vkey as AdaptorVKey,
+        obj.adaptor_key as AdaptorEd25519VerificationKey,
         obj.close_period,
         obj.fee,
         obj.max_tag_length,
@@ -103,7 +104,7 @@ export const json2AdaptorInfoCodec: jsonCodecs.JsonCodec<AdaptorInfo> = (() => {
         obj.script_hash,
       ),
     (adaptorInfo) => ({
-      adaptor_vkey: adaptorInfo.adaptorVKey,
+      adaptor_key: adaptorInfo.adaptorEd25519VerificationKey,
       close_period: adaptorInfo.closePeriod,
       fee: adaptorInfo.fee,
       max_tag_length: adaptorInfo.maxTagLength,

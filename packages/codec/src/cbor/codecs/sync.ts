@@ -12,6 +12,7 @@ import { CborTag, CborSimpleValue, cborUndefined, cborNull } from "../core";
 import { CborReader, CborReaderState } from "../CborReader";
 import { CborWriter } from "../CborWriter";
 import type { Codec, Deserialiser, Serialiser } from "../../codec";
+import * as codec from "../../codec";
 import type { JsonError } from "../../json/codecs";
 
 export type CborCodec<O> = Codec<Cbor, O, JsonError>;
@@ -108,6 +109,35 @@ export const matchCbor = <T>(cbor: Cbor, matcher: CborMatcher<T>): T => {
   throw new Error("Unknown CBOR value shape");
 };
 
+// Debugging helper
+const cborReaderStateToString = (state: CborReaderState): string => {
+  switch (state) {
+    case CborReaderState.Undefined: return "Undefined";
+    case CborReaderState.UnsignedInteger: return "UnsignedInteger";
+    case CborReaderState.NegativeInteger: return "NegativeInteger";
+    case CborReaderState.ByteString: return "ByteString";
+    case CborReaderState.StartIndefiniteLengthByteString: return "StartIndefiniteLengthByteString";
+    case CborReaderState.EndIndefiniteLengthByteString: return "EndIndefiniteLengthByteString";
+    case CborReaderState.TextString: return "TextString";
+    case CborReaderState.StartIndefiniteLengthTextString: return "StartIndefiniteLengthTextString";
+    case CborReaderState.EndIndefiniteLengthTextString: return "EndIndefiniteLengthTextString";
+    case CborReaderState.StartArray: return "StartArray";
+    case CborReaderState.EndArray: return "EndArray";
+    case CborReaderState.StartMap: return "StartMap";
+    case CborReaderState.EndMap: return "EndMap";
+    case CborReaderState.Tag: return "Tag";
+    case CborReaderState.SimpleValue: return "SimpleValue";
+    case CborReaderState.HalfPrecisionFloat: return "HalfPrecisionFloat";
+    case CborReaderState.SinglePrecisionFloat: return "SinglePrecisionFloat";
+    case CborReaderState.DoublePrecisionFloat: return "DoublePrecisionFloat";
+    case CborReaderState.Null: return "Null";
+    case CborReaderState.Boolean: return "Boolean";
+    case CborReaderState.Finished: return "Finished";
+    default: return `Unknown(${state})`;
+  }
+};
+
+
 export const deserialiseCbor = (bytes: Uint8Array): Result<Cbor, JsonError> => {
   const reader = new CborReader(bytes);
 
@@ -132,8 +162,6 @@ export const deserialiseCbor = (bytes: Uint8Array): Result<Cbor, JsonError> => {
         case CborReaderState.Null:
           return reader.readNull().map(() => cborNull);
 
-        // Not sure why but the CborReader can have overlapping
-        // states for simpe values.
         case CborReaderState.SimpleValue:
           return reader.readSimpleValue().andThen((simple) => {
             switch (simple) {
@@ -156,9 +184,20 @@ export const deserialiseCbor = (bytes: Uint8Array): Result<Cbor, JsonError> => {
         case CborReaderState.StartMap:
           return readMap();
 
+        case CborReaderState.Tag:
+          return reader.readTag().andThen((tag) =>
+            readValue().map((value) => {
+              return { tag, value } as Cbor;
+            })
+          );
+
         default:
           // Arrays, maps, tags, floats, etc. are not yet supported in this step.
-          return err(`deserialiseCbor: unsupported initial CBOR state ${state}`);
+          return err(
+            `deserialiseCbor: unsupported initial CBOR state ${state} (${cborReaderStateToString(
+              state
+            )})`
+          );
       }
     });
   };
@@ -449,6 +488,38 @@ export const indefiniteCbor2MapCodec: CborCodec<Indefinite<Map<Cbor, Cbor>>> = {
   },
   serialise: (value: Indefinite<Map<Cbor, Cbor>>): Cbor => value,
 };
+
+// FIXME: Currently we do not validate for duplicates and we can be sure that
+// the reading and writing should lead to identical CBOR bytes.
+export const cbor2NonEmptySetCodec: CborCodec<Cbor[]> = {
+  deserialise: (data: Cbor) => {
+    if (typeof data === "object" && data !== null && "tag" in data && "value" in data) {
+      const { tag, value } = data as { tag: CborTag; value: Cbor };
+      if (tag === CborTag.Set && Array.isArray(value)) {
+        return ok(value);
+      }
+    }
+    return err(`Expected CBOR tag ${CborTag.Set} with array value for non-empty set but got: ${String(data)}`);
+  },
+  serialise: (value: Cbor[]): Cbor => {
+    return { tag: CborTag.Set, value: Array.from(value) };
+  },
+};
+
+export const mkCbor2NonEmptyTypedSetCodec = <T>(itemCodec: CborCodec<T>): CborCodec<T[]> => {
+  return codec.pipe(
+    cbor2NonEmptySetCodec, {
+      deserialise: (set) => {
+        const items = Array.from(set);
+        const results = items.map(item => itemCodec.deserialise(item));
+        return Result.combine(results).map((decodedItems) => decodedItems);
+      },
+      serialise: (items) => {
+        return items.map(item => itemCodec.serialise(item));
+      }
+    }
+  );
+}
 
 export type IsIndefinite = Tagged<boolean, "IsIndefinite">;
 export const indefiniteLength = true as IsIndefinite;

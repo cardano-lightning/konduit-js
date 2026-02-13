@@ -1,7 +1,7 @@
 import type { Tagged } from "type-fest";
 import { bech32 } from "@scure/base";
 import { Result, err, ok } from "neverthrow";
-import type { Ed25519Pub, VKey } from "@konduit/cardano-keys";
+import type { Ed25519PublicKey, Ed25519VerificationKey } from "@konduit/cardano-keys";
 import * as uint8Array from "@konduit/cardano-keys/uint8Array";
 import * as hexString from "@konduit/codec/hexString";
 import * as codec from "@konduit/codec";
@@ -9,8 +9,9 @@ import { mkHexString2HashCodec } from "./keys";
 import type { HexString } from "@konduit/codec/hexString";
 import { json2StringCodec, type JsonError, type JsonCodec } from "@konduit/codec/json/codecs";
 import { blake2b } from "@noble/hashes/blake2.js";
-import type { Json } from "@konduit/codec/json";
+import { stringify, type Json } from "@konduit/codec/json";
 import { PositiveBigInt } from "@konduit/codec/integers/big";
+import { Iso } from "@konduit/codec";
 
 // Credential hash length
 const HASH_LEN = 28;
@@ -29,7 +30,7 @@ export const json2ScriptHashCodec = codec.pipe(
 
 export type PubKeyHash = Tagged<Uint8Array, "PubKeyHash">;
 export namespace PubKeyHash {
-  export const fromPubKey = (pubKey: Ed25519Pub): PubKeyHash => {
+  export const fromPubKey = (pubKey: Ed25519PublicKey): PubKeyHash => {
     return blake2b(pubKey, { dkLen: HASH_LEN }) as PubKeyHash;
   }
   export const fromBytes = (hash: Uint8Array) =>
@@ -49,9 +50,9 @@ export type Credential =
 export type NetworkMagicNumber = Tagged<PositiveBigInt, "NetworkMagicNumber">;
 export namespace NetworkMagicNumber {
   export const fromPositiveBigInt = (v: PositiveBigInt): NetworkMagicNumber => v as NetworkMagicNumber;
-  export const MAINNET = 764824073n;
-  export const PREPROD = 1n;
-  export const PREVIEW = 2n;
+  export const MAINNET = 764824073n as NetworkMagicNumber;
+  export const PREPROD = 1n as NetworkMagicNumber;
+  export const PREVIEW = 2n as NetworkMagicNumber;
 }
 
 export type Network = Tagged<"mainnet" | "testnet", "Network">;
@@ -71,16 +72,16 @@ export type Address = {
 }
 export namespace Address {
   export const fromString = (addressStr: string) => string32ToAddressCodec.deserialise(addressStr);
-  export const fromVKeys = (
+  export const fromEd25519VerificationKeys = (
     network: Network,
-    paymentVKey: VKey,
-    stakingVKey?: VKey,
+    paymentEd25519VerificationKey: Ed25519VerificationKey,
+    stakingEd25519VerificationKey?: Ed25519VerificationKey,
   ): Address => {
-    const paymentPubKeyHash = PubKeyHash.fromPubKey(paymentVKey.getKey());
+    const paymentPubKeyHash = PubKeyHash.fromPubKey(paymentEd25519VerificationKey.key);
     const paymentCredential: Credential = { type: "PubKeyHash", hash: paymentPubKeyHash };
     let stakingCredential: Credential | undefined = (() => {
-      if (stakingVKey) {
-        const stakingPubKeyHash = PubKeyHash.fromPubKey(stakingVKey.getKey());
+      if (stakingEd25519VerificationKey) {
+        const stakingPubKeyHash = PubKeyHash.fromPubKey(stakingEd25519VerificationKey.key);
         return { type: "PubKeyHash", hash: stakingPubKeyHash };
       } else {
         return undefined;
@@ -229,3 +230,16 @@ export namespace AddressBech32 {
   }
 }
 
+export const address2AddressBech32Iso: Iso<Address, AddressBech32> = {
+  into: (address: Address): AddressBech32 => AddressBech32.fromAddress(address),
+  from: (bech32Str: AddressBech32): Address => {
+    const result = string32ToAddressCodec.deserialise(bech32Str as string);
+    return result.match(
+      (addrBech32) =>  addrBech32,
+      (error) => {
+        // This should never happen as `AddressBech32` is only constructed from a valid Address.
+        throw new Error(`Panic: unable to convert AddressBech32 to Address: ${stringify(error)}, addressStr: ${bech32Str}`);
+      }
+    );
+  }
+}

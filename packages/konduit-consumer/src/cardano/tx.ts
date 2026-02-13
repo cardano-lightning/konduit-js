@@ -20,19 +20,19 @@ export namespace TxHash {
     }
     return ok(bytes as TxHash);
   }
-  export const fromTxBodyCbor = (txBodyCbor: TxBodyCbor) => sha256(txBodyCbor) as TxHash;
+  export const fromTxBodyCborBytes = (txBodyCbor: TxBodyCborBytes) => sha256(txBodyCbor) as TxHash;
   export const fromJson = (json: Json) => json2TxHashCodec.deserialise(json);
 }
 export const hexString2TxHashCodec = mkHexString2HashCodec<TxHash>("TxHash", TX_HASH_LEN);
 export const json2TxHashCodec = codec.pipe(hexString.jsonCodec, hexString2TxHashCodec);
 
-// We do not provide validation for TxCbor and TxBodyCbor here. Please use it when you can trust the source of the CBOR.
-export type TxCbor = typeFest.Tagged<Uint8Array, "TxCbor">;
-export namespace TxCbor {
-  export const fromTxReadyForSigning = (txReadyForSigning: TransactionReadyForSigning) => txReadyForSigning.toCbor() as TxCbor;
+// We do not provide validation for TxCborBytes and TxBodyCborBytes here. Please use it when you can trust the source of the CBOR.
+export type TxCborBytes = typeFest.Tagged<Uint8Array, "TxCborBytes">;
+export namespace TxCborBytes {
+  export const fromTxReadyForSigning = (txReadyForSigning: TransactionReadyForSigning) => txReadyForSigning.toCbor() as TxCborBytes;
 }
-export const unsafeTxCbor = (cbor: Uint8Array): TxCbor => cbor as TxCbor;
+export const unsafeTxCborBytes = (cbor: Uint8Array): TxCborBytes => cbor as TxCborBytes;
 
-export type TxBodyCbor = typeFest.Tagged<Uint8Array, "TxBodyCbor">;
-export const unsafeTxBodyCbor = (cbor: Uint8Array): TxBodyCbor => cbor as TxBodyCbor;
+export type TxBodyCborBytes = typeFest.Tagged<Uint8Array, "TxBodyCborBytes">;
+export const unsafeTxBodyCborBytes = (cbor: Uint8Array): TxBodyCborBytes => cbor as TxBodyCborBytes;
 

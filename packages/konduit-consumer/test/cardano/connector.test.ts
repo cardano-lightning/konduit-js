@@ -2,10 +2,10 @@ import { describe, it, test } from "vitest";
 import { Connector } from "../../src/cardano/connector";
 import { expectErr, expectNotNull, expectOk } from "../assertions";
 import { Milliseconds } from "../../src/time/duration";
-import { KeyIndex, KeyRole, RootPrivateKey, WalletIndex } from "@konduit/cardano-keys";
+import { KeyIndex, KeyRole, Ed25519RootPrivateKey, WalletIndex } from "@konduit/cardano-keys";
 import { ChannelTag } from "../../src/channel/core";
-import { ConsumerVKey } from "../../src/channel/l1Channel";
-import { AdaptorVKey } from "../../src/adaptorClient/adaptorInfo";
+import { ConsumerEd25519VerificationKey } from "../../src/channel/l1Channel";
+import { AdaptorEd25519VerificationKey } from "../../src/adaptorClient/adaptorInfo";
 import { Lovelace } from "../../src/cardano/assets";
 import { HexString } from "@konduit/codec/hexString";
 import * as hexString from "@konduit/codec/hexString";
@@ -41,17 +41,17 @@ describe("Connector integration tests", () => {
     const rootKeyStr = expectNotNull(rootKeyOpt);
     const rootKeyHex = expectOk(HexString.fromString(rootKeyStr));
     const rootKeyBytes = hexString.toUint8Array(rootKeyHex);
-    const rootKey = expectOk(RootPrivateKey.fromBytes(rootKeyBytes));
+    const rootKey = expectOk(Ed25519RootPrivateKey.fromBytes(rootKeyBytes));
 
     const backendUrlStr = expectNotNull(backendUrlOpt);
     const connector = expectOk(await Connector.new(backendUrlStr));
 
     // Derive keys from root private key
-    const consumerSKey = rootKey.deriveSKey(WalletIndex.fromSmallInt(0), KeyRole.External, KeyIndex.fromSmallInt(0));
-    const consumerVKey = consumerSKey.toVKey() as ConsumerVKey;
+    const consumerEd25519SigningKey = rootKey.deriveSigningKey(WalletIndex.fromSmallInt(0), KeyRole.External, KeyIndex.fromSmallInt(0));
+    const consumerEd25519VerificationKey = consumerEd25519SigningKey.toVerificationKey() as ConsumerEd25519VerificationKey;
 
-    const adaptorSKey = rootKey.deriveSKey(WalletIndex.fromSmallInt(0), KeyRole.External, KeyIndex.fromSmallInt(1));
-    const adaptorVKey = adaptorSKey.toVKey() as AdaptorVKey;
+    const adaptorEd25519SigningKey = rootKey.deriveSigningKey(WalletIndex.fromSmallInt(0), KeyRole.External, KeyIndex.fromSmallInt(1));
+    const adaptorEd25519VerificationKey = adaptorEd25519SigningKey.toVerificationKey() as AdaptorEd25519VerificationKey;
  
     // Create test parameters with sensible defaults
     const tag = await ChannelTag.fromRandomBytes(); // Random tag for testing
@@ -60,7 +60,7 @@ describe("Connector integration tests", () => {
 
     wasm.enableLogs(wasm.LogLevel.Debug);
 
-    const tx = expectOk(await connector.buildOpenTx(tag, consumerVKey, adaptorVKey, closePeriod, amount));
+    const tx = expectOk(await connector.buildOpenTx(tag, consumerEd25519VerificationKey, adaptorEd25519VerificationKey, closePeriod, amount));
     console.log(HexString.fromUint8Array(tx.toCbor()));
   }, 20000);
 });

@@ -46,14 +46,11 @@ export class CardanoConnector {
     }
     /**
      * @param {TransactionReadyForSigning} transaction
-     * @param {Uint8Array} signing_key
      * @returns {Promise<Uint8Array>}
      */
-    signAndSubmit(transaction, signing_key) {
+    submit(transaction) {
         _assertClass(transaction, TransactionReadyForSigning);
-        const ptr0 = passArray8ToWasm0(signing_key, wasm.__wbindgen_malloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.cardanoconnector_signAndSubmit(this.__wbg_ptr, transaction.__wbg_ptr, ptr0, len0);
+        const ret = wasm.cardanoconnector_submit(this.__wbg_ptr, transaction.__wbg_ptr);
         return ret;
     }
 }
@@ -561,6 +558,28 @@ export class TransactionReadyForSigning {
     free() {
         const ptr = this.__destroy_into_raw();
         wasm.__wbg_transactionreadyforsigning_free(ptr, 0);
+    }
+    /**
+     * @returns {Uint8Array}
+     */
+    getId() {
+        const ret = wasm.transactionreadyforsigning_getId(this.__wbg_ptr);
+        var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        return v1;
+    }
+    /**
+     * @param {Uint8Array} secret_key
+     * @returns {TransactionReadyForSigning}
+     */
+    sign(secret_key) {
+        const ptr0 = passArray8ToWasm0(secret_key, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.transactionreadyforsigning_sign(this.__wbg_ptr, ptr0, len0);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return TransactionReadyForSigning.__wrap(ret[0]);
     }
     /**
      * @returns {Uint8Array}

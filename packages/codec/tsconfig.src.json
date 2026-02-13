@@ -12,5 +12,5 @@
     "rootDir": "./src"
   },
   "extends": "./tsconfig.json",
-  "include": ["src/**/*", "wasm/**/*.d.ts", "vite-env.d.ts"]
+  "include": ["src/**/*", "vite-env.d.ts"]
 }

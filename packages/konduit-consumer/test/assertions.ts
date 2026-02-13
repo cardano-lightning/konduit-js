@@ -1,12 +1,19 @@
 import { Result } from 'neverthrow';
-import { onString } from '@konduit/codec/json';
+import { isJson, onString, stringify } from '@konduit/codec/json';
 import { JsonError } from '@konduit/codec/json/codecs';
 import { expect } from 'vitest';
 
 export const expectOk = <T, Err>(result: Result<T, Err>, msgTemplate?: string): T => {
   const mkMessage = (err: any) => {
+    console.debug(err);
     const tpl = msgTemplate || "Expected Ok result, got Err: ERROR_STR"
-    return tpl.replace("ERROR_STR", String(err));
+    const errorStr = (() => {
+      if (isJson(err)) {
+        return stringify(err);
+      }
+      return stringify(err);
+    })();
+    return tpl.replace("ERROR_STR", errorStr);
   };
   return result.match(
     (value) => value,

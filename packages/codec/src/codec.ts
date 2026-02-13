@@ -44,6 +44,11 @@ export const mkIdentityCodec = <I, E>(): Codec<I, I, E> => {
 // * Introduce simple Iso type (into: A -> B, from: B -> A) and use it for rmap and lmap
 // * Change the order in the lmap (iso, codec) and keep the order in rmap (codec, iso).
 //
+export type Iso<A, B> = {
+  into: (a: A) => B;
+  from: (b: B) => A;
+};
+
 // Profunctor (tfu!) like mappings from both sides
 export const rmap = <I, O1, O2, E>(
   codec: Codec<I, O1, E>,

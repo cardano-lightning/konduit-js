@@ -18,8 +18,12 @@ export const parse = (text: string): Result<Json, string> => {
   return stringifyThrowable(() => JSONBig.parse(text), "Invalid JSON format");
 }
 
-export const stringify = (json: Json): string => {
-  return JSONBig.stringify(json);
+export const stringify = (
+  json: Json,
+  replacer?: (this: any, key: string, value: any) => any,
+  space?: string | number
+): string => {
+  return JSONBig.stringify(json, replacer, space);
 }
 
 export type JsonMacher<T> = {

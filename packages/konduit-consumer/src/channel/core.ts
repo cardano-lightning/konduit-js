@@ -1,7 +1,8 @@
 import type { Tagged } from "type-fest";
-import { VKey } from "@konduit/cardano-keys";
+import { Ed25519VerificationKey } from "@konduit/cardano-keys";
 import { randomBytes } from "@noble/hashes/utils.js";
-import { mkTaggedHexStringCodec } from "@konduit/codec/uint8Array";
+import { mkTaggedHexStringCodec, mkTaggedJsonCodec } from "@konduit/codec/uint8Array";
+import { JsonCodec } from "@konduit/codec/json/codecs";
 
 export type ChannelTag = Tagged<Uint8Array, "ChannelTag">;
 export namespace ChannelTag {
@@ -13,11 +14,12 @@ export namespace ChannelTag {
     return keyTag.slice(28) as ChannelTag;
   }
 }
+export const json2ChannelTagCodec: JsonCodec<ChannelTag> = mkTaggedJsonCodec("ChannelTag", (_arr) => true);
 
 export type KeyTag = Tagged<Uint8Array, "KeyTag">;
 export namespace KeyTag {
-  export const fromKeyAndTag = (key: VKey, tag: ChannelTag): KeyTag => {
-    return new Uint8Array([...key.getKey(), ...tag]) as KeyTag;
+  export const fromKeyAndTag = (key: Ed25519VerificationKey, tag: ChannelTag): KeyTag => {
+    return new Uint8Array([...key.key, ...tag]) as KeyTag;
   }
 }
 export const hexString2KeyTagCodec = mkTaggedHexStringCodec("KeyTag", (arr) => arr.length >= 28);

@@ -1,13 +1,13 @@
 import type { Tagged } from "type-fest";
 import type { Result } from "neverthrow";
 import { ok, err } from "neverthrow";
-import { bigInt2LovelaceCodec, cbor2SignatureCodec, Lovelace } from "../cardano";
+import { bigInt2LovelaceCodec, cbor2Ed25519SignatureCodec, Lovelace } from "../cardano";
 import { bigInt2NonNegativeBigIntCodec, NonNegativeBigInt } from "@konduit/codec/integers/big";
 import * as cbor from "@konduit/codec/cbor/codecs/sync";
 import * as codec from "@konduit/codec";
 import { bigInt2POSIXMillisecondsCodec, POSIXMilliseconds } from "../time/absolute";
 import { json2BigIntCodec, JsonError } from "@konduit/codec/json/codecs";
-import type { Signature, SKey, VKey } from "@konduit/cardano-keys";
+import type { Ed25519Signature, Ed25519SigningKey, Ed25519VerificationKey } from "@konduit/cardano-keys";
 import { ChannelTag } from "./core";
 import * as uint8Array from "@konduit/codec/uint8Array";
 
@@ -143,18 +143,18 @@ export namespace SquashBody {
     && a.excluded.every((value, index) => value === b.excluded[index])
   );
 
-  export const squashCheque = (prev: SquashBody, cheque: ChequeBody): Result<SquashBody, string> => {
+  export const squashCheque = (prev: SquashBody, cheque: ChequeBody): Result<SquashBody, JsonError> => {
     const excludePos = prev.excluded.indexOf(cheque.index);
     if (excludePos !== -1) {
       const newExcluded = [
         ...prev.excluded.slice(0, excludePos),
         ...prev.excluded.slice(excludePos + 1),
       ];
-      return ok({
+      return Lovelace.add(prev.amount, cheque.amount).map((newAmount) => ({
         ...prev,
-        amount: Lovelace.add(prev.amount, cheque.amount),
+        amount: newAmount,
         excluded: newExcluded,
-      });
+      }));
     }
 
     if (prev.index < cheque.index) {
@@ -165,12 +165,12 @@ export namespace SquashBody {
         newExcluded.push(idx);
         idx = Index.successor(idx);
       }
-      return ok({
+      return Lovelace.add(prev.amount, cheque.amount).map((newAmount) => ({
         ...prev,
-        amount: Lovelace.add(prev.amount, cheque.amount),
+        amount: newAmount,
         excluded: [...prev.excluded, ...newExcluded],
         index: cheque.index,
-      } as SquashBody);
+      }));
     }
     return err(`DuplicateIndex: Index ${cheque.index} is already squashed (excluded: ${prev.excluded.includes(cheque.index)})`);
   }
@@ -194,19 +194,19 @@ export const cbor2SquashBodyCodec = codec.pipe(
 
 export type SquashComponents = {
   readonly body: SquashBody;
-  readonly signature: Signature;
+  readonly signature: Ed25519Signature;
 };
 
 export type Squash = Tagged<SquashComponents, "Squash">;
 export type SquashSigningData = Tagged<Uint8Array, "SquashSigningData">;
 
 export namespace Squash {
-  export const create = (body: SquashBody, signature: Signature): Squash => ({
+  export const create = (body: SquashBody, signature: Ed25519Signature): Squash => ({
     body,
     signature,
   } as Squash);
 
-  export const fromBodySigning = (sKey: SKey, tag: ChannelTag, body: SquashBody): Squash => {
+  export const fromBodySigning = (sKey: Ed25519SigningKey, tag: ChannelTag, body: SquashBody): Squash => {
     const signingData = Squash.signingData(tag, body);
     const signature = sKey.sign(signingData);
     return Squash.create(body, signature);
@@ -218,7 +218,7 @@ export namespace Squash {
     return new Uint8Array([...tag, ...bodyBytes]) as SquashSigningData;
   }
 
-  export const verify = (tag: ChannelTag, squash: Squash, vKey: VKey): boolean => {
+  export const verify = (tag: ChannelTag, squash: Squash, vKey: Ed25519VerificationKey): boolean => {
     const signingData = Squash.signingData(tag, squash.body);
     return vKey.verify(signingData, squash.signature);
   }
@@ -228,8 +228,8 @@ export const cbor2SquashCodec = codec.rmap(
   cbor.tupleOf(
     cbor.indefiniteLength,
     cbor2SquashBodyCodec,
-    cbor2SignatureCodec,
+    cbor2Ed25519SignatureCodec,
   ),
-  ([body, signature]: [SquashBody, Signature]) => Squash.create(body, signature),
-  (squash: Squash): [SquashBody, Signature] => [squash.body, squash.signature],
+  ([body, signature]: [SquashBody, Ed25519Signature]) => Squash.create(body, signature),
+  (squash: Squash): [SquashBody, Ed25519Signature] => [squash.body, squash.signature],
 );

@@ -1,34 +1,48 @@
 // Helpers around codecs and codecs for some common types
 import * as hexString from '@konduit/codec/hexString';
-import { RootPrivateKey, SKey, VKey, Signature, type Ed25519Prv, type Ed25519Pub, type Ed25519XPrv } from '@konduit/cardano-keys';
+import { Ed25519RootPrivateKey, Ed25519SigningKey, Ed25519VerificationKey, Ed25519Signature, type Ed25519PublicKey } from '@konduit/cardano-keys';
+import type { Ed25519XPrv } from '@konduit/cardano-keys/bip32Ed25519';
 import type { JsonCodec, JsonError } from '@konduit/codec/json/codecs';
 import * as uint8ArrayCodec from '@konduit/codec/uint8Array';
 import type { Codec } from '@konduit/codec';
 import * as codec from '@konduit/codec';
 import type { HexString } from '@konduit/codec/hexString';
+import { Ed25519ExpandedSecret, Ed25519PrivateKey, Ed25519Secret } from '@konduit/cardano-keys/rfc8032';
 
 export const mkHexString2HashCodec = <T>(name: string, length: number) => uint8ArrayCodec.mkTaggedHexStringCodec<T>(name, (arr) => arr.length == length);
 
-export const hexString2Ed25519PubCodec: Codec<HexString, Ed25519Pub, JsonError> = uint8ArrayCodec.mkTaggedHexStringCodec<Ed25519Pub>(
-  "Ed25519Pub",
-  (arr) => arr.length === 32,
+export const hexString2Ed25519PublicKeyCodec: Codec<HexString, Ed25519PublicKey, JsonError> = uint8ArrayCodec.mkTaggedHexStringCodec<Ed25519PublicKey>(
+  "Ed25519PublicKey",
+  (arr) => arr.length === Ed25519VerificationKey.LENGTH,
 );
-export const json2Ed25519PubCodec: JsonCodec<Ed25519Pub> = codec.pipe(
+export const json2Ed25519PublicKeyCodec: JsonCodec<Ed25519PublicKey> = codec.pipe(
   hexString.jsonCodec,
-  hexString2Ed25519PubCodec,
+  hexString2Ed25519PublicKeyCodec,
 );
-export const json2VKeyCodec = codec.rmap(json2Ed25519PubCodec, (key) => new VKey(key), (vkey) => vkey.getKey());
-export const cbor2VKeyCodec = uint8ArrayCodec.mkTaggedCborCodec<VKey>("VKey", (arr) => arr.length === 32);
+export const json2Ed25519VerificationKeyCodec = codec.rmap(json2Ed25519PublicKeyCodec, (key) => new Ed25519VerificationKey(key), (vkey) => vkey.key);
+export const cbor2Ed25519VerificationKeyCodec = uint8ArrayCodec.mkTaggedCborCodec<Ed25519VerificationKey>("Ed25519VerificationKey", (arr) => arr.length === 32);
 
-export const hexString2Ed25519PrvCodec: Codec<HexString, Ed25519Prv, JsonError> = uint8ArrayCodec.mkTaggedHexStringCodec<Ed25519Prv>(
-  "Ed25519Prv",
+export const hexString2Ed25519SignatureCodec: Codec<HexString, Ed25519Signature, JsonError> = uint8ArrayCodec.mkTaggedHexStringCodec<Ed25519Signature>(
+  "Ed25519Signature",
   (arr) => arr.length === 64,
 );
-export const json2Ed25519PrvCodec = codec.pipe(
+export const json2Ed25519SignatureCodec = codec.pipe(
   hexString.jsonCodec,
-  hexString2Ed25519PrvCodec,
+  hexString2Ed25519SignatureCodec,
 );
-export const json2SKeyCodec = codec.rmap(json2Ed25519PrvCodec, (key) => new SKey(key), (skey) => skey.getKey());
+export const cbor2Ed25519SignatureCodec = uint8ArrayCodec.mkTaggedCborCodec<Ed25519Signature>("Ed25519Signature", (arr) => arr.length === 64);
+
+// Hierarchical keys
+
+export const hexString2Ed25519ExpandedSecretCodec: Codec<HexString, Ed25519ExpandedSecret, JsonError> = uint8ArrayCodec.mkTaggedHexStringCodec<Ed25519ExpandedSecret>(
+  "Ed25519ExpandedSecret",
+  (arr) => arr.length === Ed25519SigningKey.LENGTH,
+);
+export const json2Ed25519ExpandedSecretCodec = codec.pipe(
+  hexString.jsonCodec,
+  hexString2Ed25519ExpandedSecretCodec,
+);
+export const json2Ed25519SigningKeyCodec = codec.rmap(json2Ed25519ExpandedSecretCodec, (key) => new Ed25519SigningKey(key), (skey) => skey.key);
 
 export const hexString2Ed25519XPrvCodec: Codec<HexString, Ed25519XPrv, JsonError> = uint8ArrayCodec.mkTaggedHexStringCodec<Ed25519XPrv>(
   "Ed25519XPrv",
@@ -38,14 +52,15 @@ export const json2Ed25519XPrvCodec = codec.pipe(
   hexString.jsonCodec,
   hexString2Ed25519XPrvCodec,
 );
-export const json2RootPrivateKeyCodec = codec.rmap(json2Ed25519XPrvCodec, (key) => new RootPrivateKey(key), (root) => root.getKey());
+export const json2Ed25519RootPrivateKeyCodec = codec.rmap(json2Ed25519XPrvCodec, (key) => new Ed25519RootPrivateKey(key), (root) => root.root);
 
-export const hexString2SignatureCodec: Codec<HexString, Signature, JsonError> = uint8ArrayCodec.mkTaggedHexStringCodec<Signature>(
-  "Signature",
-  (arr) => arr.length === 64,
+// Non-hierarchical keys
+
+export const json2Ed25519SecretCodec = uint8ArrayCodec.mkTaggedHexStringCodec<Ed25519Secret>(
+  "Ed25519Secret",
+  (arr) => arr.length === 32,
 );
-export const json2SignatureCodec = codec.pipe(
-  hexString.jsonCodec,
-  hexString2SignatureCodec,
-);
-export const cbor2SignatureCodec = uint8ArrayCodec.mkTaggedCborCodec<Signature>("Signature", (arr) => arr.length === 64);
+
+export const json2Ed25519PrivateKeyCodec = codec.rmap(json2Ed25519SecretCodec, (key) => new Ed25519PrivateKey(key), (skey) => skey.secret);
+
+

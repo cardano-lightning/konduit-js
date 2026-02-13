@@ -1,36 +1,43 @@
 import { JsonError } from "@konduit/codec/json/codecs";
-import { CardanoConnectorWallet } from "./wallets/embedded";
-import type { Result, ResultAsync } from "neverthrow";
-import { Mnemonic } from "@konduit/cardano-keys";
-import * as asyncCodec from "@konduit/codec/async";
 import * as jsonAsyncCodecs from "@konduit/codec/json/async";
+import * as jsonCodecs from "@konduit/codec/json/codecs";
+import * as asyncCodec from "@konduit/codec/async";
+import { AnyWallet, BlockfrostWallet, CardanoConnectorWallet, json2AnyWalletAsyncCodec } from "./wallets/embedded";
+import { Result } from "neverthrow";
+import { Mnemonic } from "@konduit/cardano-keys";
 import { AdaptorFullInfo } from "./adaptorClient";
-import { Channel, ChannelTag, ConsumerVKey } from "./channel";
-import { Milliseconds } from "./time/duration";
-import { Lovelace, TxCbor, TxHash } from "./cardano";
-import { TransactionReadyForSigning } from "./cardano/connector";
+import { Channel, ChannelTag, ConsumerEd25519VerificationKey, json2ChannelCodec, OpenTx } from "./channel";
+import { Milliseconds, Seconds } from "./time/duration";
+import { Lovelace } from "./cardano";
+import { Connector, json2ConnectorAsyncCodec } from "./cardano/connector";
 import { hoistToResultAsync, resultAsyncToPromise } from "./neverthrow";
+import { ValidDate } from "./time/absolute";
+import { NonNegativeInt } from "@konduit/codec/integers/smallish";
 
 type ConsumerEvent<T> = CustomEvent<T>;
 
 export type ConsumerEvents = {
-  "channel-opened": { channel: Channel; tag: ChannelTag };
+  "channel-opened": { channel: Channel; };
 };
 
 export class KonduitConsumer {
-  // TODO: remove wallet from here. It should be replaced by:
-  // * L2 signer interface
-  // * L2 signer can be either a private key (ideally valut) or possibly a...
-  // CIP-30 wallet if we agree on some extension to the L1 cheque standard.
-  private _wallet: CardanoConnectorWallet;
+  private _wallet: AnyWallet;
+  // The only role of the connector here is to build transactions.
+  // We use wallet API for signing and submitting.
+  public readonly txBuilder: Connector;
   private _channels: Map<ChannelTag, Channel>;
+
   private _subscriptionCounter: number = 0;
   private readonly eventTarget = new EventTarget();
 
-  constructor(wallet: CardanoConnectorWallet, channels: Map<ChannelTag, Channel> = new Map()) {
+  private pollingTimer: ReturnType<typeof setInterval> | null = null;
+  private pollingInterval = Milliseconds.fromNonNegativeInt(NonNegativeInt.fromSmallNumber(0));
+
+  constructor(txBuilder: Connector, wallet: AnyWallet, channels?: Map<ChannelTag, Channel>) {
     this._wallet = wallet;
     // Currently we just copy the connector from the wallet.
-    this._channels = channels;
+    this._channels = channels ?? new Map<ChannelTag, Channel>();
+    this.txBuilder = txBuilder;
   }
 
   // A memory leak debugging helper
@@ -38,13 +45,32 @@ export class KonduitConsumer {
     return this._subscriptionCounter;
   }
 
-  public async create(
-    backendUrl: string,
-    mnemonicPassword?: Uint8Array
+  public get channels(): Channel[] {
+    return Array.from(this._channels.values());
+  }
+
+  public static async createUsingConnector(
+    cardanoConnectBackend: string,
   ): Promise<Result<{ consumer: KonduitConsumer, mnemonic: Mnemonic }, JsonError>> {
-    let possibleWallet = await CardanoConnectorWallet.create(backendUrl, mnemonicPassword);
+    let possibleWallet = await CardanoConnectorWallet.create(cardanoConnectBackend);
     return possibleWallet.map((walletWithMnemonic) => {
-      return { consumer: new KonduitConsumer(walletWithMnemonic.wallet), mnemonic: walletWithMnemonic.mnemonic };
+      let wallet = walletWithMnemonic.wallet;
+      let connector = wallet.walletBackend.connector;
+      return { consumer: new KonduitConsumer(connector, walletWithMnemonic.wallet), mnemonic: walletWithMnemonic.mnemonic };
+    });
+  }
+
+  public static async createUsingBlockfrost(
+    cardanoConnectBackend: string, // TODO: this is only needed for tx building. Should be dropped.
+    blockfrostProjectId: string,
+  ): Promise<Result<{ consumer: KonduitConsumer, mnemonic: Mnemonic }, JsonError>> {
+    let possibleWallet = await BlockfrostWallet.create(blockfrostProjectId);
+    let possibleConnector = await Connector.new(cardanoConnectBackend);
+    return Result.combine([
+      possibleWallet,
+      possibleConnector,
+    ]).map(([walletWithMnemonic, connector]) => {
+      return { consumer: new KonduitConsumer(connector, walletWithMnemonic.wallet), mnemonic: walletWithMnemonic.mnemonic };
     });
   }
 
@@ -52,11 +78,48 @@ export class KonduitConsumer {
   public get wallet() {
     return this._wallet;
   }
-  public get connector() {
-    return this._wallet.walletBackend.connector;
+
+  // public get connector() {
+  //   return this._wallet.walletBackend.connector;
+  // }
+
+  public get vKey(): ConsumerEd25519VerificationKey {
+    return this.wallet.vKey as ConsumerEd25519VerificationKey;
   }
-  public get vKey(): ConsumerVKey {
-    return this._wallet.vKey as ConsumerVKey;
+
+  private async poll() {
+    const result = await this.walletBackend.getBalance(this.vKey);
+    const resultFlattened = result.match((info) => info, (failure) => failure);
+    let origBalance = this.balance;
+    this._balanceInfo = this._balanceInfo? this._balanceInfo.mkSuccessor(resultFlattened) : BalanceInfo.mkNew(resultFlattened);
+    result.match(
+      (lovelace) => {
+        this.emit('balance-fetched', { currentBalance: lovelace });
+        if(origBalance !== lovelace)
+          this.emit('balance-changed', { newBalance: lovelace });
+      },
+      (error) => {
+        this.emit('balance-update-failed', { error });
+      }
+    );
+  }
+
+  // (Re)start polling
+  public async startPolling(interval: Seconds) {
+    let intervalMs = Milliseconds.fromSeconds(interval);
+    this.poll();
+    if (this.pollingTimer) {
+      if(this.pollingInterval !== intervalMs) {
+        clearInterval(this.pollingTimer);
+      } else {
+        return;
+      }
+    }
+    this.pollingInterval = intervalMs;
+    this.pollingTimer = setInterval(() =>
+      this.poll(),
+      Number(intervalMs)
+    );
   }
 
   private emit<K extends keyof ConsumerEvents>(event: K, payload: ConsumerEvents[K]) {
@@ -91,65 +154,58 @@ export class KonduitConsumer {
   ): Promise<Result<Channel, JsonError>> {
     const channelTag = await ChannelTag.fromRandomBytes();
     const [adaptorUrl, adaptorInfo] = adaptorFullInfo;
-    const possibleOpenTx = hoistToResultAsync(this.connector.buildOpenTx(
-      channelTag,
-      this.vKey,
-      adaptorInfo.adaptorVKey,
-      closePeriod,
-      amount,
-    ));
-    const result = await resultAsyncToPromise(
-      possibleOpenTx.andThen((openTx: TransactionReadyForSigning): ResultAsync<[TransactionReadyForSigning, TxHash], JsonError> => {
-        return hoistToResultAsync(this._wallet.signAndSubmit(openTx)).map(
-          (txHash) => {
-            return [openTx, txHash];
-          });
-      })
+    return await resultAsyncToPromise(
+      hoistToResultAsync(this.txBuilder.buildOpenTx(
+        channelTag,
+        this.vKey,
+        adaptorInfo.adaptorEd25519VerificationKey,
+        closePeriod,
+        amount,
+      )).andThen((openTx) =>
+        hoistToResultAsync(this.wallet.sign(openTx))
+      ).andThen((signedTx) =>
+        hoistToResultAsync(this.wallet.submit(signedTx))
+        .map((txHash) => {
+          const openTx = {
+            adaptor: adaptorInfo.adaptorEd25519VerificationKey,
+            adaptorApproved: false,
+            amount: amount,
+            closePeriod: closePeriod,
+            consumer: this.vKey,
+            submitted: ValidDate.now(),
+            tag: channelTag,
+            txBlockNo: null,
+            txCbor: signedTx.toCbor(),
+            txHash: txHash,
+            type: "OpenTx" as const,
+          } as OpenTx;
+          const channel = Channel.create(openTx, adaptorUrl);
+          this._channels.set(channelTag, channel);
+          this.emit("channel-opened", { channel });
+          return channel;
+        })
+      )
     );
-    return result.map(
-      ([tx, txHash]) => {
-        const openTx = {
-          txCbor: TxCbor.fromTxReadyForSigning(tx),
-          txHash: txHash,
-          tag: channelTag,
-          type: "OpenTx" as const,
-          consumer: this.vKey,
-          adaptor: adaptorInfo.adaptorVKey,
-          closePeriod: closePeriod,
-          amount: amount,
-          submitted: null,
-        };
-        const channel = Channel.create(openTx, adaptorUrl);
-        this._channels.set(channelTag, channel);
-        this.emit("channel-opened", { channel, tag: channelTag });
-        return channel;
-    });
-  }
-
-  // public async restore(
-  //   backendUrl: string,
-  //   mnemonic: Mnemonic,
-  //   password?: Uint8Array
-  // ): Promise<Result<KonduitConsumer, JsonError>> {
-  //   let possibleWallet = await CardanoConnectorWallet.restore(backendUrl, mnemonic, password);
-  //   return possibleWallet.map((wallet) => {
-  //     return new KonduitConsumer(wallet);
-  //   });
-  // }
+  };
 
 }
 
 export const json2KonduitConsumerAsyncCodec: jsonAsyncCodecs.JsonAsyncCodec<KonduitConsumer> = (() => {
-  const json2RecordCodec = jsonAsyncCodecs.objectOf({
-      wallet: CardanoConnectorWallet.json2WalletAsyncCodec
-  });
-  return asyncCodec.rmapSync(
-    json2RecordCodec,
-    (obj): KonduitConsumer => {
-      return new KonduitConsumer(obj.wallet);
+  return asyncCodec.rmap(
+    jsonAsyncCodecs.objectOf({
+      channels: asyncCodec.fromSync(jsonCodecs.arrayOf(json2ChannelCodec)),
+      tx_builder: json2ConnectorAsyncCodec,
+      wallet: json2AnyWalletAsyncCodec,
+    }),
+    async (r) => {
+      const channelsMap = new Map<ChannelTag, Channel>();
+      r.channels.forEach((channel) => channelsMap.set(channel.channelTag, channel));
+      return new KonduitConsumer(r.tx_builder, r.wallet, channelsMap);
     },
-    (consumer: KonduitConsumer) => {
+    (consumer) => {
       return {
+        channels: consumer.channels,
+        tx_builder: consumer.txBuilder,
         wallet: consumer.wallet,
       };
     }

@@ -499,7 +499,7 @@ export class CborReader {
   }
 
   /**
-   * Reads the next data item as a semantic tag (major type 6), without advancing the reader.
+   * Reads the next data item as a semantic tag (major type 6) advancing the reader.
    *
    * @returns The decoded value.
    */

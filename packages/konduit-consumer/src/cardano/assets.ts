@@ -24,9 +24,9 @@ export namespace Lovelace {
   export const fromSmallNumber = (v: Small): Lovelace => BigInt(v) as Lovelace;
   export const fromJson = (v: Json) => json2LovelaceCodec.deserialise(v);
   export const zero = 0n as Lovelace;
-  export const add = (a: Lovelace, b: Lovelace): Lovelace => a + b as Lovelace;
-  export const subtract = (a: Lovelace, b: Lovelace): Lovelace => a - b as Lovelace;
-  export const scalarMultiply = (a: Lovelace, scalar: bigint): Lovelace => a * scalar as Lovelace;
+  export const add = (a: Lovelace, b: Lovelace): Result<Lovelace, JsonError> => fromBigInt(a + b);
+  export const subtract = (a: Lovelace, b: Lovelace): Result<Lovelace, JsonError> => fromBigInt(a - b);
+  export const scale = (a: Lovelace, multiplier: bigint): Result<Lovelace, JsonError> => fromBigInt(a * multiplier);
 }
 export const bigInt2LovelaceCodec: codec.Codec<bigint, Lovelace, JsonError> = {
   deserialise: (value: bigint): Result<Lovelace, JsonError> => {

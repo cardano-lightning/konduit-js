@@ -7,7 +7,7 @@ export class CardanoConnector {
     [Symbol.dispose](): void;
     balance(verification_key: Uint8Array): Promise<bigint>;
     static new(base_url: string, http_timeout_ms?: bigint | null): Promise<CardanoConnector>;
-    signAndSubmit(transaction: TransactionReadyForSigning, signing_key: Uint8Array): Promise<Uint8Array>;
+    submit(transaction: TransactionReadyForSigning): Promise<Uint8Array>;
     readonly network_magic_number: bigint;
 }
 
@@ -138,6 +138,8 @@ export class TransactionReadyForSigning {
     private constructor();
     free(): void;
     [Symbol.dispose](): void;
+    getId(): Uint8Array;
+    sign(secret_key: Uint8Array): TransactionReadyForSigning;
     toCbor(): Uint8Array;
     toString(): string;
 }

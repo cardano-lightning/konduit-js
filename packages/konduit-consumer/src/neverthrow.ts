@@ -1,3 +1,4 @@
+import { isJson, stringify } from '@konduit/codec/json';
 import type { Result } from 'neverthrow';
 import { ok, err, ResultAsync } from 'neverthrow';
 
@@ -12,3 +13,14 @@ export const hoistToResultAsync = <T, E>(promise: Promise<Result<T, E>>): Result
   return new ResultAsync(promise);
 }
 
+export const unwrapOrPanic = <T, E>(result: Result<T, E>, errorMessage: string): T => {
+  return result.match(
+    (value) => value,
+    (error) => {
+      if(isJson(error)) {
+        throw new Error(`${errorMessage}: ${stringify(error)}`);
+      }
+      throw new Error(`${errorMessage}: ${String(error)}`);
+    }
+  );
+}
