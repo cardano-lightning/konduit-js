@@ -2,8 +2,8 @@ import type { Tagged } from "type-fest";
 import { Result } from "neverthrow";
 import { err, ok } from "neverthrow";
 import { AdaptorInfo, json2AdaptorInfoCodec } from "./adaptorClient/adaptorInfo";
+import type { HttpEndpointError } from "./http";
 import {
-  HttpEndpointError,
   mkGetEndpoint,
   mkGetStaticEndpoint,
   mkPostEndpoint,
@@ -13,14 +13,14 @@ import {
 import { hexString2KeyTagCodec, KeyTag, type ChannelTag } from "./channel/core";
 import type { Squash } from "./channel/squash";
 import { cbor2SquashCodec } from "./channel/squash";
-import { ConsumerEd25519VerificationKey } from "./channel/l1Channel";
+import type { ConsumerEd25519VerificationKey } from "./channel/l1Channel";
 import { Address, address2AddressBech32Iso, AddressBech32, Network, NetworkMagicNumber } from "./cardano/addressses";
 import * as codec from "@konduit/codec";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import { json2TxHashCodec, Lovelace, TxCborBytes } from "./cardano";
 import { Ed25519VerificationKey } from "@konduit/cardano-keys";
-import { json2BooleanCodec, json2StringCodec, JsonDeserialiser, JsonError, nullable, type JsonCodec } from "@konduit/codec/json/codecs";
-import { Json, stringify } from "@konduit/codec/json";
+import { json2BooleanCodec, json2StringCodec, nullable, type JsonCodec } from "@konduit/codec/json/codecs";
+import type { JsonError } from "@konduit/codec/json/codecs";
 
 export { AdaptorInfo } from "./adaptorClient/adaptorInfo";
 
@@ -53,7 +53,7 @@ export namespace AdaptorFullInfo {
 export type AdaptorClient = {
   adaptorUrl: AdaptorUrl;
   info: () => Promise<Result<AdaptorInfo, HttpEndpointError>>;
-  chSquash: (keyTag: KeyTag, squash: Squash) => Promise<Result<Json, HttpEndpointError>>;
+  chSquash: (keyTag: KeyTag, squash: Squash) => Promise<Result<ChSquashResponse, HttpEndpointError>>;
 };
 
 export const json2AdaptorClientCodec: JsonCodec<AdaptorClient> = codec.rmap(
@@ -73,30 +73,26 @@ export const json2AdaptorClientCodec: JsonCodec<AdaptorClient> = codec.rmap(
   },
 );
 
+export type ChSquashResponse = "Complete" | "Incomplete";
+export const json2ChSquashResponseCodec: JsonCodec<ChSquashResponse> = jsonCodecs.altJsonCodecs(
+ [jsonCodecs.constant("Complete" as const), jsonCodecs.constant("Incomplete" as const)],
+ (completeSer, incompleteSer) => (val: ChSquashResponse) => {
+    if(val == "Complete") return completeSer(val);
+    return incompleteSer(val);
+  }
+);
+
 export const mkAdaptorClient = (baseUrl: AdaptorUrl): AdaptorClient => {
-  const deserialiseJson: JsonDeserialiser<Json> = ok;
   const chSquashEndpoint = mkPostEndpoint(
     `${baseUrl}/ch/squash`,
     RequestSerialiser.fromCborSerialiser(cbor2SquashCodec.serialise),
-    ResponseDeserialiser.fromJsonDeserialiser(deserialiseJson)
+    ResponseDeserialiser.fromJsonDeserialiser(json2ChSquashResponseCodec.deserialise)
   );
   return {
     adaptorUrl: baseUrl,
     info: mkInfoEndpoint(baseUrl),
-    chSquash: async (keyTag: KeyTag, squash: Squash): Promise<Result<Json, HttpEndpointError>> => {
-      const json = await chSquashEndpoint(squash, [["KONDUIT", hexString2KeyTagCodec.serialise(keyTag)]])
-      return json.match(
-        (json) => {
-          console.debug(`AdaptorClient.chSquash:`);
-          console.debug(`${stringify(json as Json, null, 2)}`);
-          return ok(json);
-        },
-        (error) => {
-          console.error(`AdaptorClient.chSquash error:`);
-          console.error(`${stringify(error as Json, null, 2)}`);
-          return err(error);
-        }
-      );
+    chSquash: async (keyTag: KeyTag, squash: Squash) => {
+      return chSquashEndpoint(squash, [["KONDUIT", hexString2KeyTagCodec.serialise(keyTag)]])
     }
   };
 }

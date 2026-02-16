@@ -2,26 +2,27 @@
 import type { Result } from "neverthrow";
 import { err } from "neverthrow";
 import type { JsonDeserialiser, JsonError, JsonSerialiser } from "@konduit/codec/json/codecs";
-import { Json, parse, stringify } from "@konduit/codec/json";
-import { CborDeserialiser, CborSerialiser, deserialiseCbor, serialiseCbor } from "@konduit/codec/cbor/codecs/sync";
-import { Cbor } from "@konduit/codec/cbor/core";
+import { type Json, parse, stringify } from "@konduit/codec/json";
+import { type CborDeserialiser, type CborSerialiser, deserialiseCbor, serialiseCbor } from "@konduit/codec/cbor/codecs/sync";
+import type { Cbor } from "@konduit/codec/cbor/core";
+import { HexString, fromUint8Array as hex } from "@konduit/codec/hexString";
 
 export type Url = string;
 
 // We are trying to decode the body of an error response
-// to simplify debugging. Returning Uint8Array which is lower
-// common denominator would not be helpful.
+// to simplify debugging. Returning Uint8Array which is the lowest
+// common denominator is useful but not extremely developer-friendly.
 export type DecodedErrorBody =
-  | { type: "bytes", value: Uint8Array }
-  | { type: "text", decoded: string, raw: Uint8Array }
-  | { type: "json", decoded: Json, raw: Uint8Array }
-  | { type: "cbor", decoded: Cbor, raw: Uint8Array }
+  | { type: "bytes", value: HexString }
+  | { type: "text", decoded: string, raw: HexString }
+  | { type: "json", decoded: Json, raw: HexString }
+  | { type: "cbor", decoded: Cbor, raw: HexString }
 export namespace DecodedErrorBody {
-  export const fromBytes = (value: Uint8Array): DecodedErrorBody => ({ type: "bytes", value });
-  export const fromText = (decoded: string, raw: Uint8Array): DecodedErrorBody => ({ type: "text", decoded, raw });
-  export const fromJson = (decoded: Json, raw: Uint8Array): DecodedErrorBody => ({ type: "json", decoded, raw });
-  export const fromCbor = (decoded: Cbor, raw: Uint8Array): DecodedErrorBody => ({ type: "cbor", decoded, raw });
-  // TODO: We should probably use or at least include the content type header here.
+  export const fromBytes = (value: Uint8Array): DecodedErrorBody => ({ type: "bytes", value: hex(value) })
+  export const fromText = (decoded: string, raw: Uint8Array): DecodedErrorBody => ({ type: "text", decoded, raw: hex(raw) });
+  export const fromJson = (decoded: Json, raw: Uint8Array): DecodedErrorBody => ({ type: "json", decoded, raw: hex(raw) });
+  export const fromCbor = (decoded: Cbor, raw: Uint8Array): DecodedErrorBody => ({ type: "cbor", decoded, raw: hex(raw) });
+  // TODO: We should probably use or at least include the `Content-Type` header here.
   export const decode = (bodyBytes: Uint8Array): DecodedErrorBody => {
     let text: string;
     try {
@@ -35,7 +36,6 @@ export namespace DecodedErrorBody {
       }
     }
     try {
-      console.debug(`Decoded error response body as text: ${text}`);
       const json = parse(text);
       return DecodedErrorBody.fromJson(json.unwrapOr(text), bodyBytes);
     } catch {
@@ -85,15 +85,21 @@ export const mkPostEndpoint = <Req, Res>(url: Url, requestSerialiser: RequestSer
     })();
     const payload = (() => {
       switch (requestSerialiser.type) {
-        case "json": return stringify(requestBody as unknown as Json);
+        case "json": {
+          const json = requestSerialiser.serialiser(requestBody);
+          return stringify(json);
+        }
         case "cbor": {
-          let uint8Array = serialiseCbor(requestBody as unknown as Cbor);
+          const cbor = requestSerialiser.serialiser(requestBody);
+          let uint8Array = serialiseCbor(cbor);
           return uint8Array.buffer.slice(
             uint8Array.byteOffset,
             uint8Array.byteOffset + uint8Array.byteLength,
           ) as ArrayBuffer;
         }
-        case "other": return requestSerialiser.serialiser(requestBody);
+        case "other": {
+          return requestSerialiser.serialiser(requestBody);
+        }
       }
     })();
     const acceptHeader = (() => {
@@ -196,7 +202,6 @@ export const mkGetEndpoint = <Req, Res>(baseUrl: Url, pathSerialiser: TextSerial
     })();
     let fullUrl = `${normalisedBaseUrl}/${normalisedPath}`;
     try {
-      console.debug(`Making GET request to ${fullUrl} with headers:`, headers);
       httpResponse = await fetch(fullUrl, {
         method: "GET",
         headers: [...headers, ["Accept", acceptHeader]],

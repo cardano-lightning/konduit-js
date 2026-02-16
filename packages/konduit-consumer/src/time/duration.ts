@@ -3,7 +3,7 @@ import type { Tagged } from "type-fest";
 import type { Small } from "@konduit/codec/integers/smallish";
 import { json2NonNegativeIntCodec, NonNegativeInt } from "@konduit/codec/integers/smallish";
 import type { POSIXMilliseconds, POSIXSeconds } from "./absolute";
-import { altJsonCodecs, JsonCodec } from "@konduit/codec/json/codecs";
+import { altJsonCodecs, type JsonCodec } from "@konduit/codec/json/codecs";
 import { ok, err } from "neverthrow";
 import type { Result } from "neverthrow";
 

@@ -1,7 +1,7 @@
 import { Result } from 'neverthrow';
 import { onString } from '../src/json';
-import { JsonError } from '../src/json/codecs';
-import { Assertion, expect } from 'vitest';
+import type { JsonError } from '../src/json/codecs';
+import { type Assertion, expect } from 'vitest';
 
 export const unwrapOk = <T, Err>(result: Result<T, Err>, msgTemplate?: string): T => {
   const mkMessage = (err: any) => {

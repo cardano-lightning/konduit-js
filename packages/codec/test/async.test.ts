@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { fromSync, pipe, compose, rmapSync, lmapSync, rmap, mapErr, altCodec } from '../src/codec/async';
-import { json2StringCodec, json2NumberCodec, type JsonCodec } from '../src/json/codecs';
+import { json2StringCodec, json2NumberCodec, type JsonError } from '../src/json/codecs';
 import type { Json } from '../src/json';
 import { unwrapOk, unwrapErr } from './assertions';
+import type { Codec } from '../src';
+import { err, ok } from 'neverthrow';
 
 describe('Async Codecs', () => {
   describe('fromSync', () => {
@@ -20,23 +22,21 @@ describe('Async Codecs', () => {
     });
   });
 
+  const stringToNumber: Codec<string, number, JsonError> = {
+    deserialise: (input: string) => {
+      const num = parseInt(input, 10);
+      if (!isNaN(num)) {
+        return err("Input is not a valid number");
+      }
+      return ok(num);
+    },
+    serialise: (num: number) => {
+      return String(num);
+    }
+  };
+
   describe('pipe', () => {
     it('should compose two async codecs', async () => {
-      const stringToNumber: JsonCodec<number> = {
-        deserialise: (input: Json) => {
-          if (typeof input === 'string') {
-            const num = parseInt(input, 10);
-            if (!isNaN(num)) {
-              return json2NumberCodec.deserialise(BigInt(num));
-            }
-          }
-          return json2NumberCodec.deserialise(input);
-        },
-        serialise: (output: number) => {
-          return String(json2NumberCodec.serialise(output));
-        }
-      };
-
       const asyncStringCodec = fromSync(json2StringCodec);
       const asyncStringToNumber = fromSync(stringToNumber);
       const composed = pipe(asyncStringCodec, asyncStringToNumber);
@@ -52,21 +52,6 @@ describe('Async Codecs', () => {
 
   describe('compose', () => {
     it('should compose in categorical order', async () => {
-      const stringToNumber: JsonCodec<number> = {
-        deserialise: (input: Json) => {
-          if (typeof input === 'string') {
-            const num = parseInt(input, 10);
-            if (!isNaN(num)) {
-              return json2NumberCodec.deserialise(BigInt(num));
-            }
-          }
-          return json2NumberCodec.deserialise(input);
-        },
-        serialise: (output: number) => {
-          return String(json2NumberCodec.serialise(output));
-        }
-      };
-
       const asyncStringCodec = fromSync(json2StringCodec);
       const asyncStringToNumber = fromSync(stringToNumber);
       const composed = compose(asyncStringToNumber, asyncStringCodec);

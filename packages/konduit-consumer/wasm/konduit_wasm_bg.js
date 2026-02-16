@@ -27,11 +27,11 @@ export class CardanoConnector {
         return ret;
     }
     /**
-     * @returns {bigint}
+     * @returns {Network}
      */
-    get network_magic_number() {
-        const ret = wasm.cardanoconnector_network_magic_number(this.__wbg_ptr);
-        return BigInt.asUintN(64, ret);
+    get network() {
+        const ret = wasm.cardanoconnector_network(this.__wbg_ptr);
+        return ret;
     }
     /**
      * @param {string} base_url
@@ -109,6 +109,15 @@ export const LogLevel = Object.freeze({
     Info: 2, "2": "Info",
     Warn: 3, "3": "Warn",
     Error: 4, "4": "Error",
+});
+
+/**
+ * @enum {0 | 1 | 2}
+ */
+export const Network = Object.freeze({
+    Mainnet: 0, "0": "Mainnet",
+    Preview: 1, "1": "Preview",
+    Preprod: 2, "2": "Preprod",
 });
 
 /**
@@ -631,6 +640,50 @@ export function enableLogs(level) {
     const ret = wasm.enableLogs(level);
     if (ret[1]) {
         throw takeFromExternrefTable0(ret[0]);
+    }
+}
+
+/**
+ * @param {Network} network
+ * @returns {bigint}
+ */
+export function networkAsMagic(network) {
+    const ret = wasm.networkAsMagic(network);
+    return BigInt.asUintN(64, ret);
+}
+
+/**
+ * @param {Network} network
+ * @returns {boolean}
+ */
+export function networkIsMainnet(network) {
+    const ret = wasm.networkIsMainnet(network);
+    return ret !== 0;
+}
+
+/**
+ * @param {Network} network
+ * @returns {boolean}
+ */
+export function networkIsTestnet(network) {
+    const ret = wasm.networkIsTestnet(network);
+    return ret !== 0;
+}
+
+/**
+ * @param {Network} network
+ * @returns {string}
+ */
+export function networkToString(network) {
+    let deferred1_0;
+    let deferred1_1;
+    try {
+        const ret = wasm.networkToString(network);
+        deferred1_0 = ret[0];
+        deferred1_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
     }
 }
 

@@ -14,6 +14,7 @@ import { CborWriter } from "../CborWriter";
 import type { Codec, Deserialiser, Serialiser } from "../../codec";
 import * as codec from "../../codec";
 import type { JsonError } from "../../json/codecs";
+import { isJson, stringify } from "../../json";
 
 export type CborCodec<O> = Codec<Cbor, O, JsonError>;
 
@@ -369,7 +370,13 @@ export const serialiseCbor = (value: Cbor): Uint8Array => {
       return;
     }
     // PANIC
-    throw new Error(`serialiseCbor: unsupported CBOR AST node: ${String(v)}`);
+    let nodeStr: string;
+    if(isJson(v)) {
+      nodeStr = stringify(v);
+    } else {
+      nodeStr = stringify(v);
+    }
+    throw new Error(`serialiseCbor: unsupported CBOR AST node: ${nodeStr}`);
   };
   writeValue(value);
   return writer.encode();

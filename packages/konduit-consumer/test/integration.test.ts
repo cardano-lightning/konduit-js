@@ -1,24 +1,21 @@
 import { describe, it } from "vitest";
 import * as fs from "fs";
 import { json2KonduitConsumerAsyncCodec, KonduitConsumer } from "../src";
-import { AdaptorFullInfo, mkBlockfrostClient } from "../src/adaptorClient";
+import { AdaptorFullInfo } from "../src/adaptorClient";
 import { Days, Milliseconds, Seconds } from "../src/time/duration";
 import { Address, AddressBech32, Lovelace, Network, PubKeyHash } from "../src/cardano";
 import { Ada } from "../src/cardano/assets";
-import { Json, parse, stringify } from "@konduit/codec/json";
+import { parse, stringify } from "@konduit/codec/json";
 import { expectNotNull, expectOk } from "./assertions";
 import { HexString } from "@konduit/codec/hexString";
-import { KeyIndex, KeyRole, Ed25519RootPrivateKey, WalletIndex, Ed25519PrivateKey } from "@konduit/cardano-keys";
+import { Ed25519PrivateKey } from "@konduit/cardano-keys";
 import * as hexString from "@konduit/codec/hexString";
 import * as wasm from "../wasm/konduit_wasm.js";
-import { deserialiseCbor } from "@konduit/codec/cbor/codecs/sync";
-import { Connector, Transaction } from "../src/cardano/connector";
-import * as adaptorClient from "../src/adaptorClient";
-import { BlockfrostWallet, Wallet } from "../src/wallets/embedded";
-import { ok, err, Result } from "neverthrow";
+import { Connector } from "../src/cardano/connector";
+import { BlockfrostWallet, type AnyWallet } from "../src/wallets/embedded";
 import { Ed25519Secret } from "@konduit/cardano-keys/rfc8032";
-import { JsonError } from "@konduit/codec/json/codecs";
 import { hoistToResultAsync, resultAsyncToPromise } from "../src/neverthrow";
+import { json2ChannelCodec } from "../src/channel";
 
 
 const integrationTestEnv = (() => {
@@ -28,23 +25,29 @@ const integrationTestEnv = (() => {
   const blockfrostProjectIdOpt = import.meta.env.VITE_TEST_BLOCKFROST_PROJECT_ID;
   const konduitConsumerStateFile = import.meta.env.VITE_TEST_KONDUIT_CONSUMER_STATE_FILE;
 
-  const mkKonduitConsumer = async (t: any): Promise<KonduitConsumer> => {
+  const mkKonduitConsumer = async (t: any): Promise<KonduitConsumer<AnyWallet>> => {
     if(!konduitConsumerStateFile) {
       t.skip();
     }
     if(fs.existsSync(konduitConsumerStateFile)) {
       const fileContent: string = fs.readFileSync(konduitConsumerStateFile, "utf-8");
       return expectOk(await resultAsyncToPromise(hoistToResultAsync(Promise.resolve(parse(fileContent))).andThen((json) => {
-        return hoistToResultAsync(json2KonduitConsumerAsyncCodec.deserialise(json));
+        const result = (async () => {
+          const result = await json2KonduitConsumerAsyncCodec.deserialise(json);
+          result.mapErr((e) => console.error(stringify(e)));
+          return result;
+        })();
+        return hoistToResultAsync(result);
       })));
     } else {
       const connector = await mkConnector(t);
       const blockfrostWallet = await mkBlockfrostWallet(t);
-      return new KonduitConsumer(connector, blockfrostWallet);
+      const keys = mkKeys(t);
+      return new KonduitConsumer(keys.privateKey, connector, blockfrostWallet);
     }
   }
 
-  const saveKonduitConsumerState = (consumer: KonduitConsumer) => {
+  const saveKonduitConsumerState = (consumer: KonduitConsumer<AnyWallet>) => {
     if(!konduitConsumerStateFile) {
       throw new Error("Konduit consumer state file path not set in environment variable VITE_TEST_KONDUIT_CONSUMER_STATE_FILE");
     }
@@ -80,10 +83,6 @@ const integrationTestEnv = (() => {
     if(!backendUrlOpt) {
       t.skip();
     }
-    // export async function fromPrivateKey(
-    //   projectId: string,
-    //   rootPrivateKey: Ed25519RootPrivateKey,
-    //   balanceInfo?: BalanceInfo
     const blockfrostProjectId = expectNotNull(blockfrostProjectIdOpt);
     const { privateKey } = mkKeys(t);
     const walletBackend = expectOk(await BlockfrostWallet.fromPrivateKey(blockfrostProjectId, privateKey));
@@ -141,16 +140,71 @@ describe("End-to-end integration: open channel and poll adaptor squash", () => {
       // const connector = await integrationTestEnv.mkConnector(test);
       // console.debug("Created connector and wallet backend for integration test, now creating consumer...");
 
+      console.debug("Loading consumer");
       const consumer = await integrationTestEnv.mkKonduitConsumer(test);
+      console.debug("Consumer loaded");
+      // let channel = consumer.channels.length > 0 ? consumer.channels[0] : null;
+      // if(!channel) {
 
       const adaptorFullInfo = await integrationTestEnv.mkAdaptorFullInfo(test);
       // Parameters for opening the channel
       const amount = Lovelace.fromAda(Ada.fromSmallNumber(5)); // 5 ADA
       const closePeriod = Milliseconds.fromAnyPreciseDuration({ type: "days", value: Days.fromSmallNumber(3) });
 
-      // Open the channel
-      const channel = expectOk(await consumer.openChannel(adaptorFullInfo, amount, closePeriod));
+      expectOk(await consumer.openChannel(adaptorFullInfo, amount, closePeriod));
       integrationTestEnv.saveKonduitConsumerState(consumer);
+      let squashed = false;
+      consumer.subscribe("channel-squashed", ({ channel }) => {
+        console.debug("Channel finally squashed:");
+        console.debug(stringify(json2ChannelCodec.serialise(channel)));
+        squashed = true;
+      });
+      await consumer.startPolling(Seconds.fromSmallNumber(1));
+
+      // await till squashed
+      const maxAttempts = 40;
+      const delayMs = 3000;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        console.log(`Checking if channel is squashed, attempt #${attempt}`);
+        if(squashed) {
+          console.log("Channel has been squashed, ending polling loop.");
+          break;
+        }
+        if (attempt < maxAttempts) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        } else {
+          console.log(`Reached maximum attempts (${maxAttempts}) without channel being squashed.`);
+        }
+      }
+
+
+      // }
+
+      // const keys = integrationTestEnv.mkKeys(test);
+      // console.debug("Derived keys and address for integration test:");
+      // console.debug("Address Bech32:", keys.addressBech32);
+      // console.debug("Signing key (hex):", HexString.fromUint8Array(keys.sKey.key));
+      // console.debug("Verification key (hex):", HexString.fromUint8Array(keys.vKey.key));
+
+      // console.log("Channel opened with tag:", HexString.fromUint8Array(channel.l1.channelTag));
+      // await consumer.squashChannel(channel.l1.channelTag).then((result) => {
+      //   result.match(
+      //     (res) => {
+      //       console.debug("Squash success raw result:", res);
+      //       console.debug("Squash success JSON-encoded:", stringify(res));
+      //     },
+      //     (err) => {
+      //       console.error("Squash error type:", err.type);
+      //       if (err.type === "HttpError") {
+      //         console.error("HTTP status:", err.status, err.statusText);
+      //         console.error("Decoded error body:", err.body);
+      //       } else {
+      //         console.error("Non-HTTP error:", (err as any).message);
+      //       }
+      //       console.debug("Squash error JSON-encoded:", stringify(err as any));
+      //     }
+      //   );
+      // });
 
       // console.debug("Ed25519VerificationKey bytes derived from signing key:", HexString.fromUint8Array(keys.sKey.toVerificationKey().key));
       // const signedTransaction = expectOk(transaction.sign(keys.privateKey));
@@ -173,12 +227,6 @@ describe("End-to-end integration: open channel and poll adaptor squash", () => {
       // const delayMs = 3000;
 
       // const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-      // const squashBody = SquashBody.empty; // Assuming empty body for squash, adjust if needed
-      // const squash = Squash.fromBodySigning(
-      //   sKey,
-      //   channelTag,
-      //   squashBody,
-      // );
 
       // for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       //   console.log(`Squash attempt #${attempt}`);
@@ -241,6 +289,6 @@ describe("End-to-end integration: open channel and poll adaptor squash", () => {
       //   }
       // }
     },
-    200000
+    600000
   );
 });

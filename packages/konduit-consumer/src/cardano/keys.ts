@@ -1,6 +1,7 @@
 // Helpers around codecs and codecs for some common types
 import * as hexString from '@konduit/codec/hexString';
-import { Ed25519RootPrivateKey, Ed25519SigningKey, Ed25519VerificationKey, Ed25519Signature, type Ed25519PublicKey } from '@konduit/cardano-keys';
+import { Ed25519RootPrivateKey, Ed25519SigningKey, Ed25519VerificationKey } from '@konduit/cardano-keys';
+import type { Ed25519Signature, Ed25519PublicKey } from '@konduit/cardano-keys';
 import type { Ed25519XPrv } from '@konduit/cardano-keys/bip32Ed25519';
 import type { JsonCodec, JsonError } from '@konduit/codec/json/codecs';
 import * as uint8ArrayCodec from '@konduit/codec/uint8Array';
@@ -56,11 +57,11 @@ export const json2Ed25519RootPrivateKeyCodec = codec.rmap(json2Ed25519XPrvCodec,
 
 // Non-hierarchical keys
 
-export const json2Ed25519SecretCodec = uint8ArrayCodec.mkTaggedHexStringCodec<Ed25519Secret>(
+export const json2Ed25519SecretCodec = uint8ArrayCodec.mkTaggedJsonCodec<Ed25519Secret>(
   "Ed25519Secret",
   (arr) => arr.length === 32,
 );
 
-export const json2Ed25519PrivateKeyCodec = codec.rmap(json2Ed25519SecretCodec, (key) => new Ed25519PrivateKey(key), (skey) => skey.secret);
+export const json2Ed25519PrivateKeyCodec: JsonCodec<Ed25519PrivateKey> = codec.rmap(json2Ed25519SecretCodec, (key) => new Ed25519PrivateKey(key), (skey) => skey.secret);
 
 

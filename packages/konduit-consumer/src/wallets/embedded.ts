@@ -10,11 +10,11 @@ import { generateMnemonic, Ed25519PrivateKey } from "@konduit/cardano-keys";
 import { NonNegativeInt } from "@konduit/codec/integers/smallish";
 import { Milliseconds, type Seconds } from "../time/duration";
 import { json2Ed25519PrivateKeyCodec } from "../cardano/keys";
-import { Connector, Transaction } from "../cardano/connector";
+import { Connector, type Transaction } from "../cardano/connector";
 import { hoistToResultAsync, resultAsyncToPromise } from "../neverthrow";
 import { rmap, mkIdentityCodec } from "@konduit/codec";
 import { json2ValidDateCodec, ValidDate } from "../time/absolute";
-import { JsonAsyncCodec } from "@konduit/codec/json/async";
+import type { JsonAsyncCodec } from "@konduit/codec/json/async";
 import { mkBlockfrostClient } from "../adaptorClient";
 
 type WalletEvent<T> = CustomEvent<T>;
@@ -150,8 +150,6 @@ export const json2BalanceInfoCodec: JsonCodec<BalanceInfo> = rmap(
 /* A simple, single-address, no staking wallet implementation */
 export class Wallet<WalletBackend extends WalletBackendBase> {
   public readonly networkMagicNumber: NetworkMagicNumber;
-  // A memory leak debugging helper
-  public readonly subscriptionCounter: number;
   // This is publicly accessible so we can serialise the state.
   public readonly privateKey: Ed25519PrivateKey;
 
@@ -189,7 +187,7 @@ export class Wallet<WalletBackend extends WalletBackendBase> {
     }
     this._walletBackend = newBackend;
     this.emit("backend-changed", { oldBackend: this._walletBackend, newBackend });
-    return ok(undefined);
+    return ok(null);
   }
 
   public get walletBackend(): WalletBackend {
@@ -271,7 +269,7 @@ export class Wallet<WalletBackend extends WalletBackendBase> {
   // (Re)start polling
   public async startPolling(interval: Seconds) {
     let intervalMs = Milliseconds.fromSeconds(interval);
-    this.poll();
+    await this.poll();
     if (this.pollingTimer) {
       if(this.pollingInterval !== intervalMs) {
         clearInterval(this.pollingTimer);
@@ -315,7 +313,7 @@ export class Wallet<WalletBackend extends WalletBackendBase> {
 const mkWalletAsyncCodec = <Backend extends WalletBackendBase>(
   json2BackendAsyncCodec: JsonAsyncCodec<Backend>,
 ): JsonAsyncCodec<Wallet<Backend>> => {
-  const json2WalletStateRecordCodec = jsonCodecs.objectOf({
+  const json2WalletStateRecordCodec:JsonCodec<{ balance_info: BalanceInfo | null, private_key: Ed25519PrivateKey }> = jsonCodecs.objectOf({
     balance_info: jsonCodecs.nullable(json2BalanceInfoCodec),
     private_key: json2Ed25519PrivateKeyCodec,
   });
@@ -325,7 +323,7 @@ const mkWalletAsyncCodec = <Backend extends WalletBackendBase>(
       state: asyncCodec.fromSync(json2WalletStateRecordCodec),
     }),
     async (r) => {
-      return new Wallet(r.state.private_key, r.backend, r.state.balance_info)
+      return new Wallet(r.state.private_key, r.backend, r.state.balance_info || undefined)
     },
     (wallet) => {
       return {
@@ -347,7 +345,7 @@ export namespace CardanoConnectorWallet {
     readonly connector: Connector;
   };
 
-  const mkWalletBackend = (connector: Connector): WalletBackend => {
+  export const mkWalletBackend = (connector: Connector): WalletBackend => {
     return {
       connector,
       getBalance: async (vKey: Ed25519VerificationKey) => connector.balance(vKey),
@@ -410,7 +408,7 @@ export namespace CardanoConnectorWallet {
     }));
   }
 
-  export const json2WalletAsyncCodec: JsonAsyncCodec<Wallet<WalletBackend>> = mkWalletAsyncCodec(asyncCodec.pipe(
+  export const json2WalletBackendAsyncCodec: JsonAsyncCodec<WalletBackend> = (asyncCodec.pipe(
     asyncCodec.fromSync(jsonCodecs.objectOf({
       backend_url: jsonCodecs.json2StringCodec,
       type: jsonCodecs.constant("CardanoConnectorWallet.WalletBackend"),
@@ -426,6 +424,9 @@ export namespace CardanoConnectorWallet {
       }
     }
   ));
+
+  export const json2WalletAsyncCodec: JsonAsyncCodec<Wallet<WalletBackend>> =
+    mkWalletAsyncCodec(json2WalletBackendAsyncCodec);
 }
 
 export type BlockfrostWallet = Wallet<BlockfrostWallet.WalletBackend>;
@@ -479,7 +480,7 @@ export namespace BlockfrostWallet {
     );
   }
 
-  export const json2WalletAsyncCodec: JsonAsyncCodec<Wallet<WalletBackend>> = mkWalletAsyncCodec(asyncCodec.pipe(
+  export const json2WalletBackendAsyncCodec: JsonAsyncCodec<WalletBackend> = (asyncCodec.pipe(
     asyncCodec.fromSync(jsonCodecs.objectOf({
       project_id: jsonCodecs.json2StringCodec,
       type: jsonCodecs.constant("BlockfrostWallet.WalletBackend"),
@@ -495,19 +496,46 @@ export namespace BlockfrostWallet {
       }
     }
   ));
+
+  export const json2WalletAsyncCodec: JsonAsyncCodec<Wallet<WalletBackend>>
+    = mkWalletAsyncCodec(json2WalletBackendAsyncCodec);
+}
+
+export type AnyWalletBackend =
+  | CardanoConnectorWallet.WalletBackend
+  | BlockfrostWallet.WalletBackend;
+
+export const isCardanoConnectorBackend = (backend: AnyWalletBackend): backend is CardanoConnectorWallet.WalletBackend => {
+  return "connector" in backend;
+}
+
+export const isBlockfrostBackend = (backend: AnyWalletBackend): backend is BlockfrostWallet.WalletBackend => {
+  return "projectId" in backend;
 }
 
 export type AnyWallet =
   | CardanoConnectorWallet
-  | BlockfrostWallet;
+  | BlockfrostWallet
 
 export const isBlockfrostWallet = (wallet: AnyWallet): wallet is BlockfrostWallet => {
-  return "projectId" in wallet.walletBackend;
+  return isBlockfrostBackend(wallet.walletBackend);
 }
 
 export const isCardanoConnectorWallet = (wallet: AnyWallet): wallet is CardanoConnectorWallet => {
-  return "connector" in wallet.walletBackend;
+  return isCardanoConnectorBackend(wallet.walletBackend);
 }
+export const json2AnyWalletBackendAsyncCodec: JsonAsyncCodec<AnyWalletBackend> = asyncCodec.altCodec(
+  CardanoConnectorWallet.json2WalletBackendAsyncCodec,
+  BlockfrostWallet.json2WalletBackendAsyncCodec,
+  (serConnector, serBlockfrost) => (backend: AnyWalletBackend) => {
+    if (isCardanoConnectorBackend(backend)) {
+      return serConnector(backend);
+    }
+    return serBlockfrost(backend);
+  },
+  (...errors: JsonError[]): JsonError => errors
+);
+
 
 export const json2AnyWalletAsyncCodec: JsonAsyncCodec<AnyWallet> = asyncCodec.altCodec(
   CardanoConnectorWallet.json2WalletAsyncCodec,
@@ -515,11 +543,8 @@ export const json2AnyWalletAsyncCodec: JsonAsyncCodec<AnyWallet> = asyncCodec.al
   (serConnector, serBlockfrost) => (wallet: AnyWallet) => {
     if (isCardanoConnectorWallet(wallet)) {
       return serConnector(wallet);
-    } else if (isBlockfrostWallet(wallet)) {
-      return serBlockfrost(wallet);
-    } else {
-      throw new Error("Unknown wallet type");
-    }
+   }
+    return serBlockfrost(wallet);
   },
   (...errors: JsonError[]): JsonError => errors
 );

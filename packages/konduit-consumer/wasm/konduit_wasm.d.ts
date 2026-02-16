@@ -8,7 +8,7 @@ export class CardanoConnector {
     balance(verification_key: Uint8Array): Promise<bigint>;
     static new(base_url: string, http_timeout_ms?: bigint | null): Promise<CardanoConnector>;
     submit(transaction: TransactionReadyForSigning): Promise<Uint8Array>;
-    readonly network_magic_number: bigint;
+    readonly network: Network;
 }
 
 /**
@@ -27,6 +27,12 @@ export enum LogLevel {
     Info = 2,
     Warn = 3,
     Error = 4,
+}
+
+export enum Network {
+    Mainnet = 0,
+    Preview = 1,
+    Preprod = 2,
 }
 
 /**
@@ -147,6 +153,14 @@ export class TransactionReadyForSigning {
 export function close(connector: CardanoConnector, tag: Uint8Array, consumer: Uint8Array): Promise<TransactionReadyForSigning>;
 
 export function enableLogs(level: LogLevel): void;
+
+export function networkAsMagic(network: Network): bigint;
+
+export function networkIsMainnet(network: Network): boolean;
+
+export function networkIsTestnet(network: Network): boolean;
+
+export function networkToString(network: Network): string;
 
 export function open(connector: CardanoConnector, tag: Uint8Array, consumer: Uint8Array, adaptor: Uint8Array, close_period: bigint, amount: bigint): Promise<TransactionReadyForSigning>;
 

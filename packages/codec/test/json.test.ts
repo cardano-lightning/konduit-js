@@ -144,11 +144,11 @@ describe('JSON Codecs', () => {
       expect(typeof errorJson).toBe("object");
       // The error should be something like:
       // {"address":{"street":"Expected string"}}
-      if (typeof errorJson === "object" && errorJson !== null) {
-        const addressErrors = errorJson["address"];
+      if (typeof errorJson === "object" && errorJson !== null && "address" in errorJson) {
+        const addressErrors = errorJson.address;
         expect(typeof addressErrors).toBe("object");
-        if (typeof addressErrors === "object" && addressErrors !== null) {
-          const streetError = addressErrors["street"];
+        if (typeof addressErrors === "object" && addressErrors !== null && "street" in addressErrors) {
+          const streetError = addressErrors.street;
           expect(typeof streetError).toBe("string");
         }
       }
@@ -323,10 +323,10 @@ describe('JSON Codecs', () => {
         expect(typeof errorJson).toBe("object");
         // The error should be something like:
         //{"name":"Expected string","nickname":["Expected null","Expected string"],"age":"Expected bigint (for number)"}
-        if (typeof errorJson === "object" && errorJson !== null) {
-          const nameError = errorJson["name"];
-          const nicknameError = errorJson["nickname"];
-          const ageError = errorJson["age"];
+        if (typeof errorJson === "object" && errorJson !== null && "name" in errorJson && "nickname" in errorJson && "age" in errorJson) {
+          const nameError = errorJson.name;
+          const nicknameError = errorJson.nickname;
+          const ageError = errorJson.age;
           expect(typeof nameError).toBe("string"); // no error for name
           // Alt codec errors are arrays
           expect(Array.isArray(nicknameError)).toBe(true); // error array for nickname

@@ -2,7 +2,7 @@ import type { Tagged } from "type-fest";
 import { Ed25519VerificationKey } from "@konduit/cardano-keys";
 import { randomBytes } from "@noble/hashes/utils.js";
 import { mkTaggedHexStringCodec, mkTaggedJsonCodec } from "@konduit/codec/uint8Array";
-import { JsonCodec } from "@konduit/codec/json/codecs";
+import type { JsonCodec } from "@konduit/codec/json/codecs";
 
 export type ChannelTag = Tagged<Uint8Array, "ChannelTag">;
 export namespace ChannelTag {

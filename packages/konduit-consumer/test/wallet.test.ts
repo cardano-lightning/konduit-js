@@ -5,11 +5,11 @@ import { Wallet, type WalletBackendBase } from '../src/wallets/embedded';
 import { Lovelace, NetworkMagicNumber, type TxHash} from '../src/cardano';
 import { Ed25519PublicKey, generateMnemonic, Ed25519VerificationKey } from '@konduit/cardano-keys';
 import { Milliseconds, Seconds } from '../src/time/duration';
-import { JsonError } from '@konduit/codec/json/codecs';
+import type { JsonError } from '@konduit/codec/json/codecs';
 import { PositiveBigInt } from '@konduit/codec/integers/big';
 import { HexString } from '@konduit/codec/hexString';
 import { expectOk, expectToBe } from "./assertions";
-import { Transaction } from "../src/cardano/connector";
+import type { Transaction } from "../src/cardano/connector";
 
 type Ed25519PublicKeyHex = Tagged<HexString, "Ed25519PublicKeyHex">;
 namespace Ed25519PublicKeyHex {

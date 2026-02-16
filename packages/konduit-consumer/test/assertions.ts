@@ -1,6 +1,6 @@
 import { Result } from 'neverthrow';
 import { isJson, onString, stringify } from '@konduit/codec/json';
-import { JsonError } from '@konduit/codec/json/codecs';
+import type { JsonError } from '@konduit/codec/json/codecs';
 import { expect } from 'vitest';
 
 export const expectOk = <T, Err>(result: Result<T, Err>, msgTemplate?: string): T => {

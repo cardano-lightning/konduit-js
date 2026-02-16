@@ -3,7 +3,7 @@ import type { HexString } from "./hexString";
 import type { JsonCodec, JsonError } from "./json/codecs";
 import { lmap, pipe, rmap, type Codec } from "./codec";
 import { err, ok, Result } from "neverthrow";
-import { Cbor } from "./cbor/core";
+import type { Cbor } from "./cbor/core";
 import { cbor2ByteStringCodec } from "./cbor/codecs/sync";
 
 // Uint8Array to Tagged Uint8Array Codec with validation. The tag is optional and only used for error messages.

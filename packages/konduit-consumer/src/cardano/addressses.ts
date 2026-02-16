@@ -11,7 +11,7 @@ import { json2StringCodec, type JsonError, type JsonCodec } from "@konduit/codec
 import { blake2b } from "@noble/hashes/blake2.js";
 import { stringify, type Json } from "@konduit/codec/json";
 import { PositiveBigInt } from "@konduit/codec/integers/big";
-import { Iso } from "@konduit/codec";
+import type { Iso } from "@konduit/codec";
 
 // Credential hash length
 const HASH_LEN = 28;

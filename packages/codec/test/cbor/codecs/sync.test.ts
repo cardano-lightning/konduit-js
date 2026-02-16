@@ -16,7 +16,7 @@ import {
   serialiseCbor,
   tupleOf,
 } from "../../../src/cbor/codecs/sync";
-import { Cbor, Indefinite, isIndefiniteArray, isIndefiniteMap } from "../../../src/cbor/core";
+import { type Cbor, Indefinite, isIndefiniteArray, isIndefiniteMap } from "../../../src/cbor/core";
 import { unwrapOk, unwrapErr, expectOk } from "../../assertions";
 import { HexString } from "../../../src/hexString";
 
@@ -163,10 +163,11 @@ describe("CBOR array codec", () => {
 
 describe("tupleOf codec", () => {
   it("deserialises and serialises a simple fixed-length tuple", () => {
+    // This should result in a codec for `[int,string, boolean, boolean]`
     const codec = tupleOf(definiteLength, cbor2IntCodec, cbor2StringCodec, cbor2BooleanCodec);
 
     const cborTuple: Cbor = [1n, "hi", true];
-    const decoded = unwrapOk(codec.deserialise(cborTuple));
+    const decoded: [bigint, string, boolean] = unwrapOk(codec.deserialise(cborTuple));
     expect(decoded).toEqual([1n, "hi", true]);
 
     const reEncoded = codec.serialise(decoded);

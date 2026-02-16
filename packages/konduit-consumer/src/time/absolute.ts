@@ -1,8 +1,8 @@
 import type { Tagged } from "type-fest";
 import { err, ok, type Result } from "neverthrow";
 import type { Int, NonNegativeInt } from "@konduit/codec/integers/smallish";
-import { Codec, compose } from "@konduit/codec";
-import { json2StringCodec, type JsonCodec, type JsonError } from "@konduit/codec/json/codecs";
+import { type Codec, compose } from "@konduit/codec";
+import { json2BigIntCodec, json2StringCodec, type JsonCodec, type JsonError } from "@konduit/codec/json/codecs";
 import { bigInt2NonNegativeIntCodec } from "@konduit/codec/integers/smallish";
 import * as codec from "@konduit/codec";
 
@@ -51,7 +51,7 @@ export const bigInt2POSIXMillisecondsCodec: Codec<bigint, POSIXMilliseconds, Jso
   deserialise: (n: NonNegativeInt): Result<POSIXMilliseconds, JsonError> => POSIXMilliseconds.fromNonNegativeInt(n),
   serialise: (milliseconds: POSIXMilliseconds) => milliseconds
 });
-
+export const json2POSIXMillisecondsCodec = codec.pipe(json2BigIntCodec, bigInt2POSIXMillisecondsCodec);
 
 export type POSIXSeconds = Tagged<NonNegativeInt, "POSIXSeconds">;
 export namespace POSIXSeconds {

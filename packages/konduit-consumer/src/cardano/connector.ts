@@ -8,13 +8,15 @@ import { type Ed25519VerificationKey } from "@konduit/cardano-keys";
 import { err, ok, Result } from "neverthrow";
 import { Lovelace, NetworkMagicNumber, TxCborBytes, TxHash } from "../cardano";
 import { stringifyAsyncThrowable } from "@konduit/codec/neverthrow";
-import type { JsonError } from "@konduit/codec/json/codecs";
+import { json2StringCodec, type JsonError } from "@konduit/codec/json/codecs";
 import { PositiveBigInt } from "@konduit/codec/integers/big";
 import type { Milliseconds } from "../time/duration";
 import { ChannelTag } from "../channel/core";
-import { ConsumerEd25519VerificationKey } from "../channel/l1Channel";
-import { AdaptorEd25519VerificationKey } from "../adaptorClient/adaptorInfo";
-import { JsonAsyncCodec } from "@konduit/codec/json/async";
+import type { ConsumerEd25519VerificationKey } from "../channel/l1Channel";
+import type { AdaptorEd25519VerificationKey } from "../adaptorClient/adaptorInfo";
+import type { JsonAsyncCodec } from "@konduit/codec/json/async";
+import { networkAsMagic } from "../../wasm/konduit_wasm.js";
+import * as asyncCodec from "@konduit/codec/async";
 
 export const enableLogs = (level: wasm.LogLevel): void => {
   wasm.enableLogs(level);
@@ -22,6 +24,7 @@ export const enableLogs = (level: wasm.LogLevel): void => {
 
 // A tiny wrapper around wasm data structure which does the safe type casting
 export type Transaction = {
+  prettyPrint: () => string;
   toCbor: () => TxCborBytes;
   txHash: () => TxHash;
   // This MUTATES THE transaction.
@@ -59,7 +62,7 @@ export type Transaction = {
 // // transaction = [transaction_body, transaction_witness_set, bool, auxiliary_data/ nil]/
 // // export type TransactionRecord = [
 // //   TxBodyCborBytes, // transaction_body
-// //   TxWitnessSets, // transaction_witness_set
+// //   TxWitnessSets, // transaction_witness_setpretty_print(),
 // //   boolean, // is_valid
 // //   Cbor, //
 // // ];
@@ -67,6 +70,7 @@ export type Transaction = {
 
 export const mkTransaction = (txReadyForSigning: wasm.TransactionReadyForSigning): Transaction => {
   return {
+    prettyPrint: () => txReadyForSigning.toString(),
     toCbor: () => txReadyForSigning.toCbor() as TxCborBytes,
     txHash: () => {
       let txHashBytes = txReadyForSigning.getId();
@@ -103,18 +107,15 @@ export class Connector {
 
   static async new(backendUrl: string, httpTimeout?: Milliseconds): Promise<Result<Connector, string>> {
     const timeout = httpTimeout != null? BigInt(httpTimeout) : null;
-    console.debug("CALLING WASM");
     const possibleConnector = await stringifyAsyncThrowable(() => wasm.CardanoConnector.new(backendUrl, timeout));
-    console.debug("CREATED");
     return possibleConnector.andThen((connector: wasm.CardanoConnector) => {
-      return PositiveBigInt.fromBigInt(connector.network_magic_number).match(
+      const n = networkAsMagic(connector.network);
+      return PositiveBigInt.fromBigInt(n).match(
         (positive) => {
           let networkMagicNumber = NetworkMagicNumber.fromPositiveBigInt(positive);
           return ok(new Connector(connector, backendUrl, networkMagicNumber));
         },
-        () => {
-          return err(`Invalid network magic number: ${connector.network_magic_number}`);
-        }
+        () => err(`Invalid network magic number: ${n}`)
       );
     });
   }
@@ -142,9 +143,9 @@ export class Connector {
       );
       return ok(mkTransaction(tx));
     } catch (error) {
-      return err(error);
+      return err(`Failed to build open transaction: ${error instanceof Error ? error.message : String(error)}`);
     }
-  };
+ };
 
   async buildCloseTx(
     tag: ChannelTag,
@@ -176,7 +177,9 @@ export class Connector {
     });
   }
 }
-export const json2ConnectorAsyncCodec: JsonAsyncCodec<Connector> = {
-  deserialise: async (backendUrl: string) => Connector.new(backendUrl),
-  serialise: (connector: Connector) => connector.backendUrl,
-};
+export const json2ConnectorAsyncCodec: JsonAsyncCodec<Connector> = asyncCodec.pipe(
+  asyncCodec.fromSync(json2StringCodec), {
+    deserialise: async (backendUrl: string) => await Connector.new(backendUrl),
+    serialise: (connector: Connector) => connector.backendUrl,
+  }
+);

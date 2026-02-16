@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import type { Tagged } from 'type-fest';
 import * as uint8Array from '../src/uint8Array';
-import { Json, parse, stringify } from '../src/json';
-import { JsonCodec } from '../src/json/codecs';
+import { type Json, parse, stringify } from '../src/json';
+import type { JsonCodec } from '../src/json/codecs';
 import { unwrapErr, unwrapErrWithSubstring, unwrapOk } from './assertions';
 
 // SHA-256 produces 32 bytes (256 bits / 8)

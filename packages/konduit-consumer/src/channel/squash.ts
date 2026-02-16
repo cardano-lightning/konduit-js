@@ -1,15 +1,19 @@
 import type { Tagged } from "type-fest";
 import type { Result } from "neverthrow";
 import { ok, err } from "neverthrow";
-import { bigInt2LovelaceCodec, cbor2Ed25519SignatureCodec, Lovelace } from "../cardano";
+import { bigInt2LovelaceCodec, cbor2Ed25519SignatureCodec, json2Ed25519SignatureCodec, json2LovelaceCodec, Lovelace } from "../cardano";
 import { bigInt2NonNegativeBigIntCodec, NonNegativeBigInt } from "@konduit/codec/integers/big";
 import * as cbor from "@konduit/codec/cbor/codecs/sync";
 import * as codec from "@konduit/codec";
-import { bigInt2POSIXMillisecondsCodec, POSIXMilliseconds } from "../time/absolute";
-import { json2BigIntCodec, JsonError } from "@konduit/codec/json/codecs";
+import { bigInt2POSIXMillisecondsCodec, json2POSIXMillisecondsCodec, POSIXMilliseconds } from "../time/absolute";
+import { json2BigIntCodec } from "@konduit/codec/json/codecs";
+import type { JsonCodec, JsonError } from "@konduit/codec/json/codecs";
+import * as jsonCodecs from "@konduit/codec/json/codecs";
 import type { Ed25519Signature, Ed25519SigningKey, Ed25519VerificationKey } from "@konduit/cardano-keys";
 import { ChannelTag } from "./core";
 import * as uint8Array from "@konduit/codec/uint8Array";
+import type { ConsumerEd25519VerificationKey } from "./l1Channel";
+import type { CborCodec } from "@konduit/codec/cbor/codecs/sync";
 
 export type Index = Tagged<NonNegativeBigInt, "Index">;
 export namespace Index {
@@ -20,11 +24,11 @@ export namespace Index {
 
 export const bigInt2IndexCodec: codec.Codec<bigint, Index, JsonError> = codec.rmap(
   bigInt2NonNegativeBigIntCodec,
-  (nonNegative) => nonNegative as Index,
-  (index: Index): bigint => index as NonNegativeBigInt,
+  (nonNegative: NonNegativeBigInt) => nonNegative as Index,
+  (index: Index): NonNegativeBigInt => index as NonNegativeBigInt,
 );
-export const json2IndexCodec = codec.pipe(json2BigIntCodec, bigInt2IndexCodec);
-export const cbor2IndexCodec = codec.pipe(cbor.cbor2IntCodec, bigInt2IndexCodec);
+export const json2IndexCodec: JsonCodec<Index> = codec.pipe(json2BigIntCodec, bigInt2IndexCodec);
+export const cbor2IndexCodec: CborCodec<Index> = codec.pipe(cbor.cbor2IntCodec, bigInt2IndexCodec);
 
 export const HTLC_LOCK_LEN = 32;
 export type HtlcLock = Tagged<Uint8Array, "HtlcLock">;
@@ -38,8 +42,8 @@ export namespace HtlcLock {
 }
 const validateLength = (arr: Uint8Array): boolean => arr.length === HTLC_LOCK_LEN;
 
-export const json2HtlcLockCodec = uint8Array.mkTaggedJsonCodec("HtlcLock", validateLength);
-export const cbor2HtlcLockCodec = uint8Array.mkTaggedCborCodec("HtlcLock", validateLength);
+export const json2HtlcLockCodec: JsonCodec<HtlcLock> = uint8Array.mkTaggedJsonCodec("HtlcLock", validateLength);
+export const cbor2HtlcLockCodec: CborCodec<HtlcLock> = uint8Array.mkTaggedCborCodec("HtlcLock", validateLength);
 
 // Extra invariants:
 // * `amount` is positive
@@ -50,60 +54,96 @@ type ChequeBodyComponents = {
   readonly lock: HtlcLock;
 };
 
-export type ChequeBody = Tagged<ChequeBodyComponents, "Cheque">;
+export type ChequeBody = Tagged<ChequeBodyComponents, "ChequeBody">;
 
 export namespace ChequeBody {
   export const create = (
-    index: Index,
     amount: Lovelace,
-    timeout: POSIXMilliseconds,
+    index: Index,
     lock: HtlcLock,
+    timeout: POSIXMilliseconds,
   ): Result<ChequeBody, string> => {
     if (amount < 0n) {
       return err("Amount must be non-negative");
     }
     return ok({
-      index,
       amount,
-      timeout,
+      index,
       lock,
+      timeout,
     } as ChequeBody);
   };
 
   export const areEqual = (a: ChequeBody, b: ChequeBody): boolean =>
-    a.index === b.index &&
     a.amount === b.amount &&
-    a.timeout === b.timeout &&
+    a.index === b.index &&
     a.lock.length === b.lock.length &&
+    a.timeout === b.timeout &&
     a.lock.every((value, i) => value === b.lock[i]);
 }
 
 export const cbor2ChequeBodyCodec = codec.pipe(
   cbor.tupleOf(
     cbor.indefiniteLength,
-    cbor2IndexCodec,
     codec.pipe(cbor.cbor2IntCodec, bigInt2LovelaceCodec),
+    cbor2IndexCodec,
+    cbor2HtlcLockCodec,
     codec.pipe(cbor.cbor2IntCodec, bigInt2POSIXMillisecondsCodec),
-  ),
-  {
+  ), {
     deserialise: ([
-      index,
       amount,
-      timeout,
+      index,
       lock,
-    ]: [Index, Lovelace, POSIXMilliseconds, HtlcLock]): Result<ChequeBody, string> => {
-      return ChequeBody.create(index, amount, timeout, lock);
+      timeout,
+    ]: [Lovelace, Index, HtlcLock, POSIXMilliseconds]): Result<ChequeBody, string> => {
+      return ChequeBody.create(amount, index, lock, timeout);
     },
-    serialise: (chequeBody: ChequeBody) => {
+    serialise: (chequeBody: ChequeBody): [Lovelace, Index, HtlcLock, POSIXMilliseconds] => {
       return [
-        chequeBody.index,
         chequeBody.amount,
-        chequeBody.timeout,
+        chequeBody.index,
         chequeBody.lock,
+        chequeBody.timeout,
       ];
     },
   },
 );
+
+export const json2ChequeBodyCodec: JsonCodec<ChequeBody> = codec.rmap(
+  jsonCodecs.objectOf({
+    amount: json2LovelaceCodec,
+    index: json2IndexCodec,
+    lock: json2HtlcLockCodec,
+    timeout: json2POSIXMillisecondsCodec,
+  }),
+  (obj) => obj as ChequeBody,
+  (chBody) => chBody
+)
+
+export type Cheque = Tagged<{ body: ChequeBody, signature: Ed25519Signature }, "Cheque">;
+export namespace Cheque {
+  export const fromSigning = (sKey: Ed25519SigningKey, body: ChequeBody): Cheque => {
+    const bodyBytes = cbor.serialiseCbor(cbor2ChequeBodyCodec.serialise(body));
+    const signature = sKey.sign(bodyBytes);
+    return {
+      body,
+      signature,
+    } as Cheque;
+  }
+
+  export const verify = (vKey: ConsumerEd25519VerificationKey, cheque: Cheque): boolean => {
+    const bodyBytes = cbor.serialiseCbor(cbor2ChequeBodyCodec.serialise(cheque.body));
+    return vKey.verify(bodyBytes, cheque.signature);
+  }
+}
+export const json2ChequeCodec = codec.rmap(
+  jsonCodecs.objectOf({
+    "body": json2ChequeBodyCodec,
+    "signature": json2Ed25519SignatureCodec,
+  }),
+  (obj) => obj as Cheque,
+  (cheque) => cheque
+)
 
 type SquashBodyComponents = {
   readonly index: Index;
@@ -118,9 +158,9 @@ type SquashBodyComponents = {
 export type SquashBody = Tagged<SquashBodyComponents, "Squash">;
 export namespace SquashBody {
   export const empty = {
-    index: 0n as Index,
     amount: Lovelace.zero,
     excluded: [] as Index[],
+    index: 0n as Index,
   } as SquashBody;
 
   export const create = (index: Index, amount: Lovelace, excluded: Index[]): Result<SquashBody, string> => {
@@ -181,15 +221,25 @@ export const cbor2SquashBodyCodec = codec.pipe(
     cbor.indefiniteLength,
     cbor2IndexCodec,
     codec.pipe(cbor.cbor2IntCodec, bigInt2LovelaceCodec),
-    cbor.arrayOf(cbor.indefiniteLength, cbor2IndexCodec)
+    cbor.arrayOf(cbor.definiteLength, cbor2IndexCodec)
   ), {
     deserialise: ([index, amount, excluded]: [Index, Lovelace, Index[]]): Result<SquashBody, string> => {
       return SquashBody.create(index, amount, excluded);
     },
-    serialise: (squashBody: SquashBody): [bigint, bigint, bigint[]] => {
+    serialise: (squashBody: SquashBody): [Index, Lovelace, Index[]] => {
       return [squashBody.index, squashBody.amount, squashBody.excluded];
     }
   }
+);
+
+export const json2SquashBodyCodec: JsonCodec<SquashBody> = codec.rmap(
+  jsonCodecs.objectOf({
+    "amount": json2LovelaceCodec,
+    "index": json2IndexCodec,
+    "excluded": jsonCodecs.arrayOf(json2IndexCodec),
+  }),
+  (obj) => obj as SquashBody,
+  (squashBody) => squashBody
 );
 
 export type SquashComponents = {
@@ -198,9 +248,9 @@ export type SquashComponents = {
 };
 
 export type Squash = Tagged<SquashComponents, "Squash">;
-export type SquashSigningData = Tagged<Uint8Array, "SquashSigningData">;
-
 export namespace Squash {
+  export type SquashSigningData = Tagged<Uint8Array, "SquashSigningData">;
+
   export const create = (body: SquashBody, signature: Ed25519Signature): Squash => ({
     body,
     signature,
@@ -232,4 +282,13 @@ export const cbor2SquashCodec = codec.rmap(
   ),
   ([body, signature]: [SquashBody, Ed25519Signature]) => Squash.create(body, signature),
   (squash: Squash): [SquashBody, Ed25519Signature] => [squash.body, squash.signature],
+);
+
+export const json2SquashCodec: JsonCodec<Squash> = codec.rmap(
+  jsonCodecs.objectOf({
+    "body": json2SquashBodyCodec,
+    "signature": json2Ed25519SignatureCodec,
+  }),
+  (obj) => obj as Squash,
+  (squash) => squash
 );
