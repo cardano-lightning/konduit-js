@@ -1,5 +1,5 @@
 import { bech32, utf8 } from "@scure/base";
-import { SHORT_LOOKUP, type Network, type Short } from "./network";
+import { SHORT_LOOKUP, type Network, type NetworkShort } from "./network";
 import { convert, type WordParser } from "./words";
 import * as uint8Array from "./uint8Array";
 import { recoverPubkey } from "./secp";
@@ -310,7 +310,7 @@ export function parsePrefix(prefix: string): ParseResult<{ network: Network; amo
   prefix = prefix.slice(2);
   const digitAt = prefix.search(/\d/);
   const short = digitAt < 0 ? prefix : prefix.slice(0, digitAt);
-  const network = SHORT_LOOKUP[short as Short];
+  const network = SHORT_LOOKUP[short as NetworkShort];
   if (typeof network === "undefined")
     return err({
       type: "UnknownNetwork",

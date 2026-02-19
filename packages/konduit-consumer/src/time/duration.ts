@@ -37,6 +37,10 @@ export namespace Milliseconds {
         return Milliseconds.fromSeconds(Seconds.fromMinutes(Minutes.fromHours(Hours.fromDays(Days.fromWeeks(duration.value)))));
     }
   }
+  // Please use these comparison functions instead of direct comparison operators to avoid mistakes with unit conversions.
+  export const isEqualTo = (a: Milliseconds, b: Milliseconds): boolean => a === b;
+  export const isGreaterThan = (a: Milliseconds, b: Milliseconds): boolean => a > b;
+  export const isLessThan = (a: Milliseconds, b: Milliseconds): boolean => a < b;
 }
 export const json2MillisecondsCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Milliseconds.fromNonNegativeInt(n), (ms) => ms);
 

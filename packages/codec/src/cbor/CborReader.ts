@@ -5,6 +5,7 @@ import type { Result } from "neverthrow";
 import { ok, err } from "neverthrow";
 import type { JsonError } from '../json/codecs';
 import { unsafeUnwrap } from '../neverthrow';
+import * as u8a from "../uint8Array";
 
 const _okNull = ok(null);
 
@@ -225,19 +226,19 @@ export class CborReader {
       switch (header.getAdditionalInfo()) {
         case CborAdditionalInfo.Additional16BitData: {
           return this.#ensureReadCapacity(3).andThen(() => {
-            let result = float16.toNumber(remainingBytes.slice(1) as Float16);
+            const result = float16.toNumber(remainingBytes.slice(1) as Float16);
             return this.#advanceBufferAndDataItemCounters(3).map(() => result);
           });
         }
         case CborAdditionalInfo.Additional32BitData: {
           return this.#ensureReadCapacity(5).andThen(() => {
-            let result = Buffer.from(remainingBytes).readFloatBE(1);
+            const result = u8a.readFloat32BE(remainingBytes, 1);
             return this.#advanceBufferAndDataItemCounters(5).map(() => result);
           });
         }
         case CborAdditionalInfo.Additional64BitData: {
           return this.#ensureReadCapacity(9).andThen(() => {
-            let result = Buffer.from(remainingBytes).readDoubleBE(1);
+            const result = u8a.readFloat64BE(remainingBytes, 1);
             return this.#advanceBufferAndDataItemCounters(9).map(() => result);
           });
         }
@@ -385,20 +386,6 @@ export class CborReader {
           return this.#advanceBufferAndDataItemCounters(encodingLength).map(() => val);
         });
       }
-      // FIXME: This combo makes not sens
-      // #ensureReadCapacity(bytesToRead: number): Result<null, JsonError> {
-      //   if (this.#data.length - this.#offset < bytesToRead) {
-      //     return err(UNEXPECTED_END_OF_BUFFER_MSG);
-      //   }
-      //   return _okNull;
-      // }
-      //
-      // #advanceBuffer(length: number): Result<null, JsonError> {
-      //   if (this.#offset + length > this.#data.length) return err('Buffer offset out of bounds');
-      //   this.#offset += length;
-      //   this.#cachedState = CborReaderState.Undefined;
-      //   return _okNull;
-      // }
       const buffer = this.#getRemainingBytes();
       return CborReader.#peekDefiniteLength(header, buffer).andThen(result => {
         const { length, bytesRead } = result;
@@ -463,7 +450,7 @@ export class CborReader {
       if (header.getAdditionalInfo() === CborAdditionalInfo.IndefiniteLength) {
         return this.#readIndefiniteLengthByteStringConcatenated(CborMajorType.Utf8String)
             .andThen(({ val, encodingLength }) => {
-              return this.#advanceBufferAndDataItemCounters(encodingLength).map(() => Buffer.from(val).toString('utf8'));
+              return this.#advanceBufferAndDataItemCounters(encodingLength).map(() => u8a.fromUtf8(val));
             });
       }
 
@@ -471,7 +458,7 @@ export class CborReader {
       return CborReader.#peekDefiniteLength(header, buffer).andThen(({ length, bytesRead }) => {
         return this.#ensureReadCapacity(bytesRead + length)
           .andThen(() => this.#advanceBufferAndDataItemCounters(bytesRead + length))
-          .map(() => Buffer.from(buffer.slice(bytesRead, bytesRead + length)).toString('utf8'));
+          .map(() => u8a.fromUtf8(buffer.slice(bytesRead, bytesRead + length)));
       });
     });
   }
@@ -492,7 +479,7 @@ export class CborReader {
       return CborReader.#peekDefiniteLength(header, buffer).andThen(({ length, bytesRead }) => {
         return this.#ensureReadCapacity(bytesRead + length).andThen(() => {
           return this.#advanceBufferAndDataItemCounters(bytesRead + length)
-            .map(() => Buffer.from(buffer.slice(bytesRead, bytesRead + length)).toString('utf8'));
+            .map(() => u8a.fromUtf8(buffer.slice(bytesRead, bytesRead + length)));
         });
       });
     });
@@ -928,7 +915,7 @@ export class CborReader {
    */
   #readIndefiniteLengthByteStringConcatenated(type: CborMajorType): Result<{ val: Uint8Array; encodingLength: number; }, JsonError> {
     const data = this.#getRemainingBytes();
-    let concat = Buffer.from([]);
+    let concat: Uint8Array = new Uint8Array(0);
     let encodingLength = 0;
 
     let i = 1; // skip the indefinite-length initial byte
@@ -946,7 +933,8 @@ export class CborReader {
       const { length: chunkLength, bytesRead } = unsafeUnwrap(res);
       const payloadSize = bytesRead + Number(chunkLength);
 
-      concat = Buffer.concat([concat, data.slice(i + (payloadSize - chunkLength), i + payloadSize)]);
+      const chunk = data.slice(i + (payloadSize - chunkLength), i + payloadSize);
+      concat = u8a.concat([concat, chunk]);
 
       i += payloadSize;
 
@@ -955,7 +943,7 @@ export class CborReader {
       nextInitialByte = unsafeUnwrap(initialByteWrapped);
     }
     encodingLength = i + 1; // include the break byte
-    return ok({ encodingLength, val: new Uint8Array(concat) });
+    return ok({ encodingLength, val: concat });
   }
 
   /**
@@ -991,28 +979,22 @@ export class CborReader {
       }
       case CborAdditionalInfo.Additional16BitData: {
         return CborReader.ensureReadCapacityInArray(data, 3).map(() => {
-          const buffer = Buffer.from(data.slice(1));
-          const val = buffer.readUInt16BE();
+          const val = u8a.readUInt16BE(data, 1);
           return { bytesRead: 3, unsignedInt: BigInt(val) };
         });
       }
       case CborAdditionalInfo.Additional32BitData: {
         return CborReader.ensureReadCapacityInArray(data, 5).map(() => {
-          const buffer = Buffer.from(data.slice(1));
-          const val = buffer.readUInt32BE();
-
+          const val = u8a.readUInt32BE(data, 1);
           return { bytesRead: 5, unsignedInt: BigInt(val) };
         });
       }
       case CborAdditionalInfo.Additional64BitData: {
         return CborReader.ensureReadCapacityInArray(data, 9).map(() => {
-
-          const buffer = Buffer.from(data.slice(1, 9));
-
           let result = BigInt(0);
 
-          for (const element of buffer) {
-            result = (result << BigInt(8)) + BigInt(element);
+          for (let i = 1; i < 9; i++) {
+            result = (result << BigInt(8)) + BigInt(data[i]);
           }
 
           return { bytesRead: 9, unsignedInt: result };

@@ -1,10 +1,10 @@
 // defaults for encode; default timestamp is current time at call
 
 export type Network = "Bitcoin" | "Testnet" | "Regnet" | "Simnet";
-export type Short = "bc" | "tb" | "bcrt" | "sb";
+export type NetworkShort = "bc" | "tb" | "bcrt" | "sb";
 
 export type NetworkInfo = {
-  short: Short;
+  short: NetworkShort;
   keyByte: number;
   scriptByte: number;
   witnessVersions: number[];
@@ -37,11 +37,11 @@ export const NETWORKS: Record<Network, NetworkInfo> = {
   },
 };
 
-export const SHORT_LOOKUP: Record<Short, Network> = (() =>
+export const SHORT_LOOKUP: Record<NetworkShort, Network> = (() =>
   Object.entries(NETWORKS).reduce(
     (acc, [key, val]) => {
       acc[val.short] = key as Network;
       return acc;
     },
-    {} as Record<Short, Network>,
+    {} as Record<NetworkShort, Network>,
   ))();

@@ -25,8 +25,8 @@ describe('Async Codecs', () => {
   const stringToNumber: Codec<string, number, JsonError> = {
     deserialise: (input: string) => {
       const num = parseInt(input, 10);
-      if (!isNaN(num)) {
-        return err("Input is not a valid number");
+      if (isNaN(num)) {
+        return err(`Input is not a valid number string: ${input}`);
       }
       return ok(num);
     },
@@ -37,16 +37,15 @@ describe('Async Codecs', () => {
 
   describe('pipe', () => {
     it('should compose two async codecs', async () => {
-      const asyncStringCodec = fromSync(json2StringCodec);
-      const asyncStringToNumber = fromSync(stringToNumber);
-      const composed = pipe(asyncStringCodec, asyncStringToNumber);
+      const json2StringAsyncCodec = fromSync(json2StringCodec);
+      const string2NumberAsyncCodec = fromSync(stringToNumber);
+      const composed = pipe(json2StringAsyncCodec, string2NumberAsyncCodec);
 
-      const result = await composed.deserialise("123");
-      const decoded = unwrapOk(result);
+      const decoded = unwrapOk(await composed.deserialise('123'));
       expect(decoded).toBe(123);
 
       const encoded = composed.serialise(456);
-      expect(encoded).toBe("456");
+      expect(encoded).toBe('456');
     });
   });
 
@@ -55,9 +54,7 @@ describe('Async Codecs', () => {
       const asyncStringCodec = fromSync(json2StringCodec);
       const asyncStringToNumber = fromSync(stringToNumber);
       const composed = compose(asyncStringToNumber, asyncStringCodec);
-
-      const result = await composed.deserialise("789");
-      const decoded = unwrapOk(result);
+      const decoded = unwrapOk(await composed.deserialise('789'), "Deserialising '789' failed: ERROR_STR");
       expect(decoded).toBe(789);
     });
   });

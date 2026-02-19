@@ -59,6 +59,14 @@
     "./neverthrow": {
       "types": "./dist/neverthrow.d.ts",
       "default": "./dist/neverthrow.js"
+    },
+    "./urlquery": {
+      "types": "./dist/urlquery/index.d.ts",
+      "default": "./dist/urlquery/index.js"
+    },
+    "./urlquery/codecs/sync": {
+      "types": "./dist/urlquery/codecs/sync.d.ts",
+      "default": "./dist/urlquery/codecs/sync.js"
     }
   },
   "files": [

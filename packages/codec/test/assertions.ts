@@ -38,10 +38,11 @@ export const unwrapErr = <T, E>(result: Result<T, E>): E => {
   return unwrapErrWith(result, (_error) => true);
 }
 
-export const expectOk = <T, E>(result: Result<T, E>): Assertion<T> => {
+export const expectOk = <T, E>(result: Result<T, E>, label?: string): Assertion<T> => {
   return result.match(
     (value) => expect(value),
     (error) => {
+      if(label) throw new Error(`Expected Ok result, got Err (${label}): ${error}`)
       throw new Error(`Expected Ok result, got Err: ${error}`)
     }
   );

@@ -8,7 +8,7 @@ import type { Result } from "neverthrow";
 import { ok, err } from "neverthrow";
 import type { Codec } from "./codec";
 
-export type Float16 = Tagged<Uint8Array, 'Float16'>;
+export type Float16 = Tagged<Uint8Array<ArrayBuffer>, 'Float16'>;
 
 const LOSS_OF_PRECISION_MSG = 'Invalid conversion. Loss of precision';
 

@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@konduit/bln": "workspace:^",
     "@konduit/cardano-keys": "workspace:^",
     "@konduit/codec": "workspace:^",
     "@scure/base": "^2.0.0",
@@ -38,6 +39,10 @@
     "./adaptorClient": {
       "types": "./dist/adaptorClient.d.ts",
       "default": "./dist/adaptorClient.js"
+    },
+    "./channel": {
+      "types": "./dist/channel.d.ts",
+      "default": "./dist/channel.js"
     }
   },
   "files": [

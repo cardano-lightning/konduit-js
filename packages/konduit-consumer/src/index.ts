@@ -3,7 +3,7 @@ import * as jsonAsyncCodecs from "@konduit/codec/json/async";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import * as asyncCodec from "@konduit/codec/async";
 import { type Wallet as WalletBase, type AnyWallet, BlockfrostWallet, CardanoConnectorWallet, json2AnyWalletAsyncCodec, type WalletBackendBase } from "./wallets/embedded";
-import { err, Result } from "neverthrow";
+import { err, ok, Result } from "neverthrow";
 import { Ed25519PrivateKey, Mnemonic } from "@konduit/cardano-keys";
 import { AdaptorFullInfo, type ChSquashResponse } from "./adaptorClient";
 import { Channel, ChannelTag, type ConsumerEd25519VerificationKey, json2ChannelCodec, type OpenTx } from "./channel";
@@ -32,7 +32,8 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
   // The only role of the connector here is to build transactions.
   // We use wallet API for signing and submitting.
   public readonly txBuilder: Connector;
-  private _channels: Map<ChannelTag, Channel>;
+  // FIX: debugging
+  public _channels: Map<ChannelTag, Channel>;
 
   private _subscriptionCounter: number = 0;
   private readonly eventTarget = new EventTarget();
@@ -101,7 +102,7 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
     // Go over the channels, identify those which needs approval from the adaptor
     for(const channel of this._channels.values()) {
       if(!channel.isFullySquashed) {
-        const result = await channel.squash(this.sKey)
+        const result = await channel.doSquash(this.sKey)
         if(result == null) continue; // channel is already fully squashed, nothing to do
         result.map((result) => {
           if(result != null)
@@ -172,7 +173,7 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
       ).andThen((signedTx) => {
         const now = ValidDate.now();
         return hoistToResultAsync(this.wallet.submit(signedTx))
-          .map((txHash) => {
+          .andThen((txHash) => {
             const openTx = {
               adaptor: adaptorInfo.adaptorEd25519VerificationKey,
               adaptorApproved: false,
@@ -187,9 +188,13 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
               type: "OpenTx" as const,
             } as OpenTx;
             const channel = Channel.open(openTx, adaptorUrl);
-            this._channels.set(channelTag, channel);
+            try {
+              this._channels.set(channelTag, channel);
+            } catch(e) {
+              return err(`Panic: Failed to add channel to the map: ${e}`);
+            }
             this.emit("channel-opened", { channel });
-            return channel;
+            return ok(channel);
           });
       })
     );
@@ -201,7 +206,7 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
     const channel = this._channels.get(channelTag);
     if(channel == undefined)
       return err({ type: "not-found" as const, message: "Channel not found" });
-    return channel.squash(this.sKey);
+    return channel.doSquash(this.sKey);
   }
 }
 

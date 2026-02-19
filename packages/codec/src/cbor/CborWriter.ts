@@ -3,6 +3,8 @@
 import { CborInitialByte, CborMajorType, CborTag } from './core';
 import * as float16 from '../Float16';
 import { HexString } from '../hexString';
+import * as hexString from '../hexString';
+import * as u8a from '../uint8Array';
 
 // Constants
 const MINUS_ONE = BigInt(-1);
@@ -20,13 +22,13 @@ const INDEFINITE_LENGTH_MAP = 0xbf;
 const HALF = (7 << 5) | 25;
 const FLOAT = (7 << 5) | 26;
 const DOUBLE = (7 << 5) | 27;
-const BUF_NAN = Buffer.from('ffc00000', 'hex');
-const BUF_INF_NEG = Buffer.from('fff0000000000000', 'hex');
-const BUF_INF_POS = Buffer.from('7ff0000000000000', 'hex');
+const BUF_NAN = hexString.toUint8Array(HexString.unsafeFromString('ffc00000'));
+const BUF_INF_NEG = hexString.toUint8Array(HexString.unsafeFromString('fff0000000000000'));
+const BUF_INF_POS = hexString.toUint8Array(HexString.unsafeFromString('7ff0000000000000'));
 
 /** A simple writer for Concise Binary Object Representation (CBOR) encoded data. */
 export class CborWriter {
-  #buffer = Buffer.from([]);
+  #buffer: Uint8Array = new Uint8Array(0);
 
   /**
    * Writes the provided value as a tagged bignum encoding, as described in RFC7049 section 2.4.2.
@@ -45,10 +47,10 @@ export class CborWriter {
     if (str.length % 2) {
       str = `0${str}`;
     }
-    const buffer = Buffer.from(str, 'hex');
+    const buffer = hexString.toUint8Array(HexString.unsafeFromString(str));
     this.writeTag(tag);
     this.#writeTypeValue(CborMajorType.ByteString, buffer.length);
-    this.#buffer = Buffer.concat([this.#buffer, buffer]);
+    this.#buffer = u8a.concat([this.#buffer, buffer]);
 
     return this;
   }
@@ -71,7 +73,7 @@ export class CborWriter {
    */
   writeByteString(value: Uint8Array): CborWriter {
     this.#writeTypeValue(CborMajorType.ByteString, value.length);
-    this.#buffer = Buffer.concat([this.#buffer, value]);
+    this.#buffer = u8a.concat([this.#buffer, value]);
 
     return this;
   }
@@ -82,8 +84,9 @@ export class CborWriter {
    * @param value The string.
    */
   writeTextString(value: string): CborWriter {
-    this.#writeTypeValue(CborMajorType.Utf8String, Buffer.from(value, 'utf8').length);
-    this.#buffer = Buffer.concat([this.#buffer, Buffer.from(value, 'utf8')]);
+    const encoded = u8a.toUtf8(value);
+    this.#writeTypeValue(CborMajorType.Utf8String, encoded.length);
+    this.#buffer = u8a.concat([this.#buffer, encoded]);
 
     return this;
   }
@@ -94,7 +97,7 @@ export class CborWriter {
    * @param value The value to write.
    */
   writeEncodedValue(value: Uint8Array): CborWriter {
-    this.#buffer = Buffer.concat([this.#buffer, value]);
+    this.#buffer = u8a.concat([this.#buffer, value]);
 
     return this;
   }
@@ -191,18 +194,17 @@ export class CborWriter {
         this.writeEncodedValue(val);
       },
       (_err) => {
-        const b4 = Buffer.allocUnsafe(4);
+        const b4 = u8a.alloc(4);
+        u8a.writeFloat32BE(b4, value, 0);
 
-        b4.writeFloatBE(value, 0);
-
-        if (b4.readFloatBE(0) === value) {
+        if (u8a.readFloat32BE(b4, 0) === value) {
           this.#pushUInt8(FLOAT);
-          this.writeEncodedValue(b4.valueOf());
+          this.writeEncodedValue(b4);
         } else {
-          const b8 = Buffer.allocUnsafe(8);
-          b8.writeFloatBE(value, 0);
+          const b8 = u8a.alloc(8);
+          u8a.writeFloat64BE(b8, value, 0);
           this.#pushUInt8(DOUBLE);
-          this.writeEncodedValue(b8.valueOf());
+          this.writeEncodedValue(b8);
         }
       }
     );
@@ -246,7 +248,7 @@ export class CborWriter {
 
   /** Resets the writer to have no data. */
   reset() {
-    this.#buffer = Buffer.from([]);
+    this.#buffer = new Uint8Array(0);
   }
 
   /**
@@ -281,10 +283,9 @@ export class CborWriter {
    * @param {number} value Number(0-255) to encode.
    */
   #pushUInt8(value: number) {
-    const b = Buffer.allocUnsafe(1);
-    b.writeUInt8(value, 0);
-
-    this.#buffer = Buffer.concat([this.#buffer, b]);
+    const b: Uint8Array = new Uint8Array(1);
+    u8a.writeUInt8(b, value, 0);
+    this.#buffer = u8a.concat([this.#buffer, b]);
   }
 
   /**
@@ -293,10 +294,10 @@ export class CborWriter {
    * @param {number} value Number(0-65535) to encode.
    */
   #pushUInt16(value: number) {
-    const b = Buffer.allocUnsafe(2);
-    b.writeUInt16BE(value, 0);
+    const b: Uint8Array = new Uint8Array(2);
+    u8a.writeUInt16BE(b, value, 0);
 
-    this.#buffer = Buffer.concat([this.#buffer, b]);
+    this.#buffer = u8a.concat([this.#buffer, b]);
   }
 
   /**
@@ -305,9 +306,8 @@ export class CborWriter {
    * @param {number} value Number(0..2**32-1) to encode.
    */
   #pushUInt32(value: number) {
-    const b = Buffer.allocUnsafe(4);
-    b.writeUInt32BE(value, 0);
-
-    this.#buffer = Buffer.concat([this.#buffer, b]);
+    const b: Uint8Array = new Uint8Array(4);
+    u8a.writeUInt32BE(b, value, 0);
+    this.#buffer = u8a.concat([this.#buffer, b]);
   }
 }

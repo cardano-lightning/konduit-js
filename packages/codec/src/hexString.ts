@@ -6,6 +6,7 @@ import type { JsonCodec } from "./json/codecs";
 // String which is a valid hex representation
 export type HexString = Tagged<string, "HexString">;
 export namespace HexString {
+  export const unsafeFromString = (str: string): HexString => str as HexString;
   export const fromString = (str: string): Result<HexString, string> => {
     const hexRegex = /^[0-9a-fA-F]*$/;
     if (str.length % 2 !== 0) {

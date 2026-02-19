@@ -93,7 +93,7 @@ describe('Wallet Events', () => {
     });
 
     // Create dummy transaction (opaque object)
-    const dummyTx = { type: 'dummy-tx' } as unknown as Transaction;
+    const dummyTx = { type: 'dummy-tx', sign: () => ok(dummyTx) } as unknown as Transaction;
     const context = { purpose: 'test-payment', amount: 500000n };
 
     // Submit transaction with context

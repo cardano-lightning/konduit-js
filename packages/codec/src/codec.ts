@@ -9,14 +9,21 @@ export type Codec<I, O, E> = {
   serialise: Serialiser<O, I>;
 };
 
+export const pipeDeserialisers = <I, M, O, E>(
+  first: Deserialiser<I, M, E>,
+  second: Deserialiser<M, O, E>
+): Deserialiser<I, O, E> => {
+  return (input: I): Result<O, E> => {
+    return first(input).andThen(second);
+  };
+};
+
 export const pipe = <I, M, O, E>(
   first: Codec<I, M, E>,
   second: Codec<M, O, E>
 ): Codec<I, O, E> => {
   return {
-    deserialise: (input: I): Result<O, E> => {
-      return first.deserialise(input).andThen(second.deserialise);
-    },
+    deserialise: pipeDeserialisers(first.deserialise, second.deserialise),
     serialise: (output: O): I => {
       const mid = second.serialise(output);
       return first.serialise(mid);

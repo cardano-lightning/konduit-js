@@ -12,10 +12,11 @@ import { Milliseconds, type Seconds } from "../time/duration";
 import { json2Ed25519PrivateKeyCodec } from "../cardano/keys";
 import { Connector, type Transaction } from "../cardano/connector";
 import { hoistToResultAsync, resultAsyncToPromise } from "../neverthrow";
-import { rmap, mkIdentityCodec } from "@konduit/codec";
+import { mkIdentityCodec } from "@konduit/codec";
 import { json2ValidDateCodec, ValidDate } from "../time/absolute";
 import type { JsonAsyncCodec } from "@konduit/codec/json/async";
 import { mkBlockfrostClient } from "../adaptorClient";
+import { mkJson2PollingInfoCodec, PollingInfo } from "../polling";
 
 type WalletEvent<T> = CustomEvent<T>;
 
@@ -76,76 +77,10 @@ export const json2BalanceFetchCodec: JsonCodec<BalanceFetch> = (() => {
   );
 })();
 
-export class BalanceInfo {
-  readonly lastFetch: BalanceFetch;
+export type BalanceInfo = PollingInfo<Lovelace>;
+export const BalanceInfo = PollingInfo;
 
-  constructor(lastFetch: BalanceFetch) {
-    this.lastFetch = lastFetch;
-  }
-
-  public get lovelace(): Lovelace | null {
-    if ("lovelace" in this.lastFetch) {
-      return this.lastFetch.lovelace;
-    } if ("previousSuccessfulFetch" in this.lastFetch && this.lastFetch.previousSuccessfulFetch) {
-      return this.lastFetch.previousSuccessfulFetch.lovelace;
-    }
-    return null;
-  }
-
-  public get successfulFetch(): SuccessfulFetch | null {
-    if ("lovelace" in this.lastFetch) {
-        return this.lastFetch;
-    }
-    return this.lastFetch.previousSuccessfulFetch;
-  }
-
-  public static mkNew(result: Lovelace | JsonError): BalanceInfo {
-    const now = ValidDate.now();
-    if (typeof result === "bigint") {
-      return new BalanceInfo({
-        lovelace: result as Lovelace,
-        fetchedAt: now,
-      });
-    } else {
-      return new BalanceInfo({
-        error: result,
-        fetchedAt: now,
-        previousSuccessfulFetch: null,
-      });
-    }
-  }
-
-  public mkSuccessor(result: Lovelace | JsonError): BalanceInfo {
-    const now = ValidDate.now();
-    if (typeof result === "bigint") {
-      return new BalanceInfo({
-        lovelace: result as Lovelace,
-        fetchedAt: now,
-      });
-    } else {
-      const previousSuccessfulFetch = "lovelace" in this.lastFetch
-        ? {
-            lovelace: this.lastFetch.lovelace,
-            fetchedAt: this.lastFetch.fetchedAt,
-          }
-        : ("previousSuccessfulFetch" in this.lastFetch
-            ? this.lastFetch.previousSuccessfulFetch
-            : null);
-      return new BalanceInfo({
-        error: result,
-        fetchedAt: now,
-        previousSuccessfulFetch,
-      });
-    }
-  }
-};
-
-export const json2BalanceInfoCodec: JsonCodec<BalanceInfo> = rmap(
-  json2BalanceFetchCodec,
-  (balanceFetch: BalanceFetch) => new BalanceInfo(balanceFetch),
-  (balanceInfo: BalanceInfo) => balanceInfo.lastFetch,
-);
-
+export const json2BalanceInfoCodec: JsonCodec<BalanceInfo> = mkJson2PollingInfoCodec(json2LovelaceCodec);
 
 /* A simple, single-address, no staking wallet implementation */
 export class Wallet<WalletBackend extends WalletBackendBase> {
@@ -154,7 +89,7 @@ export class Wallet<WalletBackend extends WalletBackendBase> {
   public readonly privateKey: Ed25519PrivateKey;
 
   private _subscriptionCounter: number = 0;
-  private _balanceInfo: BalanceInfo | null = null;
+  private _balanceInfo: BalanceInfo;
   private _walletBackend: WalletBackend;
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
   private pollingInterval = Milliseconds.fromNonNegativeInt(NonNegativeInt.fromSmallNumber(0));
@@ -165,7 +100,7 @@ export class Wallet<WalletBackend extends WalletBackendBase> {
     this.privateKey = privateKey;
     this._walletBackend = walletBackend;
     this.networkMagicNumber = walletBackend.networkMagicNumber;
-    this._balanceInfo = balanceInfo || null;
+    this._balanceInfo = balanceInfo || new BalanceInfo(null);
   }
 
   // Restore from mnemonic
@@ -215,7 +150,7 @@ export class Wallet<WalletBackend extends WalletBackendBase> {
   }
 
   public get balance(): Lovelace | null {
-    return this._balanceInfo && this._balanceInfo.lovelace;
+    return this._balanceInfo.lastValue;
   }
 
   public get balanceInfo(): BalanceInfo | null {
@@ -251,9 +186,8 @@ export class Wallet<WalletBackend extends WalletBackendBase> {
 
   private async poll() {
     const result = await this.walletBackend.getBalance(this.vKey);
-    const resultFlattened = result.match((info) => info, (failure) => failure);
     let origBalance = this.balance;
-    this._balanceInfo = this._balanceInfo? this._balanceInfo.mkSuccessor(resultFlattened) : BalanceInfo.mkNew(resultFlattened);
+    this._balanceInfo = this._balanceInfo.mkSuccessor(result);
     result.match(
       (lovelace) => {
         this.emit('balance-fetched', { currentBalance: lovelace });
