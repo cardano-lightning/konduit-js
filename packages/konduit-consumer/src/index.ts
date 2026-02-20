@@ -111,7 +111,7 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
       }
     }
   }
-  // // (Re)start polling
+  // (Re)start polling
   public async startPolling(interval: Seconds) {
     let intervalMs = Milliseconds.fromSeconds(interval);
     await this.poll();

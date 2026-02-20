@@ -6,6 +6,7 @@ import type { POSIXMilliseconds, POSIXSeconds } from "./absolute";
 import { altJsonCodecs, type JsonCodec } from "@konduit/codec/json/codecs";
 import { ok, err } from "neverthrow";
 import type { Result } from "neverthrow";
+import { mkOrdForScalar } from "@konduit/codec/tagged";
 
 export type Milliseconds = Tagged<NonNegativeInt, "Milliseconds">;
 export namespace Milliseconds {
@@ -37,10 +38,7 @@ export namespace Milliseconds {
         return Milliseconds.fromSeconds(Seconds.fromMinutes(Minutes.fromHours(Hours.fromDays(Days.fromWeeks(duration.value)))));
     }
   }
-  // Please use these comparison functions instead of direct comparison operators to avoid mistakes with unit conversions.
-  export const isEqualTo = (a: Milliseconds, b: Milliseconds): boolean => a === b;
-  export const isGreaterThan = (a: Milliseconds, b: Milliseconds): boolean => a > b;
-  export const isLessThan = (a: Milliseconds, b: Milliseconds): boolean => a < b;
+  export const ord = mkOrdForScalar<Milliseconds>();
 }
 export const json2MillisecondsCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Milliseconds.fromNonNegativeInt(n), (ms) => ms);
 
@@ -56,6 +54,7 @@ export namespace Seconds {
     const diff = timestamp2 - timestamp1;
     return (diff < 0 ? -diff : diff) as Seconds;
   }
+  export const ord = mkOrdForScalar<Seconds>();
 }
 export const json2SecondsCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Seconds.fromNonNegativeInt(n), (s) => s);
 
@@ -67,6 +66,7 @@ export namespace Minutes {
   export const fromSmallNumber = (n: Small) => NonNegativeInt.fromSmallNumber(n) as Minutes;
   export const fromHours = (hours: Hours): Minutes => (hours * 60) as Minutes;
   export const fromSecondsFloor = (seconds: Seconds): Minutes => (Math.floor(seconds / 60)) as Minutes;
+  export const ord = mkOrdForScalar<Minutes>();
 }
 export const json2MinutesCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Minutes.fromNonNegativeInt(n), (m) => m);
 
@@ -78,6 +78,7 @@ export namespace Hours {
   export const fromSmallNumber = (n: Small) => NonNegativeInt.fromSmallNumber(n) as Hours;
   export const fromMinutesFloor = (minutes: Minutes): Hours => (Math.floor(minutes / 60)) as Hours;
   export const fromDays = (days: Days): Hours => (days * 24) as Hours;
+  export const ord = mkOrdForScalar<Hours>();
 }
 export const json2HoursCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Hours.fromNonNegativeInt(n), (h) => h);
 
@@ -89,6 +90,7 @@ export namespace Days {
   export const fromSmallNumber = (n: Small) => NonNegativeInt.fromSmallNumber(n) as Days;
   export const fromHoursFloor = (hours: Hours): Days => (Math.floor(hours / 24)) as Days;
   export const fromWeeks = (weeks: Weeks): Days => (weeks * 7) as Days;
+  export const ord = mkOrdForScalar<Days>();
 }
 export const json2DaysCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Days.fromNonNegativeInt(n), (d) => d);
 
@@ -99,6 +101,7 @@ export namespace Weeks {
   export const fromDigits = (...args: Parameters<typeof NonNegativeInt["fromDigits"]>): Weeks => NonNegativeInt.fromDigits(...args) as Weeks;
   export const fromSmallNumber = (n: Small) => NonNegativeInt.fromSmallNumber(n) as Weeks;
   export const fromDaysFloor = (days: Days): Weeks => (Math.floor(days / 7)) as Weeks;
+  export const ord = mkOrdForScalar<Weeks>();
 }
 export const json2WeeksCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Weeks.fromNonNegativeInt(n), (w) => w);
 
@@ -109,6 +112,7 @@ export namespace Months {
   export const fromNonNegativeInt = (n: NonNegativeInt): Months => n as Months;
   export const fromDigits = (...args: Parameters<typeof NonNegativeInt["fromDigits"]>): Months => NonNegativeInt.fromDigits(...args) as Months;
   export const fromSmallNumber = (n: Small) => NonNegativeInt.fromSmallNumber(n) as Months;
+  export const ord = mkOrdForScalar<Months>();
 }
 export const json2MonthsCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Months.fromNonNegativeInt(n), (m) => m);
 
@@ -120,6 +124,7 @@ export namespace Years {
   export const fromDigits = (...args: Parameters<typeof NonNegativeInt["fromDigits"]>): Years => NonNegativeInt.fromDigits(...args) as Years;
   export const fromSmallNumber = (n: Small) => NonNegativeInt.fromSmallNumber(n) as Years;
   export const fromMonthsFloor = (months: Months): Years => (Math.floor(months / 12)) as Years;
+  export const ord = mkOrdForScalar<Years>();
 }
 
 export const json2YearsCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Years.fromNonNegativeInt(n), (y) => y);

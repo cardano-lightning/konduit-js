@@ -6,6 +6,7 @@ import type { Codec } from '../codec';
 import * as codec from '../codec';
 import type { Small, SmallPositive, ZeroToNine, OneToNine } from './smallish';
 import type { Json } from '../json';
+import { mkOrdForScalar } from '../tagged';
 
 // Positive BigInt (> 0n)
 export type PositiveBigInt = Tagged<bigint, "PositiveBigInt">;
@@ -25,6 +26,7 @@ export namespace PositiveBigInt {
   export const add = (a: PositiveBigInt, b: PositiveBigInt): PositiveBigInt => (a + b) as PositiveBigInt;
   export const one = 1n as PositiveBigInt;
   export const multiply = (a: PositiveBigInt, b: PositiveBigInt): PositiveBigInt => (a * b) as PositiveBigInt;
+  export const ord = mkOrdForScalar<PositiveBigInt>();
 }
 
 export const bigInt2PositiveBigIntCodec: Codec<bigint, PositiveBigInt, JsonError> = {
@@ -55,11 +57,13 @@ export namespace NonNegativeBigInt {
   export const fromAbs = (n: bigint) => (n < 0n ? -n : n) as PositiveBigInt;
   export const fromJson = (n: Json) => json2NonNegativeBigIntCodec.deserialise(n);
   export const successor = (n: NonNegativeBigInt): NonNegativeBigInt => (n + 1n) as NonNegativeBigInt;
+
   export const zero = 0n as NonNegativeBigInt;
   export const add = (a: NonNegativeBigInt, b: NonNegativeBigInt): NonNegativeBigInt => (a + b) as NonNegativeBigInt;
   export const one = 1n as NonNegativeBigInt;
   export const multiply = (a: NonNegativeBigInt, b: NonNegativeBigInt): NonNegativeBigInt => (a * b) as NonNegativeBigInt;
   export const distance = (a: NonNegativeBigInt, b: NonNegativeBigInt): NonNegativeBigInt => (a >= b ? a - b : b - a) as NonNegativeBigInt;
+  export const ord = mkOrdForScalar<NonNegativeBigInt>();
 }
 
 export const bigInt2NonNegativeBigIntCodec: Codec<bigint, NonNegativeBigInt, JsonError> = {
@@ -73,3 +77,4 @@ export const bigInt2NonNegativeBigIntCodec: Codec<bigint, NonNegativeBigInt, Jso
 }
 
 export const json2NonNegativeBigIntCodec: JsonCodec<NonNegativeBigInt> = codec.pipe(json2BigIntCodec, bigInt2NonNegativeBigIntCodec);
+

@@ -6,6 +6,7 @@ import { json2BigIntCodec, json2StringCodec, type JsonCodec, type JsonError } fr
 import { bigInt2NonNegativeIntCodec } from "@konduit/codec/integers/smallish";
 import * as codec from "@konduit/codec";
 import type { Milliseconds } from "./duration";
+import { mkOrdForScalar } from "@konduit/codec/tagged";
 
 export type ValidDate = Tagged<Date, "ValidDate">;
 export namespace ValidDate {
@@ -49,6 +50,7 @@ export namespace POSIXMilliseconds {
   }
   export const fromPOSIXSeconds = (seconds: POSIXSeconds): POSIXMilliseconds => (seconds * 1000) as POSIXMilliseconds;
   export const fromValidDate = (date: ValidDate): POSIXMilliseconds => date.getTime() as POSIXMilliseconds;
+  export const ord = mkOrdForScalar<POSIXMilliseconds>();
 }
 
 export const bigInt2POSIXMillisecondsCodec: Codec<bigint, POSIXMilliseconds, JsonError> = codec.pipe(bigInt2NonNegativeIntCodec, {
@@ -68,5 +70,6 @@ export namespace POSIXSeconds {
   }
   export const fromPOSIXMillisecondsFloor = (milliseconds: POSIXMilliseconds): POSIXSeconds => (milliseconds / 1000) as POSIXSeconds;
   export const fromValidDate = (date: ValidDate): POSIXSeconds => (Math.floor(date.getTime() / 1000) as POSIXSeconds);
+  export const ord = mkOrdForScalar<POSIXSeconds>();
 }
 

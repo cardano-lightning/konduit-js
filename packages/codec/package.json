@@ -64,6 +64,10 @@
       "types": "./dist/neverthrow.d.ts",
       "default": "./dist/neverthrow.js"
     },
+    "./tagged": {
+      "types": "./dist/tagged.d.ts",
+      "default": "./dist/tagged.js"
+    },
     "./urlquery": {
       "types": "./dist/urlquery/index.d.ts",
       "default": "./dist/urlquery/index.js"
