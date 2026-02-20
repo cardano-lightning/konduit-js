@@ -5,6 +5,7 @@ import { type Codec, compose } from "@konduit/codec";
 import { json2BigIntCodec, json2StringCodec, type JsonCodec, type JsonError } from "@konduit/codec/json/codecs";
 import { bigInt2NonNegativeIntCodec } from "@konduit/codec/integers/smallish";
 import * as codec from "@konduit/codec";
+import type { Milliseconds } from "./duration";
 
 export type ValidDate = Tagged<Date, "ValidDate">;
 export namespace ValidDate {
@@ -15,9 +16,12 @@ export namespace ValidDate {
     }
     return ok(date as ValidDate);
   }
-  export const fromPOSIXMilliseconds = (milliseconds: POSIXMilliseconds): Result<ValidDate, string> => {
-    const date = new Date(milliseconds as Int);
-    return fromDate(date);
+  export const fromPOSIXMilliseconds = (milliseconds: POSIXMilliseconds): ValidDate => {
+    return new Date(milliseconds as Int) as ValidDate;
+  }
+  export const addMilliseconds = (date: ValidDate, milliseconds: Milliseconds): Result<ValidDate, string> => {
+    const newDate = new Date(date.getTime() + milliseconds);
+    return fromDate(newDate);
   }
 }
 

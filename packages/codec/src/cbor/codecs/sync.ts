@@ -382,6 +382,11 @@ export const serialiseCbor = (value: Cbor): Uint8Array => {
   return writer.encode();
 };
 
+export const uint8Array2CborCodec: Codec<Uint8Array, Cbor, JsonError> = {
+  deserialise: deserialiseCbor,
+  serialise: serialiseCbor
+}
+
 export const cbor2BooleanCodec: CborCodec<boolean> = {
   deserialise: (data: Cbor) => {
     if (typeof data === "boolean") {

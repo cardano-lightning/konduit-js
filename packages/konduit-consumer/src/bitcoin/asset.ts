@@ -1,12 +1,11 @@
 import type { Tagged } from "type-fest";
 import { Result, err, ok } from "neverthrow";
 import * as codec from "@konduit/codec";
-import { json2BigIntCodec, json2StringCodec } from "@konduit/codec/json/codecs";
+import { json2BigIntCodec } from "@konduit/codec/json/codecs";
 import type { JsonError, JsonCodec } from "@konduit/codec/json/codecs";
 import type { Json } from "@konduit/codec/json";
 import { json2IntCodec, type Int, type NonNegativeInt, type OneToNine, type Small, type ZeroToNine } from "@konduit/codec/integers/smallish";
 import type { NonNegativeBigInt } from "@konduit/codec/integers/big";
-import { string2BigIntCodec } from "@konduit/codec/urlquery/codecs/sync";
 
 // Bitcoin total supply is 21 million BTC = 2_100_000_000_000_000 satoshis (fits in 53-bit integer)
 export const BITCOIN_TOTAL_SUPPLY = 21_000_000 as Bitcoin;

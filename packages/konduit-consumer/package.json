@@ -3,6 +3,7 @@
     "@konduit/bln": "workspace:^",
     "@konduit/cardano-keys": "workspace:^",
     "@konduit/codec": "workspace:^",
+    "@noble/hashes": "^2.0.1",
     "@scure/base": "^2.0.0",
     "type-fest": "^5.4.3"
   },

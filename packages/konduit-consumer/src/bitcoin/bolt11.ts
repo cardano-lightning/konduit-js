@@ -13,14 +13,14 @@ import * as uint8Array from "@konduit/codec/uint8Array";
 import { uint8Array2Secp256k1CompressedPublicKeyCodec, uint8Array2Secp256k1SignatureCodec, type AnySecp256k1PublicKey, type Secp256k1CompressedPublicKey, type Secp256k1Signature } from "../crypto/secp256k1";
 import type { DecodedInvoice } from "@konduit/bln/invoice";
 import type { Codec } from "@konduit/codec";
+import { sha256, type Sha256Hash } from "../crypto/hashes";
+import type { CborCodec } from "@konduit/codec/cbor/codecs/sync";
+import { randomBytes } from "@noble/hashes/utils.js";
 
 export type InvoiceTimestamp = Tagged<POSIXSeconds, "InvoiceTimestamp">;
 export type InvoiceExpiry = Tagged<Seconds, "InvoiceExpiry">;
 export type Blocks = Tagged<NonNegativeInt, "Blocks">;
 export type MinFinalCltvExpiry = Tagged<Blocks, "MinFinalCltvExpiry">;
-
-export type PaymentHash = Tagged<Uint8Array, "PaymentHash">;
-export const uint8Array2PaymentHashCodec = mkTaggedUint8ArrayCodec<PaymentHash>("PaymentHash", (arr: Uint8Array) => arr.length === 32);
 
 export type PaymentSecret = Tagged<Uint8Array, "PaymentSecret">;
 export const uint8Array2PaymentSecretCodec: Codec<Uint8Array, PaymentSecret, JsonError> = mkTaggedUint8ArrayCodec<PaymentSecret>("PaymentSecret", (arr: Uint8Array) => arr.length === 32);
@@ -37,6 +37,45 @@ export const json2PayeePubKeyCodec: JsonCodec<PayeePubKey> = codec.pipe(
 
 export type InvoiceString = Tagged<string, "InvoiceString">;
 
+export type HtlcSecret = Tagged<Uint8Array, "HtlcSecret">;
+export namespace HtlcSecret {
+  export const LENGTH = 32;
+  export const fromBytes = (bytes: Uint8Array) => {
+    if (bytes.length !== LENGTH) {
+      return err(`HtlcSecret must be ${LENGTH} bytes, got ${bytes.length} bytes`);
+    }
+    return ok(bytes as HtlcSecret);
+  }
+  export const fromRandomBytes = async () => {
+    const bytes = randomBytes(LENGTH);
+    return bytes as HtlcSecret;
+  }
+}
+
+export const uint8Array2HtlcSecretCodec: Codec<Uint8Array, HtlcSecret, JsonError> = mkTaggedUint8ArrayCodec<HtlcSecret>("HtlcSecret", (arr: Uint8Array) => arr.length === HtlcSecret.LENGTH);
+export const json2HtlcSecretCodec: JsonCodec<HtlcSecret> = uint8Array.mkTaggedJsonCodec("HtlcSecret", (arr) => arr.length === HtlcSecret.LENGTH);
+export const cbor2HtlcSecretCodec: CborCodec<HtlcSecret> = uint8Array.mkTaggedCborCodec("HtlcSecret", (arr) => arr.length === HtlcSecret.LENGTH);
+
+export type HtlcLock = Tagged<Sha256Hash, "HtlcLock">;
+export namespace HtlcLock {
+  export const LENGTH = 32;
+  export const fromBytes = (bytes: Uint8Array) => {
+    if (bytes.length !== LENGTH) {
+      return err(`HtlcLock must be ${LENGTH} bytes, got ${bytes.length} bytes`);
+    }
+    return ok(bytes as HtlcLock);
+  }
+  export const fromSecret = async (secret: HtlcSecret): Promise<HtlcLock> => {
+    const res = await sha256(secret);
+    return res as HtlcLock;
+  }
+}
+
+export const uint8Array2HtlcLockCodec: Codec<Uint8Array, HtlcLock, JsonError> = mkTaggedUint8ArrayCodec<HtlcLock>("HtlcLock", (arr: Uint8Array) => arr.length === HtlcLock.LENGTH);
+export const json2HtlcLockCodec: JsonCodec<HtlcLock> = uint8Array.mkTaggedJsonCodec("HtlcLock", (arr) => arr.length === HtlcLock.LENGTH);
+export const cbor2HtlcLockCodec: CborCodec<HtlcLock> = uint8Array.mkTaggedCborCodec("HtlcLock", (arr) => arr.length === HtlcLock.LENGTH);
+
+
 export type Invoice = {
   // readonly descriptionHash: DescriptionHash | null;
   // readonly features: FeatureBits | null;
@@ -49,7 +88,7 @@ export type Invoice = {
   readonly minFinalCltvExpiry: MinFinalCltvExpiry | null;
   readonly network: Network;
   readonly payee: PayeePubKey;
-  readonly paymentHash: PaymentHash;
+  readonly paymentHash: HtlcLock;
   readonly paymentSecret: PaymentSecret | null;
   readonly raw: InvoiceString;
   readonly signature: InvoiceSignature;
@@ -79,7 +118,7 @@ export const decodedInvoice2InvoiceDeserialiser = (decoded: DecodedInvoice): Res
     NonNegativeInt.fromNumber(decoded.minFinalCltvExpiry ?? 0).map(value => value as MinFinalCltvExpiry),
     ok(decoded.network),
     uint8Array2PayeePubKeyCodec.deserialise(decoded.payee),
-    uint8Array2PaymentHashCodec.deserialise(decoded.paymentHash),
+    uint8Array2HtlcLockCodec.deserialise(decoded.paymentHash),
     nullable(uint8Array2PaymentSecretCodec).deserialise(decoded.paymentSecret),
     ok(decoded.raw),
     uint8Array2InvoiceSignatureCodec.deserialise(decoded.signature),

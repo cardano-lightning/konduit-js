@@ -5,7 +5,7 @@ import * as asyncCodec from "@konduit/codec/async";
 import { type Wallet as WalletBase, type AnyWallet, BlockfrostWallet, CardanoConnectorWallet, json2AnyWalletAsyncCodec, type WalletBackendBase } from "./wallets/embedded";
 import { err, ok, Result } from "neverthrow";
 import { Ed25519PrivateKey, Mnemonic } from "@konduit/cardano-keys";
-import { AdaptorFullInfo, type ChSquashResponse } from "./adaptorClient";
+import { AdaptorFullInfo, type SquashResponse } from "./adaptorClient";
 import { Channel, ChannelTag, type ConsumerEd25519VerificationKey, json2ChannelCodec, type OpenTx } from "./channel";
 import { Milliseconds, Seconds } from "./time/duration";
 import { json2Ed25519PrivateKeyCodec, Lovelace } from "./cardano";
@@ -20,7 +20,7 @@ type ConsumerEvent<T> = CustomEvent<T>;
 
 export type ConsumerEvents = {
   "channel-opened": { channel: Channel; };
-  "channel-squashed": { channel: Channel; result: ChSquashResponse };
+  "channel-squashed": { channel: Channel; result: SquashResponse };
 };
 
 export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {

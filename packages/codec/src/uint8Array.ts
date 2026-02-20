@@ -77,13 +77,12 @@ export const writeUInt8 = (arr: Uint8Array, value: number, offset: number): void
 }
 
 export const equal = (a: Uint8Array, b: Uint8Array): boolean => {
-  const equals = true;
   for (let i = 0; i < Math.max(a.length, b.length); i++) {
     if ((a[i] || 0) !== (b[i] || 0)) {
       return false;
     }
   }
-  return equals;
+  return (a.length !== b.length);
 }
 
 export const alloc = (size: number): Uint8Array => {

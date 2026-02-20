@@ -1,8 +1,8 @@
 import type { Result } from "neverthrow";
 import { ok, err } from "neverthrow";
 import type { JsonCodec, JsonError } from "@konduit/codec/json/codecs";
-import { json2AdaptorUrlCodec, json2ChSquashResponseCodec, mkAdaptorChannelClient } from "./adaptorClient";
-import type { AdaptorUrl, ChSquashResponse } from "./adaptorClient";
+import { json2AdaptorUrlCodec, mkAdaptorChannelClient } from "./adaptorClient";
+import type { AdaptorUrl, SquashResponse } from "./adaptorClient";
 import * as codec from "@konduit/codec";
 import { json2L1ChannelCodec, L1Channel } from "./channel/l1Channel";
 import type { ConsumerEd25519VerificationKey, OpenTx } from "./channel/l1Channel";
@@ -11,16 +11,17 @@ import { Cheque, json2ChequeCodec, json2SquashCodec, Squash, SquashBody } from "
 import { Ed25519SigningKey } from "@konduit/cardano-keys";
 import type { HttpEndpointError } from "./http";
 import { mkJson2PollingInfoCodec, PollingInfo } from "./polling";
+import { json2SquashResponseCodec } from "./adaptorClient/squash";
 
 export * from "./channel/l1Channel";
 export * from "./channel/core";
 
-export type SquashingInfo = PollingInfo<{ squash: Squash; response: ChSquashResponse }>;
+export type SquashingInfo = PollingInfo<{ squash: Squash; response: SquashResponse }>;
 export const SquashingInfo = PollingInfo;
 
 export const json2SquashingInfoCodec: JsonCodec<SquashingInfo> = mkJson2PollingInfoCodec(jsonCodecs.objectOf({
   squash: json2SquashCodec,
-  response: json2ChSquashResponseCodec,
+  response: json2SquashResponseCodec,
 }));
 
 export class Channel {
@@ -28,10 +29,10 @@ export class Channel {
   public readonly adaptorUrl: AdaptorUrl;
 
   public readonly squashes: Squash[];
-  public squashingInfo: PollingInfo<{ squash: Squash; response: ChSquashResponse }>;
+  public squashingInfo: PollingInfo<{ squash: Squash; response: SquashResponse }>;
   public readonly cheques: Cheque[];
 
-  private constructor(l1: L1Channel, cheques: Cheque[], squashes: Squash[], adaptorUrl: AdaptorUrl, squashingInfo?: PollingInfo<{ squash: Squash; response: ChSquashResponse }>) {
+  private constructor(l1: L1Channel, cheques: Cheque[], squashes: Squash[], adaptorUrl: AdaptorUrl, squashingInfo?: PollingInfo<{ squash: Squash; response: SquashResponse }>) {
     this.l1 = l1;
     this.cheques = cheques;
     this.adaptorUrl = adaptorUrl;
@@ -39,10 +40,10 @@ export class Channel {
     this.squashingInfo = squashingInfo || new PollingInfo(null);
   }
 
-  public static load(l1: L1Channel, cheques: Cheque[], squashes: Squash[], adaptorUrl: AdaptorUrl, squashingInfo: PollingInfo<{ squash: Squash; response: ChSquashResponse }>): Result<Channel, JsonError> {
+  public static load(l1: L1Channel, cheques: Cheque[], squashes: Squash[], adaptorUrl: AdaptorUrl, squashingInfo: PollingInfo<{ squash: Squash; response: SquashResponse }>): Result<Channel, JsonError> {
     let vKey = l1.consumerVerificationKey;
     for(const cheque of cheques) {
-      if(!Cheque.verify(vKey, cheque))
+      if(!Cheque.verifySignature(cheque, vKey))
         return err(`Cheque with index ${cheque.body.index} failed verification with consumer verification key ${vKey}`);
     }
     // TODO: validate squashes signatures as well
@@ -71,7 +72,7 @@ export class Channel {
     return SquashBody.empty;
   }
 
-  public async doSquash(sKey: Ed25519SigningKey): Promise<null | Result<ChSquashResponse , HttpEndpointError>> {
+  public async doSquash(sKey: Ed25519SigningKey): Promise<null | Result<SquashResponse , HttpEndpointError>> {
     if(this.isFullySquashed) return null;
     const squash = Squash.fromBodySigning(sKey, this.channelTag, this.mkSquash());
     const result = await this.adaptorClient.chSquash(squash);

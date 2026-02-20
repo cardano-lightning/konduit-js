@@ -8,7 +8,6 @@ import {
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import { json2StringCodec, type JsonDeserialiser, type JsonError } from "@konduit/codec/json/codecs";
 import { json2MillisatoshiCodec, type Millisatoshi } from "./asset";
-import { stringify } from "@konduit/codec/json";
 import * as codec from "@konduit/codec";
 import * as uint8Array from "@konduit/codec/uint8Array";
 import { string2NumberCodec } from "@konduit/codec/urlquery/codecs/sync";

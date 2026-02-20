@@ -3,7 +3,7 @@ import * as fs from "fs";
 import { json2KonduitConsumerAsyncCodec, KonduitConsumer } from "../src";
 import { AdaptorFullInfo } from "../src/adaptorClient";
 import { Days, Milliseconds, Seconds } from "../src/time/duration";
-import { Address, AddressBech32, Lovelace, Network, PubKeyHash } from "../src/cardano";
+import { Address, AddressBech32, Network, PubKeyHash } from "../src/cardano";
 import { Ada } from "../src/cardano/assets";
 import { parse, stringify } from "@konduit/codec/json";
 import { expectNotNull, expectOk } from "./assertions";
@@ -15,10 +15,13 @@ import { Connector } from "../src/cardano/connector";
 import { BlockfrostWallet, type AnyWallet } from "../src/wallets/embedded";
 import { Ed25519Secret } from "@konduit/cardano-keys/rfc8032";
 import { hoistToResultAsync, resultAsyncToPromise } from "../src/neverthrow";
-import { json2ChannelCodec, KeyTag } from "../src/channel";
 import { mkLndClient, type LndClient } from "../src/bitcoin/lndClient";
 import { Millisatoshi } from "../src/bitcoin/asset";
-import type { Invoice, InvoiceString } from "../src/bitcoin/bolt11";
+import type { Invoice } from "../src/bitcoin/bolt11";
+import { Cheque, ChequeBody } from "../src/channel/squash";
+import { Lovelace } from "../src/cardano";
+import type { PayResponse } from "../src/adaptorClient/pay";
+import { ValidDate } from "../src/time/absolute";
 
 
 const integrationTestEnv = (() => {
@@ -174,14 +177,11 @@ describe("End-to-end integration: open channel and poll adaptor squash", () => {
         const closePeriod = Milliseconds.fromAnyPreciseDuration({ type: "days", value: Days.fromSmallNumber(3) });
 
         console.debug("Opening channel in integration test with parameters:", { amount: amount.toString(), closePeriod: closePeriod.toString() });
-        const channel = expectOk(await consumer.openChannel(adaptorFullInfo, amount, closePeriod), "Failed to open channel in integration test");
+        channel = expectOk(await consumer.openChannel(adaptorFullInfo, amount, closePeriod), "Failed to open channel in integration test");
 
         console.debug("Channel opened in integration test, now starting to poll adaptor for squash...");
       } else {
         console.debug("Found existing channel in consumer state, skipping channel opening and going straight to polling adaptor for squash...");
-      }
-      if(!channel) {
-        throw new Error("Panic: Channel is null after attempting to open channel in integration test");
       }
 
       integrationTestEnv.saveKonduitConsumerState(consumer);
@@ -228,12 +228,23 @@ describe("End-to-end integration: open channel and poll adaptor squash", () => {
       const quote = expectOk(quoteResult);
       console.debug("Received quote from adaptor for LND invoice:", quote);
 
-      // const channel = consumer.channels[0];
-      // export const fromKeyAndTag = (key: Ed25519VerificationKey, tag: ChannelTag): KeyTag => {
+      const timeout = expectOk(ValidDate.addMilliseconds(ValidDate.now(), quote.relativeTimeout));
 
-      // const invoiceString = "LNTB200N1P5ESD7WPP5EHV3J3A7HY0TJJQT82WK24S4NRR2RSZ352449YWTDZE44AZNNL8SDQQCQZZSXQRRSSSP5SD3UEUE8W8DK888Y2Z5DDNS3V6Q76Y85YXXSH77PRKCR4QRGK7YQ9QXPQYSGQRWQP4H0AW6NER76AZPHF5XPQRCLTMUFENP6QV2K8V9QM8ASQ599Y06F9X230Z2MNF4H9EG53PPA933FHPJMYKM6UXRWGYAAT728N9MQQNVSLE9" as InvoiceString;
-      // const quoteResult2 = await channel.adaptorClient.chQuote(invoiceString);
-
+      // return ChequeBody.load(amount, index, lock, timeoutDate);
+      const chequeBody = expectOk(ChequeBody.load(
+        quote.amount,
+        quote.index,
+        invoice.paymentHash,
+        timeout,
+      ));
+      const cheque = Cheque.fromSigning(
+        channel.channelTag,
+        keys.sKey,
+        chequeBody
+      );
+      const payResult = await channel.adaptorClient.chPay(cheque, invoice);
+      const payResponse: PayResponse = expectOk(payResult);
+      console.debug("Received pay response from adaptor:", payResponse);
 
     },
     600000

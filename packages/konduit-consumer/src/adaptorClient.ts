@@ -11,7 +11,7 @@ import {
   ResponseDeserialiser,
 } from "./http";
 import { hexString2KeyTagCodec, KeyTag, type ChannelTag } from "./channel/core";
-import type { Squash } from "./channel/squash";
+import type { Cheque, Squash } from "./channel/squash";
 import { cbor2SquashCodec } from "./channel/squash";
 import type { ConsumerEd25519VerificationKey } from "./channel/l1Channel";
 import { Address, address2AddressBech32Iso, AddressBech32, Network, NetworkMagicNumber } from "./cardano/addressses";
@@ -22,6 +22,15 @@ import { Ed25519VerificationKey } from "@konduit/cardano-keys";
 import { json2BooleanCodec, json2StringCodec, nullable, type JsonCodec } from "@konduit/codec/json/codecs";
 import type { JsonError } from "@konduit/codec/json/codecs";
 import { json2QuoteBodySerialiser, json2QuoteCodec, type Quote, type QuoteBody } from "./adaptorClient/quote";
+import { json2SquashResponseDeserialiser, type SquashResponse } from "./adaptorClient/squash";
+export type { SquashResponse } from "./adaptorClient/squash";
+import {
+  json2PayBodyCodec,
+  json2PayResponseDeserialiser,
+  type PayBody,
+  type PayResponse,
+} from "./adaptorClient/pay";
+import type { Invoice } from "./bitcoin/bolt11";
 
 export { AdaptorInfo } from "./adaptorClient/adaptorInfo";
 
@@ -60,8 +69,9 @@ const mkQuoteEndpoint = (baseUrl: AdaptorUrl) => mkPostEndpoint(
 export type AdaptorClient = {
   adaptorUrl: AdaptorUrl;
   info: () => Promise<Result<AdaptorInfo, HttpEndpointError>>;
-  chSquash: (keyTag: KeyTag, squash: Squash) => Promise<Result<ChSquashResponse, HttpEndpointError>>;
+  chSquash: (keyTag: KeyTag, squash: Squash) => Promise<Result<SquashResponse, HttpEndpointError>>;
   chQuote: (keyTag: KeyTag, quoteBody: QuoteBody) => Promise<Result<Quote, HttpEndpointError>>;
+  chPay: (keyTag: KeyTag, cheque: Cheque, invoice: Invoice) => Promise<Result<PayResponse, HttpEndpointError>>;
 };
 
 export const json2AdaptorClientCodec: JsonCodec<AdaptorClient> = codec.rmap(
@@ -81,22 +91,21 @@ export const json2AdaptorClientCodec: JsonCodec<AdaptorClient> = codec.rmap(
   },
 );
 
-export type ChSquashResponse = "Complete" | "Incomplete";
-export const json2ChSquashResponseCodec: JsonCodec<ChSquashResponse> = jsonCodecs.altJsonCodecs(
- [jsonCodecs.constant("Complete" as const), jsonCodecs.constant("Incomplete" as const)],
- (completeSer, incompleteSer) => (val: ChSquashResponse) => {
-    if(val == "Complete") return completeSer(val);
-    return incompleteSer(val);
-  }
-);
-
 export const mkAdaptorClient = (baseUrl: AdaptorUrl): AdaptorClient => {
   const mkKonduitHeader = (keyTag: KeyTag): [string, string] => ["KONDUIT", hexString2KeyTagCodec.serialise(keyTag)];
+
   const chSquashEndpoint = mkPostEndpoint(
     `${baseUrl}/ch/squash`,
     RequestSerialiser.fromCborSerialiser(cbor2SquashCodec.serialise),
-    ResponseDeserialiser.fromJsonDeserialiser(json2ChSquashResponseCodec.deserialise)
+    ResponseDeserialiser.fromJsonDeserialiser(json2SquashResponseDeserialiser)
   );
+
+  const chPayEndpoint = mkPostEndpoint(
+    `${baseUrl}/ch/pay`,
+    RequestSerialiser.fromJsonSerialiser(json2PayBodyCodec.serialise),
+    ResponseDeserialiser.fromJsonDeserialiser(json2PayResponseDeserialiser)
+  );
+
   return {
     adaptorUrl: baseUrl,
     info: mkInfoEndpoint(baseUrl),
@@ -106,7 +115,15 @@ export const mkAdaptorClient = (baseUrl: AdaptorUrl): AdaptorClient => {
     chQuote: async (keyTag: KeyTag, quoteBody: QuoteBody) => {
       const quoteEndpoint = mkQuoteEndpoint(baseUrl);
       return quoteEndpoint(quoteBody, [mkKonduitHeader(keyTag)]);
-    }
+    },
+    chPay: async (keyTag: KeyTag, cheque: Cheque, invoice: Invoice) => {
+      const body: PayBody = {
+        chequeBody: cheque.body,
+        signature: cheque.signature,
+        invoice,
+      };
+      return chPayEndpoint(body, [mkKonduitHeader(keyTag)]);
+    },
   };
 }
 
@@ -119,6 +136,7 @@ export const mkAdaptorChannelClient = (adaptorUrl: AdaptorUrl, consumerEd25519Ve
     keyTag: keyTag,
     chSquash: (squash: Squash) => adaptorClient.chSquash(keyTag, squash),
     chQuote: (quoteBody: QuoteBody) => adaptorClient.chQuote(keyTag, quoteBody),
+    chPay: (cheque: Cheque, invoice: Invoice) => adaptorClient.chPay(keyTag, cheque, invoice),
     info: () => adaptorClient.info(),
   }
 }
@@ -241,4 +259,3 @@ export const mkBlockfrostClient = (projectId: string) => { // WalletBackendBase 
     };
   });
 };
-
