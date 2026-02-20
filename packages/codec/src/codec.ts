@@ -56,6 +56,15 @@ export type Iso<A, B> = {
   from: (b: B) => A;
 };
 
+export const rmapDeserialiser = <I, O1, O2, E>(
+  deserialiser: Deserialiser<I, O1, E>,
+  fn: (o: O1) => O2
+): Deserialiser<I, O2, E> => {
+  return (input: I): Result<O2, E> => {
+    return deserialiser(input).map(fn);
+  };
+}
+
 // Profunctor (tfu!) like mappings from both sides
 export const rmap = <I, O1, O2, E>(
   codec: Codec<I, O1, E>,
@@ -63,13 +72,21 @@ export const rmap = <I, O1, O2, E>(
   fnInv: (o: O2) => O1
 ): Codec<I, O2, E> => {
   return {
-    deserialise: (input: I): Result<O2, E> => {
-      return codec.deserialise(input).map(fn);
-    },
+    deserialise: rmapDeserialiser(codec.deserialise, fn),
     serialise: (output: O2): I => {
       const mid = fnInv(output);
       return codec.serialise(mid);
     }
+  };
+}
+
+export const lmapDeserialiser = <I1, I2, O, E>(
+  deserialiser: Deserialiser<I2, O, E>,
+  fn: (i: I1) => I2
+): Deserialiser<I1, O, E> => {
+  return (input: I1): Result<O, E> => {
+    const mid = fn(input);
+    return deserialiser(mid);
   };
 }
 
@@ -79,10 +96,7 @@ export const lmap = <I1, I2, O, E>(
   fnInv: (i: I2) => I1
 ): Codec<I1, O, E> => {
   return {
-    deserialise: (input: I1): Result<O, E> => {
-      const mid = fn(input);
-      return codec.deserialise(mid);
-    },
+    deserialise: lmapDeserialiser(codec.deserialise, fn),
     serialise: (output: O): I1 => {
       const mid = codec.serialise(output);
       return fnInv(mid);

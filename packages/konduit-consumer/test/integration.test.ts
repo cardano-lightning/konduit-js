@@ -15,7 +15,10 @@ import { Connector } from "../src/cardano/connector";
 import { BlockfrostWallet, type AnyWallet } from "../src/wallets/embedded";
 import { Ed25519Secret } from "@konduit/cardano-keys/rfc8032";
 import { hoistToResultAsync, resultAsyncToPromise } from "../src/neverthrow";
-import { json2ChannelCodec } from "../src/channel";
+import { json2ChannelCodec, KeyTag } from "../src/channel";
+import { mkLndClient, type LndClient } from "../src/bitcoin/lndClient";
+import { Millisatoshi } from "../src/bitcoin/asset";
+import type { Invoice, InvoiceString } from "../src/bitcoin/bolt11";
 
 
 const integrationTestEnv = (() => {
@@ -24,6 +27,8 @@ const integrationTestEnv = (() => {
   const signingKeySecretOpt = import.meta.env.VITE_TEST_SIGNING_KEY_SECRET;
   const blockfrostProjectIdOpt = import.meta.env.VITE_TEST_BLOCKFROST_PROJECT_ID;
   const konduitConsumerStateFile = import.meta.env.VITE_TEST_KONDUIT_CONSUMER_STATE_FILE;
+  const lndMacaroonOpt = import.meta.env.VITE_TEST_LND_MACAROON;
+  const lndBaseUrlOpt = import.meta.env.VITE_TEST_LND_BASE_URL;
 
   const mkKonduitConsumer = async (t: any): Promise<KonduitConsumer<AnyWallet>> => {
     if(!konduitConsumerStateFile) {
@@ -107,6 +112,15 @@ const integrationTestEnv = (() => {
     return adaptorFullInfo;
   }
 
+  const mkLnd = (t: any): LndClient => {
+    if (!lndBaseUrlOpt || !lndMacaroonOpt) {
+      t.skip();
+    }
+    const baseUrl = expectNotNull(lndBaseUrlOpt);
+    const macaroon = expectNotNull(lndMacaroonOpt);
+    return mkLndClient({ baseUrl, macaroon });
+  }
+
   return {
     mkAdaptorFullInfo,
     mkKeys,
@@ -114,6 +128,7 @@ const integrationTestEnv = (() => {
     mkBlockfrostWallet,
     mkConnector,
     saveKonduitConsumerState,
+    mkLnd,
   };
 })();
 
@@ -121,6 +136,8 @@ describe("End-to-end integration: open channel and poll adaptor squash", () => {
   it(
     "opens a channel and polls adaptor squash endpoint until it is indexed",
     async (test) => {
+      // test.skip();
+
       // Enable WASM logging for debugging, same as connector test
       if (wasm && typeof wasm.enableLogs === "function") {
         wasm.enableLogs(wasm.LogLevel.Debug);
@@ -142,153 +159,102 @@ describe("End-to-end integration: open channel and poll adaptor squash", () => {
 
       console.debug("Loading consumer");
       const consumer = await integrationTestEnv.mkKonduitConsumer(test);
+
+      const keys = integrationTestEnv.mkKeys(test);
+      console.log("Consumer address Bech32:", keys.addressBech32);
+
       console.debug("Consumer loaded");
-      // let channel = consumer.channels.length > 0 ? consumer.channels[0] : null;
-      // if(!channel) {
+      // Grab possibly the last channel
+      let channel = consumer.channels.length > 0 ? consumer.channels[consumer.channels.length - 1] : null;
+      if(!channel) {
+        const adaptorFullInfo = await integrationTestEnv.mkAdaptorFullInfo(test);
+        // Parameters for opening the channel
+        // 10 ADA ~ $3 USD
+        const amount = Lovelace.fromAda(Ada.fromSmallNumber(10)); // 5 ADA
+        const closePeriod = Milliseconds.fromAnyPreciseDuration({ type: "days", value: Days.fromSmallNumber(3) });
 
-      const adaptorFullInfo = await integrationTestEnv.mkAdaptorFullInfo(test);
-      // Parameters for opening the channel
-      const amount = Lovelace.fromAda(Ada.fromSmallNumber(5)); // 5 ADA
-      const closePeriod = Milliseconds.fromAnyPreciseDuration({ type: "days", value: Days.fromSmallNumber(3) });
+        console.debug("Opening channel in integration test with parameters:", { amount: amount.toString(), closePeriod: closePeriod.toString() });
+        const channel = expectOk(await consumer.openChannel(adaptorFullInfo, amount, closePeriod), "Failed to open channel in integration test");
 
-      expectOk(await consumer.openChannel(adaptorFullInfo, amount, closePeriod));
+        console.debug("Channel opened in integration test, now starting to poll adaptor for squash...");
+      } else {
+        console.debug("Found existing channel in consumer state, skipping channel opening and going straight to polling adaptor for squash...");
+      }
+      if(!channel) {
+        throw new Error("Panic: Channel is null after attempting to open channel in integration test");
+      }
+
       integrationTestEnv.saveKonduitConsumerState(consumer);
       let squashed = false;
-      consumer.subscribe("channel-squashed", ({ channel }) => {
-        console.debug("Channel finally squashed:");
-        console.debug(stringify(json2ChannelCodec.serialise(channel)));
+      if(channel.isFullySquashed) {
+        console.debug(`Channel with tag ${channel.channelTag} is already fully squashed!`);
         squashed = true;
-      });
-      await consumer.startPolling(Seconds.fromSmallNumber(1));
-
-      // await till squashed
-      const maxAttempts = 40;
-      const delayMs = 3000;
-      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        console.log(`Checking if channel is squashed, attempt #${attempt}`);
-        if(squashed) {
-          console.log("Channel has been squashed, ending polling loop.");
-          break;
-        }
-        if (attempt < maxAttempts) {
-          await new Promise((resolve) => setTimeout(resolve, delayMs));
-        } else {
-          console.log(`Reached maximum attempts (${maxAttempts}) without channel being squashed.`);
+      } else {
+        consumer.subscribe("channel-squashed", ({ channel: squashedChannel }) => { 
+          if(squashedChannel.channelTag === channel.channelTag) {
+            console.debug(`Channel with tag ${channel.channelTag} was squashed!`);
+            squashed = true;
+          } else {
+            console.debug(`Received squash event for channel with tag ${squashedChannel.channelTag}, but we are waiting for channel with tag ${channel.channelTag}`);
+          }
+        });
+        await consumer.startPolling(Seconds.fromSmallNumber(1));
+        // await till squashed
+        const maxAttempts = 40;
+        const delayMs = 3000;
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          if(squashed) {
+            break;
+          }
+          if (attempt < maxAttempts) {
+            await new Promise((resolve) => setTimeout(resolve, delayMs));
+          } else {
+            console.log(`Reached maximum attempts (${maxAttempts}) without channel being squashed.`);
+            throw new Error("Channel was not squashed within the expected time frame in integration test");
+          }
         }
       }
 
+      const lnd = integrationTestEnv.mkLnd(test);
 
-      // }
+      // 100,000 millisatoshis = 100 satoshis ≈ $0.06 – $0.07 USD
+      const msat = Millisatoshi.fromDigits(1, 0, 0, 0, 0, 0);
+      const memo = `An invoice from integration test at ${new Date().toISOString()}`;
 
-      // const keys = integrationTestEnv.mkKeys(test);
-      // console.debug("Derived keys and address for integration test:");
-      // console.debug("Address Bech32:", keys.addressBech32);
-      // console.debug("Signing key (hex):", HexString.fromUint8Array(keys.sKey.key));
-      // console.debug("Verification key (hex):", HexString.fromUint8Array(keys.vKey.key));
+      const addInvoiceResult = await lnd.addLndInvoice(msat, memo);
+      const addInvoiceResponse = expectOk(addInvoiceResult, "Failed to add invoice via LND in integration test");
+      const invoice: Invoice = addInvoiceResponse.invoice;
+      const quoteResult = await channel.adaptorClient.chQuote(invoice.raw);
+      const quote = expectOk(quoteResult);
+      console.debug("Received quote from adaptor for LND invoice:", quote);
 
-      // console.log("Channel opened with tag:", HexString.fromUint8Array(channel.l1.channelTag));
-      // await consumer.squashChannel(channel.l1.channelTag).then((result) => {
-      //   result.match(
-      //     (res) => {
-      //       console.debug("Squash success raw result:", res);
-      //       console.debug("Squash success JSON-encoded:", stringify(res));
-      //     },
-      //     (err) => {
-      //       console.error("Squash error type:", err.type);
-      //       if (err.type === "HttpError") {
-      //         console.error("HTTP status:", err.status, err.statusText);
-      //         console.error("Decoded error body:", err.body);
-      //       } else {
-      //         console.error("Non-HTTP error:", (err as any).message);
-      //       }
-      //       console.debug("Squash error JSON-encoded:", stringify(err as any));
-      //     }
-      //   );
-      // });
+      // const channel = consumer.channels[0];
+      // export const fromKeyAndTag = (key: Ed25519VerificationKey, tag: ChannelTag): KeyTag => {
 
-      // console.debug("Ed25519VerificationKey bytes derived from signing key:", HexString.fromUint8Array(keys.sKey.toVerificationKey().key));
-      // const signedTransaction = expectOk(transaction.sign(keys.privateKey));
-      // const submitResult = await blockfrostWallet.signAndSubmit(transaction);
+      // const invoiceString = "LNTB200N1P5ESD7WPP5EHV3J3A7HY0TJJQT82WK24S4NRR2RSZ352449YWTDZE44AZNNL8SDQQCQZZSXQRRSSSP5SD3UEUE8W8DK888Y2Z5DDNS3V6Q76Y85YXXSH77PRKCR4QRGK7YQ9QXPQYSGQRWQP4H0AW6NER76AZPHF5XPQRCLTMUFENP6QV2K8V9QM8ASQ599Y06F9X230Z2MNF4H9EG53PPA933FHPJMYKM6UXRWGYAAT728N9MQQNVSLE9" as InvoiceString;
+      // const quoteResult2 = await channel.adaptorClient.chQuote(invoiceString);
 
-      // const channelTag = channel.l1.channelTag;
 
-      // console.log("Opened channel with tag:", HexString.fromUint8Array(channelTag));
-      // console.log("Consumer vKey:", HexString.fromUint8Array(consumer.vKey.key));
-
-      // // Build adaptor channel client
-      // const adaptorChannelClient = mkAdaptorChannelClient(
-      //   adaptorUrl,
-      //   consumer.vKey,
-      //   channelTag
-      // );
-      // console.log("Adaptor keyTag hex:", HexString.fromUint8Array(adaptorChannelClient.keyTag));
-
-      // const maxAttempts = 20;
-      // const delayMs = 3000;
-
-      // const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-      // for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      //   console.log(`Squash attempt #${attempt}`);
-      //   const squashResult = await adaptorChannelClient.chSquash(squash);
-      //   squashResult.match(
-      //     (res) => {
-      //       // Successful HTTP status (as per mkPostEndpoint semantics)
-      //       console.log("Squash success raw result:", res);
-      //       try {
-      //         const jsonEncoded = stringify(res as any);
-      //         console.log("Squash success JSON-encoded:", jsonEncoded);
-      //       } catch (e) {
-      //         console.log("Failed to JSON-encode squash success result:", e);
-      //       }
-      //     },
-      //     (err) => {
-      //       // HttpEndpointError or deserialisation/network error
-      //       console.log("Squash error type:", err.type);
-
-      //       if (err.type === "HttpError") {
-      //         console.log("HTTP status:", err.status, err.statusText);
-      //         console.log("Decoded error body:", err.body);
-
-      //         // 404 is expected until adaptor indexes the channel
-      //         if (err.status === 404) {
-      //           console.log("Channel not yet indexed by adaptor (404), will retry...");
-      //         } else if (err.status === 200 || err.status === 204) {
-      //           console.log("Unexpected success status treated as error path:", err.status);
-      //         }
-      //       } else {
-      //         console.log("Non-HTTP error:", (err as any).message);
-      //       }
-
-      //       try {
-      //         const jsonEncoded = stringify(err as any);
-      //         console.log("Squash error JSON-encoded:", jsonEncoded);
-      //       } catch {
-      //         // Ignore if error cannot be encoded as JSON
-      //       }
-      //     }
-      //   );
-
-      //   // Break condition: if we ever get a 200/204 from the adaptor, we can stop early.
-      //   if (squashResult.isOk()) {
-      //     console.log("Squash call succeeded; stopping polling loop.");
-      //     break;
-      //   } else if (
-      //     squashResult.isErr() &&
-      //     squashResult.error.type === "HttpError" &&
-      //     (squashResult.error.status === 200 || squashResult.error.status === 204)
-      //   ) {
-      //     console.log("Received 200/204 in error path; stopping polling loop.");
-      //     break;
-      //   }
-
-      //   if (attempt < maxAttempts) {
-      //     await sleep(delayMs);
-      //   } else {
-      //     console.log(`Reached maximum squash attempts (${maxAttempts}); stopping.`);
-      //   }
-      // }
     },
     600000
+  );
+});
+
+describe("LND client basic integration", () => {
+  it(
+    "creates an invoice via LND addInvoice endpoint",
+    async (test) => {
+      test.skip();
+
+      const lnd = integrationTestEnv.mkLnd(test);
+      const msat = Millisatoshi.fromDigits(1, 0, 0, 0, 0);
+      const memo = "integration-test-invoice";
+
+      const result = await lnd.addLndInvoice(msat, memo);
+
+      const response = expectOk(result);
+      console.debug("Received invoice from LND:", response);
+    },
+    60000
   );
 });

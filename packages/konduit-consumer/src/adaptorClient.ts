@@ -21,6 +21,7 @@ import { json2TxHashCodec, Lovelace, TxCborBytes } from "./cardano";
 import { Ed25519VerificationKey } from "@konduit/cardano-keys";
 import { json2BooleanCodec, json2StringCodec, nullable, type JsonCodec } from "@konduit/codec/json/codecs";
 import type { JsonError } from "@konduit/codec/json/codecs";
+import { json2QuoteBodySerialiser, json2QuoteCodec, type Quote, type QuoteBody } from "./adaptorClient/quote";
 
 export { AdaptorInfo } from "./adaptorClient/adaptorInfo";
 
@@ -50,10 +51,17 @@ export namespace AdaptorFullInfo {
   };
 }
 
+const mkQuoteEndpoint = (baseUrl: AdaptorUrl) => mkPostEndpoint(
+  `${baseUrl}/ch/quote`,
+  RequestSerialiser.fromJsonSerialiser(json2QuoteBodySerialiser),
+  ResponseDeserialiser.fromJsonDeserialiser(json2QuoteCodec.deserialise)
+);
+
 export type AdaptorClient = {
   adaptorUrl: AdaptorUrl;
   info: () => Promise<Result<AdaptorInfo, HttpEndpointError>>;
   chSquash: (keyTag: KeyTag, squash: Squash) => Promise<Result<ChSquashResponse, HttpEndpointError>>;
+  chQuote: (keyTag: KeyTag, quoteBody: QuoteBody) => Promise<Result<Quote, HttpEndpointError>>;
 };
 
 export const json2AdaptorClientCodec: JsonCodec<AdaptorClient> = codec.rmap(
@@ -83,6 +91,7 @@ export const json2ChSquashResponseCodec: JsonCodec<ChSquashResponse> = jsonCodec
 );
 
 export const mkAdaptorClient = (baseUrl: AdaptorUrl): AdaptorClient => {
+  const mkKonduitHeader = (keyTag: KeyTag): [string, string] => ["KONDUIT", hexString2KeyTagCodec.serialise(keyTag)];
   const chSquashEndpoint = mkPostEndpoint(
     `${baseUrl}/ch/squash`,
     RequestSerialiser.fromCborSerialiser(cbor2SquashCodec.serialise),
@@ -92,7 +101,11 @@ export const mkAdaptorClient = (baseUrl: AdaptorUrl): AdaptorClient => {
     adaptorUrl: baseUrl,
     info: mkInfoEndpoint(baseUrl),
     chSquash: async (keyTag: KeyTag, squash: Squash) => {
-      return chSquashEndpoint(squash, [["KONDUIT", hexString2KeyTagCodec.serialise(keyTag)]])
+      return chSquashEndpoint(squash, [mkKonduitHeader(keyTag)]);
+    },
+    chQuote: async (keyTag: KeyTag, quoteBody: QuoteBody) => {
+      const quoteEndpoint = mkQuoteEndpoint(baseUrl);
+      return quoteEndpoint(quoteBody, [mkKonduitHeader(keyTag)]);
     }
   };
 }
@@ -105,6 +118,7 @@ export const mkAdaptorChannelClient = (adaptorUrl: AdaptorUrl, consumerEd25519Ve
     adaptorUrl: adaptorUrl,
     keyTag: keyTag,
     chSquash: (squash: Squash) => adaptorClient.chSquash(keyTag, squash),
+    chQuote: (quoteBody: QuoteBody) => adaptorClient.chQuote(keyTag, quoteBody),
     info: () => adaptorClient.info(),
   }
 }
@@ -228,5 +242,3 @@ export const mkBlockfrostClient = (projectId: string) => { // WalletBackendBase 
   });
 };
 
-// TODO: Instead of proxying through the WASM it is much better 
-// const mkCardanoConnectWalletBackend = (connectorUrl: string) => {

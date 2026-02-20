@@ -5,10 +5,10 @@ import { json2AdaptorUrlCodec, json2ChSquashResponseCodec, mkAdaptorChannelClien
 import type { AdaptorUrl, ChSquashResponse } from "./adaptorClient";
 import * as codec from "@konduit/codec";
 import { json2L1ChannelCodec, L1Channel } from "./channel/l1Channel";
-import type { OpenTx } from "./channel/l1Channel";
+import type { ConsumerEd25519VerificationKey, OpenTx } from "./channel/l1Channel";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import { Cheque, json2ChequeCodec, json2SquashCodec, Squash, SquashBody } from "./channel/squash";
-import { Ed25519SigningKey, Ed25519VerificationKey } from "@konduit/cardano-keys";
+import { Ed25519SigningKey } from "@konduit/cardano-keys";
 import type { HttpEndpointError } from "./http";
 import { mkJson2PollingInfoCodec, PollingInfo } from "./polling";
 
@@ -56,9 +56,15 @@ export class Channel {
 
   get channelTag() { return this.l1.channelTag; }
 
-  get consumerVerificationKey(): Ed25519VerificationKey { return this.l1.consumerVerificationKey; }
+  get consumerVerificationKey(): ConsumerEd25519VerificationKey { return this.l1.consumerVerificationKey; }
 
-  private get adaptorClient() { return mkAdaptorChannelClient(this.adaptorUrl, this.l1.consumerVerificationKey, this.l1.channelTag); }
+  public get adaptorClient() {
+    return mkAdaptorChannelClient(
+      this.adaptorUrl,
+      this.l1.consumerVerificationKey,
+      this.l1.channelTag
+    );
+  }
 
   public mkSquash() {
     // TODO: This is obviously just a stub.

@@ -44,8 +44,21 @@ export namespace DecodedErrorBody {
   };
 }
 
+type RequestInfo = {
+  headers?: [string, string][];
+  method?: string;
+  payload?: ArrayBuffer | string;
+  url: string;
+}
+
 export type HttpEndpointError =
-  | { type: "HttpError"; status: number; statusText: string; body: DecodedErrorBody }
+  | {
+    type: "HttpError";
+    status: number;
+    statusText: string;
+    body: DecodedErrorBody,
+    requestInfo?: RequestInfo;
+  }
   | { type: "NetworkError"; message: string }
   | { type: "DeserialisationError"; message: JsonError; body: DecodedErrorBody; decodingError?: JsonError };
 
@@ -85,10 +98,9 @@ export const mkPostEndpoint = <Req, Res>(url: Url, requestSerialiser: RequestSer
     })();
     const payload = (() => {
       switch (requestSerialiser.type) {
-        case "json": {
+        case "json":
           const json = requestSerialiser.serialiser(requestBody);
           return stringify(json);
-        }
         case "cbor": {
           const cbor = requestSerialiser.serialiser(requestBody);
           let uint8Array = serialiseCbor(cbor);
@@ -109,10 +121,11 @@ export const mkPostEndpoint = <Req, Res>(url: Url, requestSerialiser: RequestSer
       }
     })();
     let httpResponse: Response;
+    let requestHeaders: [string, string][] = [...headers, ["Content-Type", contentTypeHeader], ["Accept", acceptHeader]];
     try {
       httpResponse = await fetch(url, {
         method: "POST",
-        headers: [...headers, ["Content-Type", contentTypeHeader], ["Accept", acceptHeader]],
+        headers: requestHeaders,
         body: payload,
       });
     } catch (error: any) {
@@ -130,7 +143,13 @@ export const mkPostEndpoint = <Req, Res>(url: Url, requestSerialiser: RequestSer
         type: "HttpError",
         status: httpResponse.status,
         statusText: httpResponse.statusText,
-        body: DecodedErrorBody.decode(bodyBytes)
+        body: DecodedErrorBody.decode(bodyBytes),
+        requestInfo: {
+          headers: requestHeaders,
+          method: "POST",
+          payload,
+          url,
+        }
       });
     }
     switch (responseDeserialiser.type) {
@@ -201,10 +220,11 @@ export const mkGetEndpoint = <Req, Res>(baseUrl: Url, pathSerialiser: TextSerial
       return path.startsWith("/") ? path.slice(1) : path;
     })();
     let fullUrl = `${normalisedBaseUrl}/${normalisedPath}`;
+    let requestHeaders: [string, string][] = [...headers, ["Accept", acceptHeader]];
     try {
       httpResponse = await fetch(fullUrl, {
         method: "GET",
-        headers: [...headers, ["Accept", acceptHeader]],
+        headers: requestHeaders,
       });
     } catch (error: any) {
       return err({ type: "NetworkError", message: error.message || String(error) });
@@ -223,6 +243,11 @@ export const mkGetEndpoint = <Req, Res>(baseUrl: Url, pathSerialiser: TextSerial
         status: httpResponse.status,
         statusText: httpResponse.statusText,
         body: DecodedErrorBody.decode(bodyBytes),
+        requestInfo: {
+          headers: requestHeaders,
+          method: "GET",
+          url: fullUrl,
+        }
       });
     }
 

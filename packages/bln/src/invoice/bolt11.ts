@@ -1,11 +1,11 @@
 import { bech32, utf8 } from "@scure/base";
-import { SHORT_LOOKUP, type Network, type NetworkShort } from "./network";
+import { SHORT_LOOKUP, type Network, type Short } from "../network";
 import { convert, type WordParser } from "./words";
-import * as uint8Array from "./uint8Array";
-import { recoverPubkey } from "./secp";
+import * as uint8Array from "../uint8Array";
+import { recoverPubkey } from "../secp";
 import { Result, ok, err } from "neverthrow";
 
-interface RouteHint {
+export type RouteHint = {
   pubkey: Uint8Array;
   shortChannelId: Uint8Array; // Hex string
   feeBaseMsat: number;
@@ -13,13 +13,13 @@ interface RouteHint {
   cltvExpiryDelta: number;
 }
 
-interface ExtraBits {
+export type ExtraBits = {
   start_bit: number;
   bits: boolean[];
   has_required: boolean;
 }
 
-interface FeatureBits {
+export type FeatureBits = {
   [key: string]: "required" | "supported" | "unsupported" | ExtraBits;
 }
 
@@ -28,7 +28,7 @@ interface FeatureBits {
 /**
  * The tagged data part
  */
-export interface TaggedData {
+export type TaggedData = {
   /** The SHA256 hash of the payment preimage */
   paymentHash: Uint8Array;
   /** A free-form textual description of the payment. */
@@ -56,7 +56,7 @@ export interface TaggedData {
 /**
  * Represents a decoded Lightning Network BOLT11 Invoice.
  */
-export interface DecodedInvoice {
+export type DecodedInvoice = {
   /** The original invoice (raw string). */
   raw: string;
   /** The coin network (e.g., 'btc', 'tb') derived from the 'coin_network' section. */
@@ -113,7 +113,7 @@ function parseFixed(n: number): WordParser<Uint8Array> {
   };
 }
 
-export interface FallbackAddress {
+export type FallbackAddress = {
   version: number;
   bytes: Uint8Array;
 }
@@ -310,7 +310,7 @@ export function parsePrefix(prefix: string): ParseResult<{ network: Network; amo
   prefix = prefix.slice(2);
   const digitAt = prefix.search(/\d/);
   const short = digitAt < 0 ? prefix : prefix.slice(0, digitAt);
-  const network = SHORT_LOOKUP[short as NetworkShort];
+  const network = SHORT_LOOKUP[short as Short];
   if (typeof network === "undefined")
     return err({
       type: "UnknownNetwork",
@@ -460,6 +460,23 @@ function parseBech32(s: string): ParseResult<{ prefix: string; words: number[] }
  * Parse a BOLT11 Lightning Payment Request into a structured object.
  */
 export function parse(s: string): ParseResult<DecodedInvoice> {
+
+  function recoverPayee(
+    prefix: string,
+    data: number[],
+    signature: Uint8Array,
+  ): Uint8Array {
+    const sig = new Uint8Array([
+      ...signature.slice(-1),
+      ...signature.slice(0, 64),
+    ]);
+    const message = new Uint8Array([
+      ...utf8.decode(prefix),
+      ...convert(data, 5, 8, true),
+    ]);
+    return recoverPubkey(message, sig);
+  }
+
   return parseBech32(s).andThen(({ prefix, words }) => {
     return Result.combine([
       parsePrefix(prefix),
@@ -489,18 +506,27 @@ export function parse(s: string): ParseResult<DecodedInvoice> {
   });
 }
 
-function recoverPayee(
-  prefix: string,
-  data: number[],
-  signature: Uint8Array,
-): Uint8Array {
-  const sig = new Uint8Array([
-    ...signature.slice(-1),
-    ...signature.slice(0, 64),
-  ]);
-  const message = new Uint8Array([
-    ...utf8.decode(prefix),
-    ...convert(data, 5, 8, true),
-  ]);
-  return recoverPubkey(message, sig);
+export type ParseURIError =
+  ParseError
+  | { type: "InvalidScheme"; message: string; expectedScheme: "lightning"; actualScheme: string };
+
+// bolt-11 specifies simple URIs scheme:
+// > If a URI scheme is desired, the current recommendation is to either
+// > use 'lightning:' as a prefix before the BOLT-11 encoding
+export function parseURI(uri: string): Result<{ invoiceString: string, decoded: DecodedInvoice }, ParseURIError> {
+  const urnScheme = 'lightning';
+  const urnSchemeActual = uri.slice(0, urnScheme.length).toLowerCase();
+  if (urnSchemeActual !== urnScheme ||
+    uri.charAt(urnScheme.length) !== ':'
+  ) {
+    return err({
+      type: "InvalidScheme",
+      message: `Invalid URI scheme: expected '${urnScheme}', got '${urnSchemeActual}'`,
+      expectedScheme: "lightning",
+      actualScheme: urnSchemeActual,
+    });
+  }
+  const invoiceString = uri.slice(urnScheme.length + 1);
+  return parse(invoiceString).mapErr((e) => e as ParseURIError).map((decoded) => ({ invoiceString, decoded }));
 }
+

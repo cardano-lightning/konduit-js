@@ -20,6 +20,10 @@
       "types": "./dist/codec/async.d.ts",
       "default": "./dist/codec/async.js"
     },
+    "./base64String": {
+      "types": "./dist/base64String.d.ts",
+      "default": "./dist/base64String.js"
+    },
     "./hexString": {
       "types": "./dist/hexString.d.ts",
       "default": "./dist/hexString.js"

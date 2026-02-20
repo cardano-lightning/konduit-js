@@ -5,6 +5,7 @@ import { lmap, pipe, rmap, type Codec } from "./codec";
 import { err, ok, Result } from "neverthrow";
 import type { Cbor } from "./cbor/core";
 import { cbor2ByteStringCodec } from "./cbor/codecs/sync";
+import * as base64String from "./base64String";
 
 // Uint8Array to Tagged Uint8Array Codec with validation. The tag is optional and only used for error messages.
 export const mkTaggedUint8ArrayCodec = <T>(tag: string, validate: (arr: Uint8Array) => boolean): Codec<Uint8Array, T, JsonError> => {
@@ -12,7 +13,7 @@ export const mkTaggedUint8ArrayCodec = <T>(tag: string, validate: (arr: Uint8Arr
     deserialise: (arr: Uint8Array): Result<T, JsonError> => {
       if (!validate(arr)) {
         if(tag) {
-          return err(`Uint8Array validation failed for tagged type ${tag}`);
+          return err(`Uint8Array validation failed for tagged type ${tag}. Value parsed: ${hexString.fromUint8Array(arr)}, value length: ${arr.length}`);
         }
         return err("Uint8Array validation failed for tagged type");
       }
@@ -40,6 +41,13 @@ export const mkTaggedJsonCodec = <T>(tag: string, validate: (arr: Uint8Array) =>
     mkTaggedHexStringCodec<T>(tag, validate)
   );
 };
+
+
+export const json2Uint8ArrayThroughBase64Codec = rmap(
+  base64String.jsonCodec,
+  base64String.toUint8Array,
+  base64String.fromUint8Array,
+);
 
 export const mkTaggedCborCodec = <T>(tag: string, validate: (arr: Uint8Array) => boolean): Codec<Cbor, T, JsonError> => {
   return pipe(
