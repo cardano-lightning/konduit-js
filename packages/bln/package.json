@@ -33,6 +33,10 @@
     "./invoice/bip21": {
       "types": "./dist/invoice/bip21.d.ts",
       "default": "./dist/invoice/bip21.js"
+    },
+    "./network": {
+      "types": "./dist/network.d.ts",
+      "default": "./dist/network.js"
     }
   },
   "files": [

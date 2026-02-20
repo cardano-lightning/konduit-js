@@ -1,4 +1,5 @@
 node_modules
 dist
-test/readme-example.ts
+test/readme-example-1.ts
+test/readme-example-2.ts
 

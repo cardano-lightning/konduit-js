@@ -5,28 +5,67 @@ import sodium from 'libsodium-wrappers-sumo';
 import * as uint8Array from './uint8Array';
 import type { Tagged } from 'type-fest';
 import { err, ok, type Result } from 'neverthrow';
+import type { Ed25519ExpandedSecret, Ed25519PublicKey } from './rfc8032';
 
-// 32 bytes
-export type ChainCode = Tagged<Uint8Array, "ChainCode">;
-
-// 64 bytes - two 32 bytes parts:
-// kl - key material used for signing etc.
-// kr - "nonce prefix" used as extra input to HMAC during hardened derivation
-export type Ed25519Prv = Tagged<Uint8Array, "Ed25519Prv">;
-
-// 32 bytes
-export type Ed25519Pub = Tagged<Uint8Array, "Ed25519Pub">;
+// 32 bytes - the original 32 bytes master secret (before expansion)
+export type Ed25519MasterSecret = Tagged<Uint8Array, "Ed25519MasterSecret">;
 
 // 96 bytes - three 32 bytes parts:
 // kl - secret scalar used for signing etc.
 // kr - "nonce prefix" used as extra input to HMAC during hardened derivation
 // cc - chain code used for derivation
 export type Ed25519XPrv = Tagged<Uint8Array, "Ed25519XPrv">;
+export namespace Ed25519XPrv {
+  // The final result of the clamping procedure should result in a scalar
+  // which has three lowest bits cleared, three highest bits `010` (the
+  // third bit should be `0` originally.... but it could been enforced as well).
+  export function fromBytes(raw: Uint8Array): Result<Ed25519XPrv, string> {
+    if (raw.length !== 96) return err(`Expected 96 bytes, got ${raw.length}`);
+    const kl = raw.subarray(0, 32);
+    const isValidScalar =
+      (kl[0] & 0b0000_0111) === 0 && // Lowest 3 bits cleared
+      (kl[31] & 0b1110_0000) === 0b0100_0000 // highest 3 bits cleared BUT bit 254 == 1
+    ;
+    if (!isValidScalar) return err("Invalid Ed25519-BIP32 scalar: bits do not match required clamping pattern");
+    return ok(raw as Ed25519XPrv);
+  }
 
-export function extractPrv(
-  xprv: Ed25519XPrv
-): Ed25519Prv {
-  return xprv.subarray(0, 64) as Ed25519Prv;
+  // BIP32-Ed25519 key derivation procedure from the original
+  // paper by Khovratovich and Law:
+  //
+  // Let ˜k be 256-bit master secret. Then derive k = H512(˜k)
+  // and denote its left 32-byte by kL and right one by kR. If the
+  // third highest bit of the last byte of kL is not zero, discard ˜k.
+  // Otherwise additionally set the bits in kL as follows: the lowest
+  // 3 bits of the ﬁrst byte of kL of are cleared, the highest bit of
+  // the last byte is cleared, the second highest bit of the last byte
+  // is set. The resulting pair (kL, kR) is the extended root private
+  // key, and A ← [kL]B is the root public key after encoding.
+  // Derive c ← H256(0x01||˜k), where H256 is SHA-256, and call
+  // it the root chain code
+  export function fromMasterSecret(secret: Ed25519MasterSecret): Result<Ed25519XPrv, string> {
+    const material = sodium.crypto_hash_sha512(secret, "uint8array") as Uint8Array;
+    const isThridHighestBitClear = (material[31] & 0b0010_0000) == 0
+    if(!isThridHighestBitClear) {
+      return err("Invalid master secret: third highest bit of last byte of kL must be zero");
+    }
+    material[0] &= 0b1111_1000;  // Clear lowest 3 bits
+    material[31] &= 0b0011_1111; // Clear 2 highest bits
+    material[31] |= 0b0100_0000; // Set bit 254
+
+    const chainCode = sodium.crypto_hash_sha256(uint8Array.concat([new Uint8Array([0x01]), secret]), "uint8array") as Uint8Array;
+    return fromBytes(uint8Array.concat([material, chainCode]));
+  }
+}
+
+// RFC8032 expanded secret is scalar and nonce prefix.
+export const extractExpandedSecret = (xprv: Ed25519XPrv): Ed25519ExpandedSecret => xprv.subarray(0, 64) as Ed25519ExpandedSecret;
+
+// 32 bytes
+export type ChainCode = Tagged<Uint8Array, "ChainCode">;
+export namespace ChainCode {
+  export const fromXPrv = (key: Ed25519XPrv): ChainCode => key.subarray(-32) as ChainCode;
+  export const fromXPub = (key: Ed25519XPub): ChainCode => key.subarray(-32) as ChainCode;
 }
 
 // 64 bytes - two 32 bytes parts:
@@ -34,17 +73,7 @@ export function extractPrv(
 // cc - chain code used for derivation
 export type Ed25519XPub = Tagged<Uint8Array, "Ed25519XPub">;
 
-export function extractPub(
-  xpub: Ed25519XPub
-): Ed25519Pub {
-  return xpub.subarray(0, 32) as Ed25519Pub;
-}
-
-export function extractChainCode(
-  key: Ed25519XPrv | Ed25519XPub
-): ChainCode {
-  return key.subarray(-32) as ChainCode;
-}
+export const extractEd25519PublicKey = (xpub: Ed25519PublicKey) => xpub.subarray(0, 32) as Ed25519PublicKey;
 
 export const HARDENING_OFFSET = 0x80000000;
 
@@ -86,20 +115,6 @@ export namespace NonHardenedIdx {
 }
 
 export type DerivationIdx = NonHardenedIdx | HardenedIdx;
-
-export function mkEd25519XPrv(raw: Uint8Array): Result<Ed25519XPrv, string> {
-  if (raw.length !== 96) return err(`Expected 96 bytes, got ${raw.length}`);
-
-  const kl = raw.subarray(0, 32);
-
-  const isValidScalar =
-    (kl[0] & 0b0000_0111) === 0 && // Lowest 3 bits cleared
-    (kl[31] & 0b1110_0000) === 0b0100_0000 // highest 3 bits cleared BUT bit 254 == 1
-  ;
-
-  if (!isValidScalar) return err("Invalid Ed25519-BIP32 scalar: bits do not match required clamping pattern");
-  return ok(raw as Ed25519XPrv);
-}
 
 /**
  * Adds two 256-bit numbers represented as byte arrays. For the first 28 bytes,

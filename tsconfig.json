@@ -20,6 +20,7 @@
     { "path": "./packages/bln" },
     { "path": "./packages/cardano-keys" },
     { "path": "./packages/codec" },
+    { "path": "./packages/currency-format" },
     { "path": "./packages/konduit-consumer" },
     { "path": "./apps/bln-cli" },
     { "path": "./apps/konduit-app" }
