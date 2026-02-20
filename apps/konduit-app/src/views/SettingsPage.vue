@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { writeJson } from "../utils/dom";
+import DataListing from "../components/DataListing.vue";
 import { useNotifications } from "../composables/notifications";
-import SettingRow from "./SettingsPage/SettingRow.vue";
 import TheHeader from "../components/TheHeader.vue";
 import NavBar from "../components/NavBar.vue";
-import Hr from "../components/Hr.vue";
-import { cardanoConnector, wallet } from "../store";
-import { json2KonduitConsumerAsyncCodec, KonduitConsumer } from "@konduit/konduit-consumer";
+import MainContainer from "../components/MainContainer.vue";
+import { cardanoConnector, wallet, type AppKonduitConsumer } from "../store";
+import { json2KonduitConsumerAsyncCodec } from "@konduit/konduit-consumer";
 import { konduitConsumer, forget } from "../store";
-import { abbreviated } from "../composables/formatters";
 import { orPlaceholder } from "../utils/formatters";
+import { computed } from "vue";
 
 const notifications = useNotifications();
 
@@ -30,26 +30,26 @@ const writeSettings = () => {
     );
     return;
   }
-  const json = json2KonduitConsumerAsyncCodec.serialise(konduitConsumer.value as KonduitConsumer);
+  const json = json2KonduitConsumerAsyncCodec.serialise(konduitConsumer.value as AppKonduitConsumer);
   writeJson(json, "konduit.json");
 };
 
 const formattedConnector = orPlaceholder(cardanoConnector.value?.backendUrl);
-const formattedAddress = abbreviated(() => wallet.value?.addressBech32, 25, 10);
+const formattedAddress = computed(() => orPlaceholder(wallet.value?.addressBech32));
 
 </script>
 
 <template>
   <TheHeader :back-page-name="'home'" />
-  <dl id="container">
-    <SettingRow :label="'Cardano connector'" :formatted-value="formattedConnector" :actions="[['edit-cardano-connector-url', 'pen']]" />
-    <Hr class="separator" />
-    <SettingRow :label="'Embedded wallet address'" :formatted-value="formattedAddress" />
-    <SettingRow :label="'Export'" :formatted-value="''" :actions="[[writeSettings,'download']]" />
-    <SettingRow :label="'Forget'" :formatted-value="''" :actions="[[forgetReload, 'trash']]" />
-  </dl>
+  <MainContainer>
+    <DataListing :rows="[
+      { label: 'Cardano connector', formattedValue: formattedConnector, actions: [['edit-cardano-connector-url', 'pen']] },
+      'separator',
+      { label: 'Embedded wallet address', formattedValue: formattedAddress, actions: [] },
+      { label: 'Export', formattedValue: '', actions: [[writeSettings,'download']] },
+      { label: 'Forget', formattedValue: '', actions: [[forgetReload, 'trash']] },
+    ]" />
+  </MainContainer>
   <NavBar />
 </template>
 
-<style scoped>
-</style>

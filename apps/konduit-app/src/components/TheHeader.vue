@@ -8,7 +8,7 @@ import KonduitLogo from "./KonduitLogo.vue";
 
 // Define props
 const props = defineProps<{
-  backPageName?: string;
+  backPageName?: string | (() => void);
   title?: string;
   subsection?: string;
 }>();
@@ -23,6 +23,10 @@ const currentPageName = computed(() => {
 
 const goBack = () => {
   if(props.backPageName) {
+    if(typeof props.backPageName === "function") {
+      props.backPageName();
+      return;
+    }
     router.push({ name: props.backPageName });
   } else {
     router.back();

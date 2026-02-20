@@ -121,7 +121,6 @@ const groupedFields = computed((): { fields: {name: string, field: FieldProps}[]
   flex-direction: column;
   gap: 3em;
   justify-content: space-between;
-  padding: 1em;
   /* This should be parent concern */
   /* padding-bottom: calc(30% + env(safe-area-inset-bottom)); */
 }

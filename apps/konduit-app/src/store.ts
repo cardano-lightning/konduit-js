@@ -3,9 +3,11 @@ import { Connector } from "@konduit/konduit-consumer/cardano/connector";
 import { ref, readonly, computed, watch } from 'vue'
 import type { Ref } from "vue";
 import { fromDb, toDb } from "./store/persistence";
-import { BalanceInfo, CardanoConnectorWallet } from "@konduit/konduit-consumer/wallets/embedded";
+import { BalanceInfo, CardanoConnectorWallet, isBlockfrostWallet, type AnyWallet } from "@konduit/konduit-consumer/wallets/embedded";
 import { json2KonduitConsumerAsyncCodec, KonduitConsumer } from "@konduit/konduit-consumer";
+import * as asyncCodec from "@konduit/codec/async";
 import { Seconds } from '@konduit/konduit-consumer/time/duration';
+import type { Channel } from '@konduit/konduit-consumer/channel';
 import { err, ok, type Result } from 'neverthrow';
 import type { JsonError } from '@konduit/codec/json/codecs';
 import type { Json } from "@konduit/codec/json";
@@ -15,9 +17,17 @@ export type AppPhase = "loading" | "launching" | "running";
 
 export const appPhase: Ref<AppPhase> = ref<AppPhase>("loading");
 
+// We are currently restricted to cardano connector because
+// the TX builder depends on it.
+export type AppKonduitConsumer = KonduitConsumer<CardanoConnectorWallet>;
+
 const _wallet: Ref<CardanoConnectorWallet | null> = ref(null);
 // We are replacing the signingKey with a wallet abstraction
-export const wallet = readonly(_wallet);
+export const wallet = {
+  get value(): CardanoConnectorWallet | null {
+    return _wallet.value;
+  }
+};
 
 export const hasWallet = computed(() => {
   return wallet.value !== null;
@@ -31,53 +41,84 @@ export const hasWallet = computed(() => {
 // - On forget action we do not clear this setting, so that the next create action will use the last used connector and its backend URL.
 const _cardanoConnectorUrlLabel = "cardano-connector-url";
 
-const _cardanoConnector = ref<Connector>(defaultCardanoConnector);
-export const cardanoConnector = readonly(_cardanoConnector);
+export const cardanoConnector = ref<Connector>(defaultCardanoConnector);
 
-watch(_cardanoConnector, async (curr, _prev) => {
+watch(cardanoConnector, async (curr, _prev) => {
   if (curr) {
     await toDb(_cardanoConnectorUrlLabel, curr.backendUrl);
   }
 });
 
+/* We use only `readonly` wrappers on the objects which actually are readonly
+ * If we do this on a mutable object like KonduitConsumer or Wallet
+ * it magically becomes immutable and ITS MUTATING INTERNAL METHODS DO NOT WORK ANYMORE.
+ */
 const _walletBalanceInfo = ref<BalanceInfo | null>(null);
 export const walletBalanceInfo = readonly(_walletBalanceInfo);
 
 export const walletBalance = computed(() => {
-  return _walletBalanceInfo.value?.lovelace;
+  return _walletBalanceInfo.value?.lastValue || null;
 });
 
-const _konduitConsumer = ref<KonduitConsumer | null>(null);
-export const konduitConsumer = readonly(_konduitConsumer);
+export const _channels = ref<Array<Channel>>([]);
+export const channels = readonly(_channels);
+
+export const konduitConsumer = ref<AppKonduitConsumer | null>(null);
 
 const _subscriptions: Array<() => void> = [];
 
 const _koduitConsumerDbLabel: string = "konduit-consumer";
 
 const _saveKonduitConsumer = async () => {
-  if(_konduitConsumer.value === null) return;
+  if(konduitConsumer.value === null) return;
   // TypeScript needs some help here
-  const konduitConsumerJson = json2KonduitConsumerAsyncCodec.serialise(_konduitConsumer.value as KonduitConsumer);
+  const konduitConsumerJson = json2KonduitConsumerAsyncCodec.serialise(konduitConsumer.value as AppKonduitConsumer);
   await toDb(_koduitConsumerDbLabel, konduitConsumerJson);
 }
 
-export const loadKonduitConsumerFromJson = async (consumerJson: Json): Promise<Result<KonduitConsumer, JsonError>> => {
-  const result = await json2KonduitConsumerAsyncCodec.deserialise(consumerJson);
+export const loadKonduitConsumerFromJson = async (consumerJson: Json): Promise<Result<AppKonduitConsumer, JsonError>> => {
+  const consumerCodec = asyncCodec.pipe(
+    json2KonduitConsumerAsyncCodec, {
+      deserialise: async (konduitConsumer) => {
+        if(isBlockfrostWallet(konduitConsumer.wallet)) {
+          return err("BlockfrostWallet is not supported yet in this app");
+        }
+        return ok(konduitConsumer as AppKonduitConsumer);
+      },
+      serialise: (konduitConsumer: AppKonduitConsumer) => {
+        return konduitConsumer as KonduitConsumer<AnyWallet>;
+      }
+    }
+  );
+
+  const result = await consumerCodec.deserialise(consumerJson);
   result.map((consumer) => _setupKonduitConsumer(consumer));
   return result;
 }
 
-export const loadKonduitConsumerFromDb = async (): Promise<Result<KonduitConsumer | null, JsonError>> => {
+export const loadKonduitConsumerFromDb = async (): Promise<Result<AppKonduitConsumer | null, JsonError>> => {
   const konduitConsumerJson = await fromDb(_koduitConsumerDbLabel);
   if(konduitConsumerJson === null) return ok(null);
   return await loadKonduitConsumerFromJson(konduitConsumerJson as Json);
 }
 
-const _setupKonduitConsumer = (consumer: KonduitConsumer): void => {
-  if(_konduitConsumer.value !== null) {
+const _setupKonduitConsumer = (consumer: AppKonduitConsumer): void => {
+  if(konduitConsumer.value !== null) {
     forgetKonduitConsumer();
   }
-  _konduitConsumer.value = consumer;
+  konduitConsumer.value = consumer;
+  _channels.value = consumer.channels;
+
+  _subscriptions.push(consumer.subscribe('channel-opened', ({ channel: _channel }) => {
+    _saveKonduitConsumer();
+    _channels.value = consumer.channels;
+  }));
+
+  _subscriptions.push(consumer.subscribe('channel-squashed', ({ channel: _channel }) => {
+    _saveKonduitConsumer();
+  //   _channels.value = consumer.channels;
+  }));
+
   _subscriptions.push(consumer.wallet.subscribe('balance-fetched', () => {
     _saveKonduitConsumer();
     _walletBalanceInfo.value = consumer.wallet.balanceInfo;
@@ -86,49 +127,38 @@ const _setupKonduitConsumer = (consumer: KonduitConsumer): void => {
 
   _subscriptions.push(consumer.wallet.subscribe('backend-changed', async ({ newBackend }) => {
     _saveKonduitConsumer();
-    _cardanoConnector.value = newBackend.connector
+    cardanoConnector.value = newBackend.connector
   }));
-  _cardanoConnector.value = consumer.wallet.walletBackend.connector;
-
+  cardanoConnector.value = consumer.wallet.walletBackend.connector;
   consumer.wallet.startPolling(Seconds.fromDigits(1, 2, 0));
+  consumer.startPolling(Seconds.fromDigits(0, 1, 5));
   _wallet.value = consumer.wallet;
 }
 
-export const createKonduitConsumer = async (): Promise<Result<KonduitConsumer, JsonError>> => {
-  if(_konduitConsumer.value !== null) {
+export const createKonduitConsumer = async (): Promise<Result<AppKonduitConsumer, JsonError>> => {
+  if(konduitConsumer.value !== null) {
     forgetKonduitConsumer();
   }
-  const result = await CardanoConnectorWallet.create(cardanoConnector.value as Connector);
+  const result = await KonduitConsumer.createUsingConnector(cardanoConnector.value.backendUrl);
   return await result.match(
-    async ({ mnemonic: _m, wallet }) => {
-      const consumer = new KonduitConsumer(wallet);
+    async (res) => {
+      const { consumer, mnemonic: _mnemonic } = res;
       _setupKonduitConsumer(consumer);
-      await _saveKonduitConsumer();
+      _saveKonduitConsumer();
       return ok(consumer);
     },
-    async (e) => err(e)
+    (e) => err(e)
   );
 }
 
 export const forgetKonduitConsumer = (): void => {
-  if(_konduitConsumer.value === null) {
+  if(konduitConsumer.value === null) {
     return;
   }
-  _konduitConsumer.value.wallet.stopPolling();
-  _konduitConsumer.value = null;
+  konduitConsumer.value.wallet.stopPolling();
+  konduitConsumer.value = null;
   _subscriptions.forEach(unsub => unsub());
 }
-
-// const channelsLabel = "channels";
-// export const channels: Ref<Channel[]> = ref<Channel[]>([]);
-// 
-// export function appendChannel(channel: Channel): void {
-//   channels.value = [...channels.value, channel];
-// }
-//
-// watch(channels, async (curr, _prev) => {
-//   toDb(channelsLabel, curr);
-// }, { deep: true });
 
 // We keep the "current invoice" as the pay flow can be interrupted:
 // - User can be redirected to the adaptor and channel setup

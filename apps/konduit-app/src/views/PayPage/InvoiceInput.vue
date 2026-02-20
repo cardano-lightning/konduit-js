@@ -29,7 +29,8 @@ const validateInvoiceString = (
     resultRef.value = null;
     return;
   }
-  return invoice.parse(raw);
+  console.log(invoice.parse(raw));
+  resultRef.value = invoice.parse(raw);
 };
 
 
@@ -48,8 +49,8 @@ const resizeObserver: Ref<ResizeObserver | null> = ref(null);
 const textAreaSize: Ref<{ width: number; height: number }> = ref({ width: 0, height: 0 });
 
 const testing = {
-  invoice: "lightning:LNTB6U1P54HQLJPP5EZUCLJSJFWNNYX5XDPUHH4NHPVPTCG330TTHQ6L7RAS9SJM9AWDQDQQCQZZSXQRRSSSP54XRLF7PZ2EEGPN7EL4SY9WZEZTJWVW9TUTN83L70CMM3H4LF3M7S9QXPQYSGQFTY8SYDWU4HKCAVKA3FTXKD52V0L9LQMA9UN4A3FMWW38STU9NS5GKL0GAMV73595ZUNJ3R80V3U6J0JKKR2PVVW80TRRQ0G8RAFTDCQZF36N3",
-  autoTrigger: true,
+  invoice: "lightning:LNTB60U1P5EG5P2PP5NXSKU3D3GX6HZ8Q4HU2Q6VC0DACHYNLR5J6U08FQGN5HT2DTD4JSDQQCQZZSXQRRSSSP5QN2CWRQ9QSLU86GQZQF90Q3836GQZ0RPVQRLSVQREELTRZWWMPYS9QXPQYSGQKVM2UDCHS9M35DCA766N9K58JEMTKSCFFME2KRLKDAC0YQTCZNKSTMMFPXSL0NKC3M65605MPXLZTSZDHHZT3A04C43V2DLHVCYWNKSPFTALSW",
+  autoTrigger: false,
 };
 
 onMounted(() => {
@@ -132,7 +133,6 @@ watch(qrPayloadValidationResult, (newVal) => {
 });
 
 const onQrScan = (payload: string) => {
-  console.log("Scanned QR payload:", payload);
   validateInvoiceString(payload, qrPayloadValidationResult);
 };
 

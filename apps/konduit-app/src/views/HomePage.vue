@@ -2,12 +2,11 @@
 import NavBar from "../components/NavBar.vue";
 import { type Props as ButtonProps } from "../components/Button.vue";
 import ButtonGroup from "../components/ButtonGroup.vue";
+import MainContainer from "../components/MainContainer.vue";
 import TheHeader from "../components/TheHeader.vue";
 import { HexString } from "@konduit/codec/hexString";
-import { walletBalance } from "../store";
+import { channels, walletBalance } from "../store";
 import Link from "../components/Link.vue";
-
-let channels: { keytag: Uint8Array }[] = [];
 
 let channelButtons: ButtonProps[] = [
   { action: "add-channel", label: "+", primary: false, disabled: false },
@@ -17,7 +16,7 @@ let channelButtons: ButtonProps[] = [
 <template>
   <div>
     <TheHeader />
-    <div id="container">
+    <MainContainer>
       <div v-if="channels.length === 0" class="missing">
         <div v-if="!walletBalance">
           <p>No open channels found and your wallet seems to be empty.</p>
@@ -33,15 +32,15 @@ let channelButtons: ButtonProps[] = [
         <h2>Channels</h2>
         <!-- when there are no channels use class="missing" to show the missing state -->
         <ul class="channel-list">
-          <li v-for="channel in channels" :key="HexString.fromUint8Array(channel.keytag)" class="channel-item">
+          <li v-for="channel in channels" class="channel-item">
             <div class="channel-info">
-              <h3>Channel KeyTag: {{ HexString.fromUint8Array(channel.keytag) }}</h3>
+              <h3>Channel KeyTag: {{ HexString.fromUint8Array(channel.channelTag) }}</h3>
             </div>
           </li>
         </ul>
         <ButtonGroup :buttons="channelButtons" />
       </div>
-    </div>
+    </MainContainer>
     <NavBar />
   </div>
 </template>

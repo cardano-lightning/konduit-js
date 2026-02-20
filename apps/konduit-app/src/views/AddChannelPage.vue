@@ -1,69 +1,122 @@
 <script setup lang="ts">
-import { currentInvoice, cardanoConnector } from "../store";
+import { currentInvoice, konduitConsumer } from "../store";
 import { type Props as ButtonProps } from "../components/Button.vue";
 import NavBar from "../components/NavBar.vue";
 import TheHeader from "../components/TheHeader.vue";
 import Form from "../components/Form.vue";
-import { useRegle, type Maybe, createRule } from "@regle/core";
+import { useRegle, type Maybe, createRule, type RegleRuleDefinition } from "@regle/core";
 import * as rules from '@regle/rules';
-import { computed, ref, type ComputedRef } from "vue";
+import { computed, ref, type ComputedRef, type Ref } from "vue";
 import { FieldWidth } from "../components/Form/core";
 import * as TextField from "../components/Form/TextField.vue";
 import * as SelectField from "../components/Form/SelectField.vue";
 import { Days, Hours, Milliseconds, NormalisedDuration } from "@konduit/konduit-consumer/time/duration";
 import { useDefaultFormatters } from "../composables/l10n";
 import { useRouter } from "vue-router";
-import { Adaptor } from "@konduit/konduit-consumer/adaptor";
+import { AdaptorFullInfo } from "@konduit/konduit-consumer/adaptorClient";
+import * as codec from "@konduit/codec";
+import { string2IntCodec, type StringDeserialiser } from "@konduit/codec/urlquery/codecs/sync";
 import { stringify } from "@konduit/codec/json";
+import { useNotifications } from "../composables/notifications";
+import { pipeDeserialisers, type Deserialiser } from "@konduit/codec";
+import type { JsonError } from "@konduit/codec/json/codecs";
+import { Ada, int2AdaCodec, Lovelace } from "@konduit/konduit-consumer/cardano";
+import { err, ok, Result } from "neverthrow";
+import { isEmpty } from "@regle/rules";
 
 const formatters = useDefaultFormatters();
 
-const adaptor = ref<Adaptor | null>(null);
+const formatError = (error: JsonError): string => {
+  if(typeof error === "string") {
+    return error;
+  }
+  return stringify(error);
+};
 
-const adaptorUrlValidator = createRule({
-  message: (result) => {
-    if(result?.adaptorUrlValidationError) {
-      switch(result.adaptorUrlValidationError.type) {
+const ruleFromDeserialiser = <T>(deserialiser: Deserialiser<string, T, JsonError>): RegleRuleDefinition<string, [], true, { $valid: boolean, deserialisationError: JsonError | null, value: T | null }> => {
+  return createRule({
+    validator: async (value: Maybe<string>) => {
+      if(isEmpty(value)) {
+        return { $valid: false, value: null, deserialisationError: "Value is required." };
+      }
+      let deserialisationResult = deserialiser(value);
+      return deserialisationResult.match(
+        (value) => ({ $valid: true, value, deserialisationError: null }),
+        (_err) => ({ $valid: false, value: null, deserialisationError: _err })
+      );
+    },
+    message: (result) => {
+      if(result.deserialisationError) {
+        return formatError(result.deserialisationError);
+      }
+      return "The provided value is not valid.";
+    },
+  });
+}
+
+const ruleFromAsyncDeserialiser = <T>(deserialiser: (value: string) => Promise<Result<T, string>>): RegleRuleDefinition<string, [], true, { $valid: boolean, deserialisationError: string | null, value: T | null }> => {
+  return createRule({
+    validator: async (value: Maybe<string>) => {
+      if(isEmpty(value)) {
+        return { $valid: false, value: null, deserialisationError: "Value is required." };
+      }
+      let deserialisationResult = await deserialiser(value);
+      return deserialisationResult.match(
+        (value) => ({ $valid: true, value, deserialisationError: null }),
+        (_err) => ({ $valid: false, value: null, deserialisationError: _err })
+      );
+    },
+    message: (result) => {
+      if(result.deserialisationError) {
+        return formatError(result.deserialisationError);
+      }
+      return "The provided value is not valid.";
+    },
+  });
+}
+
+// We keep this additional value reference to access the validated
+// value from the respond period options setup and disable options
+// based on the info dynamically provided by the adaptor.
+const adaptorFullInfo = ref<AdaptorFullInfo | null>(null);
+
+const adaptorUrlRule = ruleFromAsyncDeserialiser(
+  async (value: string): Promise<Result<AdaptorFullInfo, string>> => {
+    const result = await AdaptorFullInfo.fromString(value);
+    result.map((info) => {
+      adaptorFullInfo.value = info;
+    });
+    return result.mapErr((error) => {
+      switch(error.type) {
         case "HttpError":
-          return `The provided URL returned an HTTP error: ${result.adaptorUrlValidationError.status} ${result.adaptorUrlValidationError.statusText}`;
+          return `The provided URL returned an HTTP error: ${error.status} ${error.statusText}`;
         case "NetworkError":
-          return `The provided URL is unreachable (due to server setup like CORS or networking problem): "${result.adaptorUrlValidationError.message}"`;
+          return `The provided URL is unreachable (due to server setup like CORS or networking problem): "${error.message}"`;
         case "DeserialisationError":
-          return `The provided URL did not return a valid Cardano Connector backend response: ${stringify(result.adaptorUrlValidationError.message)}`;
+          return `The provided URL did not return a valid Cardano Connector backend response: ${stringify(error.message)}`;
         default:
           return "An unknown error occurred while validating the provided URL.";
       }
-    }
-    return [];
-  },
-  validator: async (value: Maybe<string>) => {
-    let emptyResult = {
-      adaptorUrlValidationError: null,
-      adaptor: null,
-      $valid: false,
-    };
-    if(rules.isEmpty(value)) return emptyResult;
-    let backendUrl = value as string;
-    const createResult = await Adaptor.fromUrlString(backendUrl);
-    return createResult.match(
-      (a: Adaptor) => {
-        adaptor.value = a;
-        return {
-          ...emptyResult,
-          adaptor: a,
-          $valid: true
-        };
-      },
-      (_err) => {
-        return {
-          ...emptyResult,
-          adaptorUrlValidationError: _err,
-          $valid: false
-        };
+    });
+  }
+);
+
+const adaRule = ruleFromDeserialiser<Ada>((() => {
+  const adaDeserialiser = codec.pipe(
+    string2IntCodec,
+    int2AdaCodec,
+  ).deserialise;
+  return pipeDeserialisers(
+    adaDeserialiser,
+    (ada) => {
+      if(ada == 0) {
+        return err("You can not open a channel with zero amount. Please provide a positive amount of ADA.");
       }
-    );
-  },
-});
+      return ok(ada);
+    }
+  );
+
+})());
 
 // This setup reacts to the adaptor changes:
 // * we disable respond periods that are shorter than the adaptor's required close period
@@ -77,12 +130,17 @@ const respondPeriodFieldSetup = computed(() => {
     NormalisedDuration.fromComponentsNormalization({ days: Days.fromDigits(4) }),
     NormalisedDuration.fromComponentsNormalization({ days: Days.fromDigits(7) }),
   ];
-
   const optionsInfo = allowedRespondTimes.map(nd => {
     let milliseconds = Milliseconds.fromNormalisedDuration(nd);
     let optionValue = `${milliseconds}`;
     let label = formatters.formatDurationLong(nd);
-    let disabled = (adaptor.value && adaptor.value.info.closePeriod > milliseconds) || false;
+    let disabled = (
+        (adaptorFullInfo.value || false)
+        && Milliseconds.isGreaterThan(
+            Milliseconds.fromSeconds(adaptorFullInfo.value[1].closePeriod),
+            milliseconds
+          )
+      );
     return {
       origValue: nd,
       optionValue,
@@ -108,43 +166,29 @@ const respondPeriodFieldSetup = computed(() => {
   };
 });
 
-const respondPeriodRule = createRule({
-  message: (meta) => {
-    if(meta.optionValue == null) return "Please select a valid respond period.";
-    if(meta.duration != null && meta.$invalid) {
-      return `The selected respond period of ${formatters.formatDurationLong(meta.duration)} is not valid for the current adaptor.`;
-    }
-    return "The selected respond period is not valid.";
-  },
-  validator: async (value: Maybe<string>) => {
-    if(rules.isEmpty(value)) {
-      return {
-        $valid: false,
-        optionValue: null,
-      };
-    }
-    let possibleDurationInfo = respondPeriodFieldSetup.value.optionValue2DurationInfo[value as string];
-    if(possibleDurationInfo) {
-      let [duration, disabled] = possibleDurationInfo;
-      if(disabled) {
-        return {
-          $valid: false,
-          duration: duration,
-          optionValue: value,
-        };
-      }
-      return {
-        $valid: true,
-        duration: duration,
-        optionValue: value,
-      };
-    }
-    return {
-      $valid: false,
-      optionValue: value,
-    };
-  },
+// We need this ref to pass it to the deserialiser factory below.
+const respondPeriodOptionsRef = computed(() => {
+  return respondPeriodFieldSetup.value.optionValue2DurationInfo;
 });
+
+const respondPeriodRule = (() => {
+  const mkString2RespondPeriodDeserialiser = (optionsRef: Ref<Record<string, [NormalisedDuration, boolean]>>): StringDeserialiser<NormalisedDuration> => {
+    return (value: string) => {
+      if(!optionsRef.value)
+        return err("Respond period options are not configured yet.");
+      const options = optionsRef.value;
+      if(!options[value]) return err(`No such respond period option: ${value}`);
+      let [duration, disabled] = options[value];
+      if(disabled) {
+        return err(`The selected respond period of ${formatters.formatDurationLong(duration)} is not valid for the current adaptor.`);
+      }
+      return ok(duration);
+    }
+  };
+  return ruleFromDeserialiser(
+    mkString2RespondPeriodDeserialiser(respondPeriodOptionsRef)
+  );
+})();
 
 const formState = (() => {
   const initialRespondPeriodOpt = respondPeriodFieldSetup.value?.options.find(opt => !opt.disabled);
@@ -160,18 +204,16 @@ const formState = (() => {
 const { r$ } = useRegle(formState, {
   adaptorUrl: {
     required: rules.required,
-    adaptorUrlValidator: adaptorUrlValidator,
+    adaptorUrl: adaptorUrlRule,
     $debounce: 1000,
   },
   respondPeriod: {
     required: rules.required,
-    respondPeriodRule: respondPeriodRule,
+    respondPeriod: respondPeriodRule,
     $debounce: 500,
   },
   amount: {
-    required: rules.required,
-    numeric: rules.numeric,
-    minValue: rules.minValue(1),
+    ada: adaRule,
     $debounce: 500,
   },
   currency: {
@@ -181,7 +223,6 @@ const { r$ } = useRegle(formState, {
 
 // We want to run the validation immediately so
 r$.adaptorUrl.$touch();
-// r$.respondPeriod.$touch();
 
 const isValid = (dirty: boolean, valid: boolean) => {
   if(!dirty) return null;
@@ -201,11 +242,13 @@ const touch = (fieldName: string) => {
   }
 };
 
+const notifications = useNotifications();
+
 const fields = computed(() => {
   return {
     adaptorUrl: {
       fieldWidth: FieldWidth.full,
-      isValid: isValid(r$.adaptorUrl.$dirty, r$.adaptorUrl.$rules.adaptorUrlValidator.$valid),
+      isValid: isValid(r$.adaptorUrl.$dirty, r$.adaptorUrl.$rules.adaptorUrl.$valid),
       label: "Adaptor's URL",
       type: TextField.url,
       placeholder: "https://example-adaptor.com",
@@ -216,7 +259,7 @@ const fields = computed(() => {
         fieldWidth: FieldWidth.full,
         isValid: isValid(
           r$.amount.$dirty,
-          r$.respondPeriod.$rules.respondPeriodRule.$valid
+          r$.respondPeriod.$rules.respondPeriod.$valid
         ),
         label: "Respond Period",
         type: SelectField.select,
@@ -228,7 +271,7 @@ const fields = computed(() => {
       fieldWidth: FieldWidth.half,
       isValid: isValid(
         r$.amount.$dirty,
-        r$.amount.$rules.minValue.$valid && r$.amount.$rules.numeric.$valid && r$.amount.$rules.required.$valid
+        r$.amount.$rules.ada.$valid,
       ),
       label: "Amount",
       type: TextField.number,
@@ -240,20 +283,48 @@ const fields = computed(() => {
       errors: r$.currency.$errors,
       fieldWidth: FieldWidth.half,
       isValid: true,
-      label: "Currency",
+      label: "Currency / Unit",
       options: ["ADA"],
       type: SelectField.select,
     }
   };
 });
 
-const handleSubmit = () => {
-  if (r$.$ready) {
-    console.log("Submitting form", r$.$value);
-    // Here you would typically handle the form submission,
-    // e.g., send data to the backend or update application state.
+const submitting = ref(false);
+
+const handleSubmit = async () => {
+  if (r$.$ready && submitting.value === false) {
+    let ada = r$.amount.$rules.ada.$metadata.value;
+    let respondPeriod = r$.respondPeriod.$rules.respondPeriod.$metadata.value;
+    let adaptorFullInfo = r$.adaptorUrl.$rules.adaptorUrl.$metadata.value;
+    if(konduitConsumer.value == null || ada == null || respondPeriod == null || adaptorFullInfo == null) {
+      notifications.error("Criticial - cannot add channel: app state is inconsistent");
+      return;
+    }
+    submitting.value = true;
+    const openningResult = await konduitConsumer.value.openChannel(
+      adaptorFullInfo,
+      Lovelace.fromAda(ada),
+      Milliseconds.fromNormalisedDuration(respondPeriod)
+    );
+    submitting.value = false;
+    return openningResult.match(
+      (_channel) => {
+        const redirectPage = currentInvoice.value != null ? { name: 'pay' } : { name: 'home' };
+        console.error("Channels in the consumer:");
+        if(konduitConsumer.value != null) {
+          console.error(konduitConsumer.value._channels);
+        } else {
+          console.error("No channels found.");
+        }
+        notifications.redirectSuccess("Channel opening transaction was just submitted. It may take some time to confirm on the blockchain and be accepted and fully trusted by the adaptor.", redirectPage);
+      },
+      (error) => {
+        notifications.error(`Failed to open channel: ${error}. Please try again or contact support if the problem persists.`);
+      }
+    );
   } else {
-    console.log("Form is not ready for submission.");
+    notifications.warn("Please fix the errors in the form before submitting.");
   }
 };
 
@@ -278,7 +349,7 @@ const buttons: ComputedRef<ButtonProps[]> = computed(() => {
       primary: false,
     },
     {
-      disabled: !r$.$ready,
+      disabled: !r$.$ready || submitting.value,
       label: "Add",
       action: handleSubmit,
       primary: true,

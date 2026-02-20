@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MainContainer from "../components/MainContainer.vue";
 import TheHeader from "../components/TheHeader.vue";
 import Form from "../components/Form.vue";
 import * as TextField from "../components/Form/TextField.vue";
@@ -132,6 +133,8 @@ const buttons: ComputedRef<ButtonProps[]> = computed(() => {
 
 <template>
   <TheHeader :back-page-name="'settings'" />
-  <Form :buttons="buttons" :fields="fields" :formState="formState" :handleSubmit="handleSubmit" :touch="touch" />
+  <MainContainer>
+    <Form :buttons="buttons" :fields="fields" :formState="formState" :handleSubmit="handleSubmit" :touch="touch" />
+  </MainContainer>
 </template>
 

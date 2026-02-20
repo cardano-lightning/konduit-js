@@ -16,6 +16,10 @@ import '@formatjs/intl-durationformat/polyfill-force.js';
  * Exception to the rule is overwrite of the notification styles.
  */
 :root {
+  /* You should rely and wrap your main content in the `MainContainer` by default */
+  --main-container-padding: 2rem;
+  --navbar-padding-bottom: calc(60px + env(safe-area-inset-bottom)); /* Navbar height + safe area */
+
   /* FIXME: The theming should be reorganized properly - it is still messy
    * as we use it for buttons and text etc. without distinction.
    */
@@ -24,6 +28,8 @@ import '@formatjs/intl-durationformat/polyfill-force.js';
 
   --secondary-background-color: #2c3a70;
   --secondary-color: #888;
+  /* A lighter version of primary-color */
+  --missing-data-color: #fff8fa;
 
   --error-background-color: #ffe2e2;
   --error-color: #e57373;
@@ -35,8 +41,6 @@ import '@formatjs/intl-durationformat/polyfill-force.js';
 
   /* Inputs, frames around qr codes, video preview etc. */
   --frame-border-color: #d1d5db;
-
-  --navbar-padding-bottom: calc(60px + env(safe-area-inset-bottom)); /* Navbar height + safe area */
 }
 
 @media (prefers-color-scheme: light) {
@@ -46,6 +50,8 @@ import '@formatjs/intl-durationformat/polyfill-force.js';
 
     --secondary-background-color: #888;
     --secondary-color: #2c3a70;
+
+    --missing-data-color: #344480;
   }
 }
 
@@ -79,28 +85,49 @@ body {
   flex-direction: column;
   height: 100vh;
   margin: 0;
-  max-width: 60vh;
+  max-width: 80vh;
   min-width: 320px;
-  width: calc(100vw - 2rem);
+  width: 100vw;
 }
 
 /*
  * Toasts: class specificity is required to override the default toast styles
  */
-.Vue-Toastification__container .Vue-Toastification__toast.cl-toast.Vue-Toastification__toast--error,
-.Vue-Toastification__container .Vue-Toastification__toast.cl-toast.Vue-Toastification__toast--success,
-.Vue-Toastification__container .Vue-Toastification__toast.cl-toast.Vue-Toastification__toast--warning,
-.Vue-Toastification__container .Vue-Toastification__toast.cl-toast.Vue-Toastification__toast--info {
+
+.Vue-Toastification__container.top-center {
+  padding: 0;
+  max-width: 80vh !important;
+  min-width: 320px !important;
+  width: 100vw !important;
+
+  left: 50%;
+  margin-left: 0 !important;
+  transform: translateX(-50%);
+
+  padding-top: 0;
+  top: 0 !important;
+}
+.Vue-Toastification__container.top-center .Vue-Toastification__toast.cl-toast.Vue-Toastification__toast--error,
+.Vue-Toastification__container.top-center .Vue-Toastification__toast.cl-toast.Vue-Toastification__toast--success,
+.Vue-Toastification__container.top-center .Vue-Toastification__toast.cl-toast.Vue-Toastification__toast--warning,
+.Vue-Toastification__container.top-center .Vue-Toastification__toast.cl-toast.Vue-Toastification__toast--info {
   background: #fff1f2;
-  border: 1px solid #444;
+  box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.1), 0 2px 15px 0 rgba(0, 0, 0, 0.05) !important;
+  border-radius: 0;
+  border: 1px solid var(--frame-border-color);
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  color: var(--primary-color);
   font-family: monospace, Lucida Console, Courier New;
   font-weight: 400;
-  color: #162456;
-  border-radius: 0;
+  max-width: none !important;
+  text-align: center;
+  width: 100% !important;
 }
-
   .Vue-Toastification__container .Vue-Toastification__toast.cl-toast.cl-toast .Vue-Toastification__progress-bar {
-    background: #162456;
+    /* background: var(--secondary-color) !important; */
+    background: #ddd;
   }
 </style>
 

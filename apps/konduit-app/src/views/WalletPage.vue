@@ -2,22 +2,23 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import qr from "qrcode";
 import Hr from "../components/Hr.vue";
-import SettingRow from "./SettingsPage/SettingRow.vue";
-import type { Action } from "./SettingsPage/SettingRow.vue";
+import DataListing from "../components/DataListing.vue";
+import type { Action } from "../components/DataListing/DataRow.vue";
 import NavBar from "../components/NavBar.vue";
+import MainContainer from "../components/MainContainer.vue";
 // import QrCode from "../components/icons/QrCode.vue";
 // import Share2 from "../components/icons/Share2.vue";
 import TheHeader from "../components/TheHeader.vue";
 import { wallet, walletBalance, walletBalanceInfo } from "../store";
+import { mkLovelaceAmount } from "../components/FancyAmount.vue";
 import FancyAmount from "../components/FancyAmount.vue";
 import { useDefaultFormatters } from "../composables/l10n";
 import { POSIXSeconds } from "@konduit/konduit-consumer/time/absolute";
 import { AnyPreciseDuration, NormalisedDuration, Seconds } from "@konduit/konduit-consumer/time/duration";
-import { abbreviated } from "../composables/formatters";
 import { useClipboard } from "@vueuse/core";
 import { useNotifications } from "../composables/notifications";
 import { NetworkMagicNumber } from "@konduit/konduit-consumer/cardano";
-import { MISSING_PLACEHOLDER } from "../utils/formatters";
+import { MISSING_PLACEHOLDER, orPlaceholder } from "../utils/formatters";
 
 const notifications = useNotifications();
 
@@ -25,7 +26,7 @@ const notifications = useNotifications();
 // * Total balance section
 const amount = computed(() => {
   if (walletBalance.value != null) {
-    return { value: walletBalance.value, currency: "Lovelace" as const };
+    return mkLovelaceAmount(walletBalance.value);
   }
   return null;
 });
@@ -44,10 +45,10 @@ onMounted(() => {
   });
 });
 const formattedSyncInfo = computed(() => {
-  if(walletBalanceInfo?.value?.successfulFetch != null) {
+  if(walletBalanceInfo?.value?.lastSuccessfulFetch != null) {
     const secondsSinceLastSync = Seconds.fromDiffTime(
       now.value,
-      POSIXSeconds.fromValidDate(walletBalanceInfo.value.successfulFetch.fetchedAt)
+      POSIXSeconds.fromValidDate(walletBalanceInfo.value.lastSuccessfulFetch.fetchedAt)
     );
     if(secondsSinceLastSync == 0) return "Synced just now";
 
@@ -66,7 +67,7 @@ const formattedSyncInfo = computed(() => {
 
 // Address section:
 // * Address display
-const formattedAddress = abbreviated((() => wallet.value?.addressBech32), 20, 0);
+const formattedAddress = computed(() => orPlaceholder(wallet.value?.addressBech32))
 
 //* Copy button
 const clipboard = useClipboard();
@@ -147,7 +148,11 @@ const network = computed(() => {
 
 const addressActions = computed((): Action[] => {
   let actions: Action[] = [];
-  actions.push([copyAddress, "copy"]);
+  actions.push({
+    action: "copy" as const,
+    message: "Address copied to clipboard.",
+    value: addressBech32.value
+  });
   if (cardanoScanLink.value) {
     actions.push([cardanoScanLink.value, "external-link"]);
   }
@@ -164,27 +169,16 @@ watch(addressBech32, generateQR, {
 
 <template>
   <TheHeader :back-page-name="'home'" />
-  <div id="container">
+  <MainContainer>
     <div id="total">
       <span class="amount"><FancyAmount :amount="amount" /></span>
       <div class="synced-at">{{ formattedSyncInfo }}</div>
     </div>
     <Hr />
-    <SettingRow :label="'Cardano Network'" :formatted-value="network" />
-    <SettingRow :label="'Address'" :formatted-value="formattedAddress" :actions="addressActions" />
-    <!--
-      <span class="address">{{ formattedAddress }}</span>
-      <div class="buttons">
-        <Copy
-          class="button"
-          @click="copyAddress()"
-          data-label="key"
-          title="Copy address"
-        />
-        <a v-if="cardanoScanLink" :href="cardanoScanLink" target="_blank" rel="noopener" class="button" title="View on CardanoScan" ><ExternalLink :size="16" /></a>
-      </div>
-    </div>
-    -->
+    <DataListing :rows="[
+      { label: 'Cardano Network', formattedValue: network },
+      { label: 'Address', formattedValue: formattedAddress, actions: addressActions },
+    ]" />
     <!-- TODO: Bring back this functionality
       <QrCode
         class="button"
@@ -199,7 +193,7 @@ watch(addressBech32, generateQR, {
     <!--
     <div id="qr-container" v-html="qrSvg" ref="qrContainer"></div>
     -->
-  </div>
+  </MainContainer>
   <NavBar />
 </template>
 

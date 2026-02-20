@@ -1,4 +1,4 @@
-import * as hex from "./hex";
+import { HexString } from "@konduit/codec/hexString";
 
 export const MISSING_PLACEHOLDER = "N/A";
 
@@ -21,9 +21,14 @@ export const abbreviate = (str: string | null | undefined, prefixLen: number = 8
   return `${str.substring(0, prefixLen)}...${str.substring(str.length - suffixLen)}`;
 };
 
+export const hex = (bytes: Uint8Array | null | undefined, hexPrefix: string = "0x", placeholder: string = MISSING_PLACEHOLDER): string => {
+  if(bytes == null || bytes === undefined) return placeholder;
+  return `${hexPrefix}${HexString.fromUint8Array(bytes)}`;
+}
+
 export const abbreviateHex = (bytes: Uint8Array | null | undefined, prefixLen: number = 8, suffixLen: number = 8, hexPrefix: string = "0x", placeholder: string = MISSING_PLACEHOLDER): string => {
   if(bytes == null || bytes === undefined) return placeholder;
-  const hexStr = `${hexPrefix}${hex.encode(bytes)}`;
+  const hexStr = `${hexPrefix}${hex(bytes)}`;
   return abbreviate(hexStr, prefixLen, suffixLen, placeholder);
 }
 
@@ -47,7 +52,7 @@ export function formatBytesAlphanumericOrHex(bytes: Uint8Array, hexPrefix: strin
     return decoder.decode(bytes);
   }
 
-  return `${hexPrefix}${hex.encode(bytes)}`;
+  return `${hexPrefix}${hex(bytes)}`;
 }
 
 export function orPlaceholder(value: string | null | undefined, placeholder: string = MISSING_PLACEHOLDER): string {
