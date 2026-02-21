@@ -2,7 +2,7 @@ import { err, ok, type Result } from "neverthrow";
 import type { Json } from "../json";
 import { onBigInt, onBoolean, onArray, onObject, onNull, nullJson, onString, stringify } from "../json";
 import * as json from "../json";
-import { altCodecs, type Codec, type Deserialiser, type ExtractCodecInput, type Serialiser, type UnionOfCodecsOutputs } from "../codec";
+import { altCodecs, mkIdentityCodec, pipe, type Codec, type Deserialiser, type ExtractCodecInput, type Serialiser, type UnionOfCodecsOutputs } from "../codec";
 
 // We actually represent parsing errors as JSON too :-P
 export type JsonError = Json;
@@ -33,11 +33,31 @@ export const mkStringifier = <T>(codec: JsonCodec<T>): (value: T) => string => {
   }
 }
 
-// Codec for bigint
+// Codec for string
+export const json2StringCodec: JsonCodec<string> = {
+  deserialise: onString(val => err(`Expected string but got: ${String(val)}`) as Result<string, JsonError>)(ok),
+  serialise: (value: string) => value
+};
+
+// Default codec for bigint
 export const json2BigIntCodec: JsonCodec<bigint> = {
   deserialise: onBigInt(val => err(`Expected bigint but got: ${String(val)}`) as Result<bigint, string>)(ok),
   serialise: (value: bigint) => value as Json
 };
+
+// Codec for bigint which is provided as a string
+export const json2BigIntThroughStringCodec = pipe(
+  json2StringCodec, {
+    deserialise: (str: string) => {
+      try {
+        return ok(BigInt(str));
+      } catch (e) {
+        return err(`Invalid BigInt string: ${str}`);
+      }
+    },
+    serialise: (bigInt: bigint) => bigInt.toString(),
+  }
+);
 
 // Codec for number (checks safe integer range during deserialisation)
 export const json2NumberCodec: JsonCodec<number> = {
@@ -51,16 +71,26 @@ export const json2NumberCodec: JsonCodec<number> = {
   serialise: (value: number) => BigInt(Math.round(value))
 };
 
+export const json2NumberThroughStringCodec = pipe(
+  json2StringCodec, {
+    deserialise: (str: string) => {
+      const num = Number(str);
+      if (isNaN(num)) {
+        return err(`Invalid number string: ${str}`);
+      }
+      if (num > Number.MAX_SAFE_INTEGER || num < Number.MIN_SAFE_INTEGER) {
+        return err(`Number value ${num} is outside safe integer range [${Number.MIN_SAFE_INTEGER}, ${Number.MAX_SAFE_INTEGER}]`);
+      }
+      return ok(num);
+    },
+    serialise: (num: number) => num.toString(),
+  }
+);
+
 // Codec for boolean
 export const json2BooleanCodec: JsonCodec<boolean> = {
   deserialise: onBoolean(val => err(`Expected boolean but got: ${String(val)}`) as Result<boolean, JsonError>)(ok),
   serialise: (value: boolean) => value
-};
-
-// Codec for string
-export const json2StringCodec: JsonCodec<string> = {
-  deserialise: onString(val => err(`Expected string but got: ${String(val)}`) as Result<string, JsonError>)(ok),
-  serialise: (value: string) => value
 };
 
 // Codec for null
@@ -69,19 +99,19 @@ export const json2NullCodec: JsonCodec<null> = {
   serialise: () => nullJson
 };
 
-// Codec for array (identity - keeps Json[] as is)
 export const json2ArrayCodec: JsonCodec<Json[]> = {
   deserialise: onArray(err("Expected array") as Result<Json[], JsonError>)(ok),
   serialise: (value: Json[]) => value
 };
 
-// Codec for object (identity - keeps object as is)
 export const json2ObjectCodec: JsonCodec<{ [key: string]: Json }> = {
   deserialise: onObject(
       (value: Json) => err(`Expected object but got ${stringify(value)}`) as Result<{ [key: string]: Json }, JsonError>
     )(ok),
   serialise: (value: { [key: string]: Json }) => value as Json
 };
+
+export const identityCodec: JsonCodec<Json> = mkIdentityCodec()
 
 // I'm not sure why but some parts of the original altCodecs type can be be unified with concrete parts of
 // the JsonCodec, but some not. So I'm leaving this mutant here to help the TS compiler a bit :-P

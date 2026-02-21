@@ -136,7 +136,7 @@ const respondPeriodFieldSetup = computed(() => {
     let label = formatters.formatDurationLong(nd);
     let disabled = (
         (adaptorFullInfo.value || false)
-        && Milliseconds.isGreaterThan(
+        && Milliseconds.ord.isGreaterThan(
             Milliseconds.fromSeconds(adaptorFullInfo.value[1].closePeriod),
             milliseconds
           )

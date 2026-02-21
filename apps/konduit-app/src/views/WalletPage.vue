@@ -15,12 +15,8 @@ import FancyAmount from "../components/FancyAmount.vue";
 import { useDefaultFormatters } from "../composables/l10n";
 import { POSIXSeconds } from "@konduit/konduit-consumer/time/absolute";
 import { AnyPreciseDuration, NormalisedDuration, Seconds } from "@konduit/konduit-consumer/time/duration";
-import { useClipboard } from "@vueuse/core";
-import { useNotifications } from "../composables/notifications";
 import { NetworkMagicNumber } from "@konduit/konduit-consumer/cardano";
 import { MISSING_PLACEHOLDER, orPlaceholder } from "../utils/formatters";
-
-const notifications = useNotifications();
 
 // Amount section:
 // * Total balance section
@@ -68,15 +64,6 @@ const formattedSyncInfo = computed(() => {
 // Address section:
 // * Address display
 const formattedAddress = computed(() => orPlaceholder(wallet.value?.addressBech32))
-
-//* Copy button
-const clipboard = useClipboard();
-
-function copyAddress() {
-  if (!wallet.value?.addressBech32) return;
-  notifications.success("Address copied to clipboard.");
-  return clipboard.copy(wallet.value.addressBech32);
-}
 
 //* Cardano scan link
 const cardanoScanLink = computed(() => {

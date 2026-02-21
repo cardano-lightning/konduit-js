@@ -2002,8 +2002,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@konduit/konduit-consumer@workspace:packages/konduit-consumer"
   dependencies:
+    "@konduit/bln": "workspace:^"
     "@konduit/cardano-keys": "workspace:^"
     "@konduit/codec": "workspace:^"
+    "@noble/hashes": "npm:^2.0.1"
     "@scure/base": "npm:^2.0.0"
     "@types/node": "npm:^24.10.1"
     type-fest: "npm:^5.4.3"

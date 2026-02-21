@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { mkBlockfrostClient } from "../../src/adaptorClient";
+import { mkBlockfrostClient } from "../../src/blockfrostClient";
 import { expectNotNull, expectOk } from "../assertions";
 import { NetworkMagicNumber } from "../../src/cardano/addressses";
 import { Ed25519RootPrivateKey, WalletIndex, KeyRole, KeyIndex } from "@konduit/cardano-keys";

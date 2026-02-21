@@ -1,5 +1,5 @@
 import { err, ok } from 'neverthrow';
-import { json2BigIntCodec, type JsonCodec, type JsonError } from '../json/codecs';
+import { json2BigIntCodec, json2NumberThroughStringCodec, type JsonCodec, type JsonError } from '../json/codecs';
 import * as codec from '../codec';
 import type { Tagged } from 'type-fest';
 import type { Codec } from '../codec';
@@ -60,6 +60,7 @@ export const bigInt2IntCodec: Codec<bigint, Int, JsonError> = {
 };
 
 export const json2IntCodec: JsonCodec<Int> = codec.pipe(json2BigIntCodec, bigInt2IntCodec);
+export const json2IntThroughStringCodec: JsonCodec<Int> = codec.pipe(json2NumberThroughStringCodec, number2IntCodec);
 
 // Positive integer (> 0) within safe integer range
 export type PositiveInt = Tagged<Int, "PositiveInt">;
@@ -89,6 +90,7 @@ export const int2PositiveIntCodec: Codec<Int, PositiveInt, JsonError> = {
 };
 
 export const json2PositiveIntCodec: JsonCodec<PositiveInt> = codec.pipe(json2IntCodec, int2PositiveIntCodec);
+export const json2PositiveIntThroughStringCodec: JsonCodec<PositiveInt> = codec.pipe(json2IntThroughStringCodec, int2PositiveIntCodec);
 
 // Non-negative integer (>= 0) within safe integer range
 export type NonNegativeInt = Tagged<Int, "NonNegativeInt">;
@@ -123,3 +125,4 @@ export const bigInt2NonNegativeIntCodec: Codec<bigint, NonNegativeInt, JsonError
   bigInt2IntCodec,
   int2NonNegativeIntCodec,
 );
+export const json2NonNegativeIntThroughStringCodec: JsonCodec<NonNegativeInt> = codec.pipe(json2IntThroughStringCodec, int2NonNegativeIntCodec);

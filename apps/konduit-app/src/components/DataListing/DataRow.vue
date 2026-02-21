@@ -1,9 +1,11 @@
 <script lang="ts">
 export type ActionIcon = "pen" | "download" | "trash" | "copy" | "external-link";
-export type BasicAction = [OnClick, ActionIcon]
+
+export type Href = string;
 export type Action =
-  | BasicAction
+  | [OnClick, ActionIcon]
   | { action: "copy", message: string, value: string | null }
+  | { action: "external-link", url: string }
 
 export type ValueImportance = "missing" | "important" | "very-important";
 export type ValueConfig = string | {
@@ -41,15 +43,20 @@ const mkCopyHandler = (message: string, value: string | null) => () => {
   notifications.success(message);
 };
 
+type BasicAction = [OnClick, Href, ActionIcon]
+
 const toBasicAction = (action: Action): BasicAction => {
   if (Array.isArray(action)) {
-    return action;
+    if(typeof action[0] === "string")
+      return [action[0], action[0], action[1]];
+    else
+      return [action[0], "#", action[1]];
   }
   switch (action.action) {
     case "copy":
-      return [mkCopyHandler(action.message, action.value), "copy"];
-    default:
-      throw new Error(`Unsupported action type: ${action.action}`);
+      return [mkCopyHandler(action.message, action.value), "#", "copy"];
+    case "external-link":
+      return [action.url, action.url, "external-link"];
   }
 };
 
@@ -66,14 +73,14 @@ const basicActions = props.actions?.map(toBasicAction);
             v-for="(action, index) in basicActions"
             :key="index"
             class="edit"
-            :href="typeof action[0] === 'string' ? action[0] : '#'"
-            :click="typeof action[0] === 'function' ? action[0] : () => {}"
+            :href="action[1]"
+            :click="action[0]"
           >
-            <Pen v-if="action[1] === 'pen' || !action[1]" />
-            <Download v-else-if="action[1] === 'download'" />
-            <Trash v-else-if="action[1] === 'trash'" />
-            <Copy v-else-if="action[1] === 'copy'" />
-            <ExternalLink v-else-if="action[1] === 'external-link'" />
+            <Pen v-if="action[2] === 'pen' || !action[2]" />
+            <Download v-else-if="action[2] === 'download'" />
+            <Trash v-else-if="action[2] === 'trash'" />
+            <Copy v-else-if="action[2] === 'copy'" />
+            <ExternalLink v-else-if="action[2] === 'external-link'" />
           </Link>
         </div>
     </dt>

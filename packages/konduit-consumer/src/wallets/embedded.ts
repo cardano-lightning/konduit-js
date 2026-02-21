@@ -15,7 +15,7 @@ import { hoistToResultAsync, resultAsyncToPromise } from "../neverthrow";
 import { mkIdentityCodec } from "@konduit/codec";
 import { json2ValidDateCodec, ValidDate } from "../time/absolute";
 import type { JsonAsyncCodec } from "@konduit/codec/json/async";
-import { mkBlockfrostClient } from "../adaptorClient";
+import { mkBlockfrostClient } from "../blockfrostClient";
 import { mkJson2PollingInfoCodec, PollingInfo } from "../polling";
 
 type WalletEvent<T> = CustomEvent<T>;

@@ -1,6 +1,6 @@
 import { err, ok, type Result } from 'neverthrow';
 import type { JsonCodec, JsonError } from '../json/codecs';
-import { json2BigIntCodec } from '../json/codecs';
+import { json2BigIntCodec, json2BigIntThroughStringCodec } from '../json/codecs';
 import type { Tagged } from 'type-fest';
 import type { Codec } from '../codec';
 import * as codec from '../codec';
@@ -40,6 +40,7 @@ export const bigInt2PositiveBigIntCodec: Codec<bigint, PositiveBigInt, JsonError
 }
 
 export const json2PositiveBigIntCodec: JsonCodec<PositiveBigInt> = codec.pipe(json2BigIntCodec, bigInt2PositiveBigIntCodec);
+export const json2PositiveBigIntThroughStringCodec: JsonCodec<PositiveBigInt> = codec.pipe(json2BigIntThroughStringCodec, bigInt2PositiveBigIntCodec);
 
 // Non-negative BigInt (>= 0n)
 export type NonNegativeBigInt = Tagged<bigint, "NonNegativeBigInt">;
@@ -77,4 +78,5 @@ export const bigInt2NonNegativeBigIntCodec: Codec<bigint, NonNegativeBigInt, Jso
 }
 
 export const json2NonNegativeBigIntCodec: JsonCodec<NonNegativeBigInt> = codec.pipe(json2BigIntCodec, bigInt2NonNegativeBigIntCodec);
+export const json2NonNegativeBigIntThroughStringCodec: JsonCodec<NonNegativeBigInt> = codec.pipe(json2BigIntThroughStringCodec, bigInt2NonNegativeBigIntCodec);
 
