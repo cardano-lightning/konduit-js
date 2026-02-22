@@ -107,7 +107,7 @@ export const mkAdaptorClient = (baseUrl: AdaptorUrl): AdaptorClient => {
       const quoteEndpoint = mkQuoteEndpoint(baseUrl);
       return quoteEndpoint(quoteBody, [mkKonduitHeader(keyTag)]);
     },
-    chPay: (keyTag: KeyTag, cheque: Cheque, invoice: Invoice) => {
+    chPay: async (keyTag: KeyTag, cheque: Cheque, invoice: Invoice) => {
       const { key, tag } = KeyTag.split(keyTag);
       const json2PayResponseCodec = mkJson2PayResponseCodec(tag, key);
       const chPayEndpoint = mkPostEndpoint(

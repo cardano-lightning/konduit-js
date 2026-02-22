@@ -108,6 +108,7 @@ export namespace NonNegativeInt {
   export const fromAbs = (n: Int) => (n < 0 ? -n : n) as NonNegativeInt;
   export const fromJson = (n: Json) => json2NonNegativeIntCodec.deserialise(n);
   export const ord = mkOrdForScalar<NonNegativeInt>();
+  export const distance = (a: NonNegativeInt, b: NonNegativeInt): NonNegativeInt => Math.abs(a - b) as NonNegativeInt;
 }
 
 export const int2NonNegativeIntCodec: Codec<Int, NonNegativeInt, JsonError> = {

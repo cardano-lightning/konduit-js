@@ -35,6 +35,7 @@ import {
 import { bolt11 } from "@konduit/bln";
 import type { Json } from "@konduit/codec/json";
 import { string2UrlQueryCodec, type UrlQuery } from "../../../codec/dist/urlquery/ast";
+import { HexString } from "@konduit/codec/hexString";
 
 export type LndConfig = {
   baseUrl: string;
@@ -60,24 +61,24 @@ export type GetInfoFeature = {
 };
 
 export type GetInfoResponse = {
-  version: string;
-  commit_hash: string;
-  identity_pubkey: string;
   alias: string;
+  best_header_timestamp: NonNegativeBigInt;
+  block_hash: string;
+  block_height: NonNegativeInt;
+  chains: GetInfoChain[];
   color: string;
-  num_pending_channels: NonNegativeInt;
+  commit_hash: string;
+  // features: Record<number, GetInfoFeature>;
+  identity_pubkey: string;
   num_active_channels: NonNegativeInt;
   num_inactive_channels: NonNegativeInt;
   num_peers: NonNegativeInt;
-  block_height: NonNegativeInt;
-  block_hash: string;
-  best_header_timestamp: NonNegativeBigInt;
+  num_pending_channels: NonNegativeInt;
   synced_to_chain: boolean;
   synced_to_graph: boolean;
   testnet: boolean;
-  chains: GetInfoChain[];
   uris: string[];
-  // features: Record<number, GetInfoFeature>;
+  version: string;
 };
 
 export type GraphRoutesHop = {
@@ -97,19 +98,19 @@ export type GraphRoutesHop = {
 };
 
 export const json2GraphRoutesHopCodec: JsonCodec<GraphRoutesHop> = jsonCodecs.objectOf({
-  amt_to_forward: json2NonNegativeBigIntCodec,
-  amt_to_forward_msat: json2NonNegativeBigIntCodec,
+  amt_to_forward: json2NonNegativeBigIntThroughStringCodec,
+  amt_to_forward_msat: json2NonNegativeBigIntThroughStringCodec,
   blinding_point: uint8Array.json2Uint8ArrayThroughBase64Codec,
   encrypted_data: uint8Array.json2Uint8ArrayThroughBase64Codec,
   metadata: uint8Array.json2Uint8ArrayThroughBase64Codec,
-  chan_capacity: json2NonNegativeBigIntCodec,
-  chan_id: json2NonNegativeBigIntCodec,
+  chan_capacity: json2NonNegativeBigIntThroughStringCodec,
+  chan_id: json2NonNegativeBigIntThroughStringCodec,
   expiry: json2NonNegativeBigIntCodec,
-  fee: json2NonNegativeBigIntCodec,
-  fee_msat: json2NonNegativeBigIntCodec,
+  fee: json2NonNegativeBigIntThroughStringCodec,
+  fee_msat: json2NonNegativeBigIntThroughStringCodec,
   pub_key: uint8Array.jsonCodec,
   tlv_payload: json2BooleanCodec,
-  total_amt_msat: json2NonNegativeBigIntCodec,
+  total_amt_msat: json2NonNegativeBigIntThroughStringCodec,
 });
 
 export type GraphRoutesRoute = {
@@ -120,25 +121,27 @@ export type GraphRoutesRoute = {
   total_amt_msat: NonNegativeBigInt;
   total_fees: NonNegativeBigInt;
   total_fees_msat: NonNegativeBigInt;
-  total_time_lock: NonNegativeBigInt;
+  total_time_lock: NonNegativeInt;
 };
 
 const json2GraphRouteCodec: JsonCodec<GraphRoutesRoute> = jsonCodecs.objectOf({
   custom_channel_data: json2StringCodec,
-  first_hop_amount_msat: json2NonNegativeBigIntCodec,
+  first_hop_amount_msat: json2NonNegativeBigIntThroughStringCodec,
   hops: jsonCodecs.arrayOf(json2GraphRoutesHopCodec),
-  total_amt: json2NonNegativeBigIntCodec,
-  total_amt_msat: json2NonNegativeBigIntCodec,
-  total_fees: json2NonNegativeBigIntCodec,
-  total_fees_msat: json2NonNegativeBigIntCodec,
-  total_time_lock: json2NonNegativeBigIntCodec,
+  total_amt: json2NonNegativeBigIntThroughStringCodec,
+  total_amt_msat: json2NonNegativeBigIntThroughStringCodec,
+  total_fees: json2NonNegativeBigIntThroughStringCodec,
+  total_fees_msat: json2NonNegativeBigIntThroughStringCodec,
+  total_time_lock: json2NonNegativeIntCodec,
 });
+
+
 
 export type GraphRoutesResponse = {
   routes: GraphRoutesRoute[];
 };
 
-const json2GraphRoutesCodec: JsonCodec<GraphRoutesResponse> = jsonCodecs.objectOf({
+export const json2GraphRoutesCodec: JsonCodec<GraphRoutesResponse> = jsonCodecs.objectOf({
   routes: jsonCodecs.arrayOf(json2GraphRouteCodec),
 });
 
@@ -423,6 +426,7 @@ export type RouterSendRequest = {
   allow_self_payment: boolean | undefined;
   amp: RouterSendAmpRecord | undefined;
   amt_msat: NonNegativeBigInt | undefined;
+  cltv_limit: NonNegativeInt | undefined;
   dest: RouterSendDestination | undefined;
   fee_limit_msat: NonNegativeBigInt | undefined;
   last_hop_pubkey: Uint8Array | undefined;
@@ -435,6 +439,7 @@ export const json2RouterSendRequestCodec: JsonCodec<RouterSendRequest> = jsonCod
   allow_self_payment: jsonCodecs.optional(json2BooleanCodec),
   amp: jsonCodecs.optional(json2RouterSendAmpRecordCodec),
   amt_msat: jsonCodecs.optional(json2NonNegativeBigIntThroughStringCodec),
+  cltv_limit: jsonCodecs.optional(json2NonNegativeIntCodec),
   dest: jsonCodecs.optional(json2RouterSendDestinationCodec),
   fee_limit_msat: jsonCodecs.optional(json2NonNegativeBigIntThroughStringCodec),
   last_hop_pubkey: jsonCodecs.optional(uint8Array.jsonCodec),
@@ -668,18 +673,12 @@ export const mkLndClient = (config: LndConfig): LndClient => {
     ResponseDeserialiser.fromJsonDeserialiser(json2GetInfoCodec.deserialise),
   );
 
-  const graphRoutesEndpoint = mkPostEndpoint(
-    `${config.baseUrl}/v1/graph/routes`,
-    RequestSerialiser.fromJsonSerialiser(
-      (body: { payee: Uint8Array; amountMsat: Millisatoshi }) => ({
-        // Rust uses /v1/graph/routes/{payee}/{amount_sat}
-        // JSON body variant here; adjust path/body if your REST needs URL params instead.
-        payee: uint8Array.jsonCodec.serialise(
-          body.payee
-        ),
-        amount_msat: json2MillisatoshiCodec.serialise(body.amountMsat),
-      })
-    ),
+  const graphRoutesEndpoint = mkGetEndpoint(
+    `${config.baseUrl}`,
+    ({ payee, amountMsat}: { payee: Uint8Array; amountMsat: Millisatoshi }) => {
+      const payeeHex = HexString.fromUint8Array(payee);
+      return `/v1/graph/routes/${payeeHex}/${amountMsat}`;
+    },
     ResponseDeserialiser.fromJsonDeserialiser(json2GraphRoutesCodec.deserialise)
   );
 
