@@ -2,11 +2,12 @@ import * as codec from "@konduit/codec";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import { json2Ed25519SignatureCodec } from "../cardano/keys";
 import { json2ChequeBodyCodec, type ChequeBody } from "../channel/squash";
-import { json2StringCodec, type JsonError } from "@konduit/codec/json/codecs";
+import { json2StringCodec, type JsonCodec, type JsonError } from "@konduit/codec/json/codecs";
 import type { Ed25519Signature } from "@konduit/cardano-keys";
 import { decodedInvoice2InvoiceDeserialiser, type Invoice } from "../bitcoin/bolt11";
 import { bolt11 } from "@konduit/bln";
-import { json2SquashResponseDeserialiser, type SquashResponse } from "./squash";
+import { mkJson2SquashResponseCodec, type SquashResponse } from "./squash";
+import type { ChannelTag, ConsumerEd25519VerificationKey } from "../channel";
 
 export type PayBody = {
   chequeBody: ChequeBody;
@@ -46,5 +47,5 @@ export const json2PayBodyCodec: jsonCodecs.JsonCodec<PayBody> = {
 
 export type PayResponse = SquashResponse;
 
-export const json2PayResponseDeserialiser: jsonCodecs.JsonDeserialiser<PayResponse> = json2SquashResponseDeserialiser;
+export const mkJson2PayResponseCodec: (tag: ChannelTag, vKey: ConsumerEd25519VerificationKey) => JsonCodec<PayResponse> = mkJson2SquashResponseCodec;
 

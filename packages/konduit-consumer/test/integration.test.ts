@@ -5,7 +5,7 @@ import { AdaptorFullInfo } from "../src/adaptorClient";
 import { Days, Milliseconds, Seconds } from "../src/time/duration";
 import { Address, AddressBech32, Network, PubKeyHash } from "../src/cardano";
 import { Ada } from "../src/cardano/assets";
-import { parse, stringify } from "@konduit/codec/json";
+import { parse, stringify, type Json } from "@konduit/codec/json";
 import { expectNotNull, expectOk } from "./assertions";
 import { HexString } from "@konduit/codec/hexString";
 import { Ed25519PrivateKey } from "@konduit/cardano-keys";
@@ -30,8 +30,8 @@ const integrationTestEnv = (() => {
   const signingKeySecretOpt = import.meta.env.VITE_TEST_SIGNING_KEY_SECRET;
   const blockfrostProjectIdOpt = import.meta.env.VITE_TEST_BLOCKFROST_PROJECT_ID;
   const konduitConsumerStateFile = import.meta.env.VITE_TEST_KONDUIT_CONSUMER_STATE_FILE;
-  const lndMacaroonOpt = import.meta.env.VITE_TEST_LND_MACAROON;
-  const lndBaseUrlOpt = import.meta.env.VITE_TEST_LND_BASE_URL;
+  const lndMacaroonOpt = import.meta.env.VITE_TEST_LND_INVOICING_MACAROON;
+  const lndBaseUrlOpt = import.meta.env.VITE_TEST_LND_INVOICING_BASE_URL;
 
   const mkKonduitConsumer = async (t: any): Promise<KonduitConsumer<AnyWallet>> => {
     if(!konduitConsumerStateFile) {
@@ -198,12 +198,22 @@ describe("End-to-end integration: open channel and poll adaptor squash", () => {
             console.debug(`Received squash event for channel with tag ${squashedChannel.channelTag}, but we are waiting for channel with tag ${channel.channelTag}`);
           }
         });
+
+        consumer.subscribe("channel-squashing-failed", ({ channel: failedChannel, error }) => {
+          if(failedChannel.channelTag === channel.channelTag) {
+            console.error(`Squash failed for channel with tag ${channel.channelTag}. The error details: ${stringify(error as Json)}`);
+          } else {
+            console.debug(`Received squash failure event for channel with tag ${failedChannel.channelTag}, but we are waiting for channel with tag ${channel.channelTag}`);
+          }
+        });
         await consumer.startPolling(Seconds.fromSmallNumber(1));
         // await till squashed
         const maxAttempts = 40;
         const delayMs = 3000;
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
           if(squashed) {
+            console.debug(`Channel with tag ${channel.channelTag} is squashed after ${attempt} attempts!`);
+            console.debug(`Leaving the loop that polls for channel squash, and proceeding with the rest of the integration test...`);
             break;
           }
           if (attempt < maxAttempts) {
@@ -215,17 +225,23 @@ describe("End-to-end integration: open channel and poll adaptor squash", () => {
         }
       }
 
+      console.debug("Channel is squashed, now creating invoice via LND and paying via adaptor...");
       const lnd = integrationTestEnv.mkLnd(test);
 
       // 100,000 millisatoshis = 100 satoshis ≈ $0.06 – $0.07 USD
       const msat = Millisatoshi.fromDigits(1, 0, 0, 0, 0, 0);
-      const memo = `An invoice from integration test at ${new Date().toISOString()}`;
+      const memo = `An invoice from konduit-js integration test at ${new Date().toISOString()}`;
 
       const addInvoiceResult = await lnd.addLndInvoice(msat, memo);
+
+      console.debug("Received response from LND for addInvoice:", addInvoiceResult);
+
+
       const addInvoiceResponse = expectOk(addInvoiceResult, "Failed to add invoice via LND in integration test");
       const invoice: Invoice = addInvoiceResponse.invoice;
       const quoteResult = await channel.adaptorClient.chQuote(invoice.raw);
       const quote = expectOk(quoteResult);
+
       console.debug("Received quote from adaptor for LND invoice:", quote);
 
       const timeout = expectOk(ValidDate.addMilliseconds(ValidDate.now(), quote.relativeTimeout));
@@ -251,21 +267,3 @@ describe("End-to-end integration: open channel and poll adaptor squash", () => {
   );
 });
 
-describe("LND client basic integration", () => {
-  it(
-    "creates an invoice via LND addInvoice endpoint",
-    async (test) => {
-      test.skip();
-
-      const lnd = integrationTestEnv.mkLnd(test);
-      const msat = Millisatoshi.fromDigits(1, 0, 0, 0, 0);
-      const memo = "integration-test-invoice";
-
-      const result = await lnd.addLndInvoice(msat, memo);
-
-      const response = expectOk(result);
-      console.debug("Received invoice from LND:", response);
-    },
-    60000
-  );
-});

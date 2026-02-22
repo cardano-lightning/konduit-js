@@ -17,11 +17,11 @@ import * as codec from "@konduit/codec";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import { json2StringCodec, type JsonCodec } from "@konduit/codec/json/codecs";
 import { json2QuoteBodySerialiser, json2QuoteCodec, type Quote, type QuoteBody } from "./adaptorClient/quote";
-import { json2SquashResponseDeserialiser, type SquashResponse } from "./adaptorClient/squash";
+import { mkJson2SquashResponseCodec, type SquashResponse } from "./adaptorClient/squash";
 export type { SquashResponse } from "./adaptorClient/squash";
 import {
   json2PayBodyCodec,
-  json2PayResponseDeserialiser,
+  mkJson2PayResponseCodec,
   type PayBody,
   type PayResponse,
 } from "./adaptorClient/pay";
@@ -89,29 +89,32 @@ export const json2AdaptorClientCodec: JsonCodec<AdaptorClient> = codec.rmap(
 export const mkAdaptorClient = (baseUrl: AdaptorUrl): AdaptorClient => {
   const mkKonduitHeader = (keyTag: KeyTag): [string, string] => ["KONDUIT", hexString2KeyTagCodec.serialise(keyTag)];
 
-  const chSquashEndpoint = mkPostEndpoint(
-    `${baseUrl}/ch/squash`,
-    RequestSerialiser.fromCborSerialiser(cbor2SquashCodec.serialise),
-    ResponseDeserialiser.fromJsonDeserialiser(json2SquashResponseDeserialiser)
-  );
-
-  const chPayEndpoint = mkPostEndpoint(
-    `${baseUrl}/ch/pay`,
-    RequestSerialiser.fromJsonSerialiser(json2PayBodyCodec.serialise),
-    ResponseDeserialiser.fromJsonDeserialiser(json2PayResponseDeserialiser)
-  );
-
   return {
     adaptorUrl: baseUrl,
     info: mkInfoEndpoint(baseUrl),
     chSquash: async (keyTag: KeyTag, squash: Squash) => {
+      const { key, tag } = KeyTag.split(keyTag);
+      const json2SquashResponseCodec = mkJson2SquashResponseCodec(tag, key);
+      const chSquashEndpoint = mkPostEndpoint(
+        `${baseUrl}/ch/squash`,
+        RequestSerialiser.fromCborSerialiser(cbor2SquashCodec.serialise),
+        ResponseDeserialiser.fromJsonDeserialiser(json2SquashResponseCodec.deserialise)
+      );
+
       return chSquashEndpoint(squash, [mkKonduitHeader(keyTag)]);
     },
     chQuote: async (keyTag: KeyTag, quoteBody: QuoteBody) => {
       const quoteEndpoint = mkQuoteEndpoint(baseUrl);
       return quoteEndpoint(quoteBody, [mkKonduitHeader(keyTag)]);
     },
-    chPay: async (keyTag: KeyTag, cheque: Cheque, invoice: Invoice) => {
+    chPay: (keyTag: KeyTag, cheque: Cheque, invoice: Invoice) => {
+      const { key, tag } = KeyTag.split(keyTag);
+      const json2PayResponseCodec = mkJson2PayResponseCodec(tag, key);
+      const chPayEndpoint = mkPostEndpoint(
+        `${baseUrl}/ch/pay`,
+        RequestSerialiser.fromJsonSerialiser(json2PayBodyCodec.serialise),
+        ResponseDeserialiser.fromJsonDeserialiser(json2PayResponseCodec.deserialise)
+      );
       const body: PayBody = {
         chequeBody: cheque.body,
         signature: cheque.signature,

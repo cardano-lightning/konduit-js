@@ -7,11 +7,12 @@ import * as codec from "@konduit/codec";
 import { json2L1ChannelCodec, L1Channel } from "./channel/l1Channel";
 import type { ConsumerEd25519VerificationKey, OpenTx } from "./channel/l1Channel";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
-import { Cheque, json2ChequeCodec, json2SquashCodec, Squash, SquashBody } from "./channel/squash";
+import { Cheque, json2ChequeCodec, json2SquashCodec, Squash, SquashBody, VerifiedCheque, VerifiedSquash } from "./channel/squash";
 import { Ed25519SigningKey } from "@konduit/cardano-keys";
 import type { HttpEndpointError } from "./http";
 import { mkJson2PollingInfoCodec, PollingInfo } from "./polling";
-import { json2SquashResponseCodec } from "./adaptorClient/squash";
+import { mkJson2SquashResponseCodec } from "./adaptorClient/squash";
+import type { ChannelTag } from "./channel/core";
 
 export * from "./channel/l1Channel";
 export * from "./channel/core";
@@ -19,9 +20,9 @@ export * from "./channel/core";
 export type SquashingInfo = PollingInfo<{ squash: Squash; response: SquashResponse }>;
 export const SquashingInfo = PollingInfo;
 
-export const json2SquashingInfoCodec: JsonCodec<SquashingInfo> = mkJson2PollingInfoCodec(jsonCodecs.objectOf({
+export const mkJson2SquashingInfoCodec = (tag: ChannelTag, vKey: ConsumerEd25519VerificationKey): JsonCodec<SquashingInfo> => mkJson2PollingInfoCodec(jsonCodecs.objectOf({
   squash: json2SquashCodec,
-  response: json2SquashResponseCodec,
+  response: mkJson2SquashResponseCodec(tag, vKey),
 }));
 
 export class Channel {
@@ -41,12 +42,17 @@ export class Channel {
   }
 
   public static load(l1: L1Channel, cheques: Cheque[], squashes: Squash[], adaptorUrl: AdaptorUrl, squashingInfo: PollingInfo<{ squash: Squash; response: SquashResponse }>): Result<Channel, JsonError> {
-    let vKey = l1.consumerVerificationKey;
+    const vKey = l1.consumerVerificationKey;
     for(const cheque of cheques) {
-      if(!Cheque.verifySignature(cheque, vKey))
+      if(VerifiedCheque.fromVerification(l1.channelTag, vKey, cheque).isErr()) {
         return err(`Cheque with index ${cheque.body.index} failed verification with consumer verification key ${vKey}`);
+      }
     }
-    // TODO: validate squashes signatures as well
+    for(const squash of squashes) {
+      if(VerifiedSquash.fromVerification(l1.channelTag, vKey, squash).isErr()) {
+        return err(`Squash with index ${squash.body.index} failed verification with consumer verification key ${vKey}`);
+      }
+    }
     return ok(new Channel(l1, cheques, squashes, adaptorUrl, squashingInfo));
   }
 
@@ -74,7 +80,7 @@ export class Channel {
 
   public async doSquash(sKey: Ed25519SigningKey): Promise<null | Result<SquashResponse , HttpEndpointError>> {
     if(this.isFullySquashed) return null;
-    const squash = Squash.fromBodySigning(sKey, this.channelTag, this.mkSquash());
+    const squash = Squash.fromBodySigning(this.channelTag, sKey, this.mkSquash());
     const result = await this.adaptorClient.chSquash(squash);
     result.match(
       (response) => {
@@ -114,15 +120,23 @@ export const json2ChannelCodec: JsonCodec<Channel> = codec.pipe(
     cheques: jsonCodecs.arrayOf(json2ChequeCodec),
     l1_channel: json2L1ChannelCodec,
     squashes: jsonCodecs.arrayOf(json2SquashCodec),
-    squashing_info: json2SquashingInfoCodec,
+    squashing_info: jsonCodecs.identityCodec,
   }), {
-    deserialise: (r) => Channel.load(r.l1_channel, r.cheques, r.squashes, r.adaptor_url, r.squashing_info),
-    serialise: (channel: Channel) => ({
+    deserialise: (r) => {
+      const json2SquashingInfo = mkJson2SquashingInfoCodec(r.l1_channel.channelTag, r.l1_channel.consumerVerificationKey);
+      return json2SquashingInfo.deserialise(r.squashing_info).andThen((squashingInfo) =>
+        Channel.load(r.l1_channel, r.cheques, r.squashes, r.adaptor_url, squashingInfo)
+      );
+    },
+    serialise: (channel: Channel) => {
+      const json2SquashingInfo = mkJson2SquashingInfoCodec(channel.channelTag, channel.consumerVerificationKey);
+      return {
         adaptor_url: channel.adaptorUrl,
         cheques: channel.cheques,
         l1_channel: channel.l1,
         squashes: channel.squashes,
-        squashing_info: channel.squashingInfo,
-    })
+        squashing_info: json2SquashingInfo.serialise(channel.squashingInfo),
+      };
+    }
   }
 );

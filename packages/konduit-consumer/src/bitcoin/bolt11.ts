@@ -46,7 +46,7 @@ export namespace HtlcSecret {
     }
     return ok(bytes as HtlcSecret);
   }
-  export const fromRandomBytes = async () => {
+  export const fromRandomBytes = () => {
     const bytes = randomBytes(LENGTH);
     return bytes as HtlcSecret;
   }
@@ -65,8 +65,8 @@ export namespace HtlcLock {
     }
     return ok(bytes as HtlcLock);
   }
-  export const fromSecret = async (secret: HtlcSecret): Promise<HtlcLock> => {
-    const res = await sha256(secret);
+  export const fromSecret = (secret: HtlcSecret): HtlcLock => {
+    const res = sha256(secret);
     return res as HtlcLock;
   }
 }

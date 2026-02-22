@@ -21,6 +21,7 @@ type ConsumerEvent<T> = CustomEvent<T>;
 export type ConsumerEvents = {
   "channel-opened": { channel: Channel; };
   "channel-squashed": { channel: Channel; result: SquashResponse };
+  "channel-squashing-failed": { channel: Channel; error: HttpEndpointError };
 };
 
 export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
@@ -104,10 +105,15 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
       if(!channel.isFullySquashed) {
         const result = await channel.doSquash(this.sKey)
         if(result == null) continue; // channel is already fully squashed, nothing to do
-        result.map((result) => {
-          if(result != null)
-            this.emit("channel-squashed", { channel, result });
-        });
+        result.match(
+          (result) => {
+            if(result != null)
+              this.emit("channel-squashed", { channel, result });
+          },
+          (error) => {
+            this.emit("channel-squashing-failed", { channel, error });
+          }
+        );
       }
     }
   }
@@ -206,6 +212,7 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
     const channel = this._channels.get(channelTag);
     if(channel == undefined)
       return err({ type: "not-found" as const, message: "Channel not found" });
+    // public async doSquash(sKey: Ed25519SigningKey): Promise<null | Result<SquashResponse , HttpEndpointError>> {
     return channel.doSquash(this.sKey);
   }
 }

@@ -82,7 +82,7 @@ export const equal = (a: Uint8Array, b: Uint8Array): boolean => {
       return false;
     }
   }
-  return (a.length !== b.length);
+  return (a.length === b.length);
 }
 
 export const alloc = (size: number): Uint8Array => {

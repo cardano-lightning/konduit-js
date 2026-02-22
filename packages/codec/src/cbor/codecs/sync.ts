@@ -11,10 +11,10 @@ import {
 import { CborTag, CborSimpleValue, cborUndefined, cborNull } from "../core";
 import { CborReader, CborReaderState } from "../CborReader";
 import { CborWriter } from "../CborWriter";
-import type { Codec, Deserialiser, Serialiser } from "../../codec";
+import type { Codec, Deserialiser, ExtractCodecInput, Serialiser, UnionOfCodecsOutputs } from "../../codec";
 import * as codec from "../../codec";
 import type { JsonError } from "../../json/codecs";
-import { isJson, stringify } from "../../json";
+import { isJson, stringify, type Json } from "../../json";
 
 export type CborCodec<O> = Codec<Cbor, O, JsonError>;
 
@@ -795,7 +795,7 @@ export const tupleOf = <Codecs extends readonly CborCodec<any>[]>(
       } else if (indefinite && isIndefiniteArray(data)) {
         items = data.items;
       } else {
-        return err(`Expecting ${indefinite ? "indefinite" : "definite"} CBOR array for tupleOf but got: ${String(data)}`);
+        return err(`Expecting ${indefinite ? "indefinite" : "definite"} CBOR array for tupleOf but got: ${stringify(data as Json)}`);
       }
 
       if (items.length !== codecs.length) {
@@ -852,7 +852,7 @@ export const arrayOf = <T>(
       } else if (indefinite && isIndefiniteArray(data)) {
         items = data.items;
       } else {
-        return err(`Expecting ${indefinite ? "indefinite" : "definite"} CBOR array for arrayOf but got: ${String(data)}`);
+        return err(`Expecting ${indefinite ? "indefinite" : "definite"} CBOR array for arrayOf but got: ${stringify(data as Json)}`);
       }
 
       const result: T[] = [];
@@ -888,4 +888,20 @@ export const arrayOf = <T>(
       return arr;
     },
   };
+};
+
+export const altCborCodecs = <Codecs extends readonly CborCodec<any>[]>(
+  codecs: [...Codecs],
+  caseSerialisers: (
+    ...serialisers: { [K in keyof Codecs]: Codecs[K] extends Codec<Cbor, infer O, any> ? Serialiser<O, Cbor> : never
+    }
+  ) => Serialiser<UnionOfCodecsOutputs<Codecs>, codec.ExtractCodecInput<Codecs[number]>>
+): Codec<ExtractCodecInput<Codecs[number]>, UnionOfCodecsOutputs<Codecs>, JsonError> => {
+  const combineErrs = (...errors: JsonError[]): JsonError => errors;
+
+  return codec.altCodecs(
+    codecs,
+    caseSerialisers as any,
+    combineErrs as any
+  );
 };
