@@ -4,12 +4,16 @@ export const mkOrdForScalar = <T extends bigint | number | string | boolean>() =
   const isLessThanOrEqual = (a: T, b: T): boolean => a <= b;
   const isGreaterThan = (a: T, b: T): boolean => a > b;
   const isGreaterThanOrEqual = (a: T, b: T): boolean => a >= b;
+  const max = (a: T, b: T): T => a > b ? a : b;
+  const min = (a: T, b: T): T => a < b ? a : b;
   return {
     areEqual,
     isLessThan,
     isLessThanOrEqual,
     isGreaterThan,
     isGreaterThanOrEqual,
+    max,
+    min,
   }
 }
 
@@ -18,8 +22,8 @@ export const mkOrdForUint8Array = <T extends Uint8Array>() => {
   const isLessThan = (a: T, b: T): boolean => {
     const minLength = Math.min(a.length, b.length);
     for (let i = 0; i < minLength; i++) {
-      if (a[i] < b[i]) return true;
-      if (a[i] > b[i]) return false;
+      if (a[i]! < b[i]!) return true;
+      if (a[i]! > b[i]!) return false;
     }
     return a.length < b.length;
   };

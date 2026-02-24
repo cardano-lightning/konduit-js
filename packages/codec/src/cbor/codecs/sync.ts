@@ -1,6 +1,7 @@
 import { err, ok, Result } from "neverthrow";
 import type { Tagged } from "type-fest";
 import type { Cbor } from "../core";
+import * as uint8Array from "../../uint8Array";
 import {
   Indefinite,
   isCborNull,
@@ -13,7 +14,7 @@ import { CborReader, CborReaderState } from "../CborReader";
 import { CborWriter } from "../CborWriter";
 import type { Codec, Deserialiser, ExtractCodecInput, Serialiser, UnionOfCodecsOutputs } from "../../codec";
 import * as codec from "../../codec";
-import type { JsonError } from "../../json/codecs";
+import type { JsonCodec, JsonError } from "../../json/codecs";
 import { isJson, stringify, type Json } from "../../json";
 
 export type CborCodec<O> = Codec<Cbor, O, JsonError>;
@@ -606,7 +607,7 @@ export const dictOf = <T extends DictFieldCodecs>(
       const map = new Map<Cbor, Cbor>();
 
       for (const key in fieldCodecs) {
-        const codec = fieldCodecs[key];
+        const codec = fieldCodecs[key]!;
         const fieldVal = (value as any)[key];
         if (fieldVal === undefined) {
           continue;
@@ -743,7 +744,7 @@ export const heterogeneousMapOf = <
       let hasErrors = false;
 
       pairs.forEach(([kCodec, vCodec], index) => {
-        const [rawKey, rawVal] = entries[index];
+        const [rawKey, rawVal] = entries[index]!;
 
         const dk = kCodec.deserialise(rawKey);
         const dv = vCodec.deserialise(rawVal);
@@ -809,7 +810,7 @@ export const tupleOf = <Codecs extends readonly CborCodec<any>[]>(
       let hasErrors = false;
 
       codecs.forEach((codec, index) => {
-        const value = items![index];
+        const value = items![index]!;
         const decoded = codec.deserialise(value);
         if (decoded.isOk()) {
           result[index] = decoded.value;
@@ -905,3 +906,20 @@ export const altCborCodecs = <Codecs extends readonly CborCodec<any>[]>(
     combineErrs as any
   );
 };
+
+export const string2CborCodec: Codec<string, Cbor, JsonError> = codec.pipe(
+  uint8Array.stringCodec, {
+    deserialise: deserialiseCbor,
+    serialise: serialiseCbor
+  }
+);
+export const json2CborCodec: JsonCodec<Cbor> = string2CborCodec as JsonCodec<Cbor>;
+
+
+export const mkTaggedCborCodec = <T>(tag: string, validate: (arr: Uint8Array) => boolean): Codec<Cbor, T, JsonError> => {
+  return codec.pipe(
+    cbor2ByteStringCodec,
+    uint8Array.mkTaggedUint8ArrayCodec<T>(tag, validate),
+  );
+}
+

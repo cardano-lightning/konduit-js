@@ -8,6 +8,7 @@
     "moduleDetection": "force",
     "moduleResolution": "bundler",
     "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
     "noUncheckedSideEffectImports": true,
     "skipLibCheck": true,
     "strict": true,

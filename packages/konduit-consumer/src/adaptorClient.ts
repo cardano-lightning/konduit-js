@@ -10,7 +10,7 @@ import {
   ResponseDeserialiser,
 } from "./http";
 import { hexString2KeyTagCodec, KeyTag, type ChannelTag } from "./channel/core";
-import type { Cheque, Squash } from "./channel/squash";
+import type { LockedCheque, Squash } from "./channel/squash";
 import { cbor2SquashCodec } from "./channel/squash";
 import type { ConsumerEd25519VerificationKey } from "./channel/l1Channel";
 import * as codec from "@konduit/codec";
@@ -66,7 +66,7 @@ export type AdaptorClient = {
   info: () => Promise<Result<AdaptorInfo, HttpEndpointError>>;
   chSquash: (keyTag: KeyTag, squash: Squash) => Promise<Result<SquashResponse, HttpEndpointError>>;
   chQuote: (keyTag: KeyTag, quoteBody: QuoteBody) => Promise<Result<Quote, HttpEndpointError>>;
-  chPay: (keyTag: KeyTag, cheque: Cheque, invoice: Invoice) => Promise<Result<PayResponse, HttpEndpointError>>;
+  chPay: (keyTag: KeyTag, cheque: LockedCheque, invoice: Invoice) => Promise<Result<PayResponse, HttpEndpointError>>;
 };
 
 export const json2AdaptorClientCodec: JsonCodec<AdaptorClient> = codec.rmap(
@@ -107,7 +107,7 @@ export const mkAdaptorClient = (baseUrl: AdaptorUrl): AdaptorClient => {
       const quoteEndpoint = mkQuoteEndpoint(baseUrl);
       return quoteEndpoint(quoteBody, [mkKonduitHeader(keyTag)]);
     },
-    chPay: async (keyTag: KeyTag, cheque: Cheque, invoice: Invoice) => {
+    chPay: async (keyTag: KeyTag, cheque: LockedCheque, invoice: Invoice) => {
       const { key, tag } = KeyTag.split(keyTag);
       const json2PayResponseCodec = mkJson2PayResponseCodec(tag, key);
       const chPayEndpoint = mkPostEndpoint(
@@ -134,7 +134,7 @@ export const mkAdaptorChannelClient = (adaptorUrl: AdaptorUrl, consumerEd25519Ve
     keyTag: keyTag,
     chSquash: (squash: Squash) => adaptorClient.chSquash(keyTag, squash),
     chQuote: (quoteBody: QuoteBody) => adaptorClient.chQuote(keyTag, quoteBody),
-    chPay: (cheque: Cheque, invoice: Invoice) => adaptorClient.chPay(keyTag, cheque, invoice),
+    chPay: (cheque: LockedCheque, invoice: Invoice) => adaptorClient.chPay(keyTag, cheque, invoice),
     info: () => adaptorClient.info(),
   }
 }

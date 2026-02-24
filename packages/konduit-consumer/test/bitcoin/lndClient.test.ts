@@ -233,13 +233,14 @@ describe("LND client basic interactions", () => {
 
       const info = expectOk(await lndPaying.getInfo());
 
-
       // Construct a minimal router send request similar to the Rust client:
       // we set the payment_request and a simple fee limit.
       const originalTotalFeesMsat = route.routes[0]?.total_fees_msat;
       const feeLimitMsat = originalTotalFeesMsat ? originalTotalFeesMsat : NonNegativeBigInt.fromDigits(1, 0, 0, 0); // allow up to 1 msat fee.
+      const totalTimeLock:NonNegativeInt = expectNotNull(route.routes[0]?.total_time_lock);
+
       const cltvLimit = expectOk(NonNegativeInt.add(
-        NonNegativeInt.distance(route.routes[0]?.total_time_lock, info.block_height),
+        NonNegativeInt.distance(totalTimeLock, info.block_height),
         NonNegativeInt.fromDigits(3))
       ); // add some buffer to the CLTV limit based on current block height.
 

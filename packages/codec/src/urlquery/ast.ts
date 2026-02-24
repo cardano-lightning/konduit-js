@@ -32,7 +32,7 @@ export const string2UrlQueryCodec: Codec<string, UrlQuery, JsonError> = {
     const params = new URLSearchParams();
 
     for (const key of Object.keys(query)) {
-      const value = query[key];
+      const value = query[key]!;
       if (Array.isArray(value)) {
         for (const v of value) {
           params.append(key, v);

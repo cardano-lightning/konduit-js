@@ -209,8 +209,9 @@ describe("tupleOf codec", () => {
     const reEncoded = outer.serialise(decoded);
     expect(Array.isArray(reEncoded)).toBe(true);
     const arr = reEncoded as Cbor[];
+    expect(arr).toHaveLength(2);
     expect(arr[0]).toBe("key");
-    let innerOut = arr[1];
+    let innerOut = arr[1]!;
     if(!isIndefiniteArray(innerOut)) throw new Error("expected indefinite array");
     expect(innerOut.items[0]).toBe(5n);
     expect(innerOut.items[1]).toBe(false);

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parse, stringify, type Json } from '../src/json';
-import { json2StringCodec, json2NumberCodec, json2BooleanCodec, json2NullCodec, objectOf, altJsonCodecs, optional, type JsonCodec, arrayOf } from '../src/json/codecs';
+import { json2StringCodec, json2NumberCodec, json2BooleanCodec, json2NullCodec, objectOf, altJsonCodecs, optional, type JsonCodec, arrayOf, tupleOf } from '../src/json/codecs';
 import * as json from '../src/json';
 import { unwrapOk, unwrapErr } from './assertions';
 
@@ -100,7 +100,53 @@ describe('JSON Codecs', () => {
       unwrapErr(result);
     });
   });
-  
+
+  describe('tupleOf codec', () => {
+    it('should encode and decode a simple tuple', () => {
+      const tupleCodec = tupleOf(json2StringCodec, json2NumberCodec);
+
+      const original: [string, number] = ["Alice", 42];
+
+      const encoded = tupleCodec.serialise(original);
+      expect(Array.isArray(encoded)).toBe(true);
+      expect(encoded).toEqual(["Alice", BigInt(42)]);
+
+      const decoded = unwrapOk(tupleCodec.deserialise(encoded));
+      expect(decoded).toEqual(original);
+    });
+
+    it('should encode and decode a triple with nullable fields', () => {
+      // first: string, second: nullable string, third: nullable number
+      const nullableString = altJsonCodecs(
+        [json2NullCodec, json2StringCodec],
+        (serNull, serString) => (value: null | string) =>
+          value === null ? serNull(null) : serString(value)
+      );
+      const nullableNumber = altJsonCodecs(
+        [json2NullCodec, json2NumberCodec],
+        (serNull, serNumber) => (value: null | number) =>
+          value === null ? serNull(null) : serNumber(value)
+      );
+
+      const tripleCodec = tupleOf(json2StringCodec, nullableString, nullableNumber);
+
+      const original: [string, null | string, null | number] = ["Bob", null, 10];
+
+      const encoded = tripleCodec.serialise(original);
+      expect(encoded).toEqual(["Bob", null, BigInt(10)]);
+
+      const decoded = unwrapOk(tripleCodec.deserialise(encoded));
+      expect(decoded).toEqual(original);
+
+      // Also check case with different nullable values
+      const original2: [string, null | string, null | number] = ["Carol", "C", null];
+      const encoded2 = tripleCodec.serialise(original2);
+      expect(encoded2).toEqual(["Carol", "C", null]);
+      const decoded2 = unwrapOk(tripleCodec.deserialise(encoded2));
+      expect(decoded2).toEqual(original2);
+    });
+  });
+
   describe('nested object codec', () => {
     type Address = {
       street: string;

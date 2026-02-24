@@ -201,7 +201,7 @@ export const objectOf = <T extends Record<string, JsonCodec<any>>>(
           let hasErrors = false;
 
           for (const fieldName in fieldCodecs) {
-            const fieldCodec = fieldCodecs[fieldName];
+            const fieldCodec = fieldCodecs[fieldName]!;
             const fieldValue = obj[fieldName];
 
             // If field is missing, pass undefined to the codec
@@ -225,7 +225,7 @@ export const objectOf = <T extends Record<string, JsonCodec<any>>>(
     serialise: (value: CodecsToObject<T>): Json => {
       const result: { [key: string]: Json } = {};
       for (const fieldName in fieldCodecs) {
-        const fieldCodec = fieldCodecs[fieldName];
+        const fieldCodec = fieldCodecs[fieldName]!;
         const fieldValue = (value as any)[fieldName];
         if (fieldValue !== undefined) {
           result[fieldName] = fieldCodec.serialise(fieldValue);
@@ -266,6 +266,60 @@ export const arrayOf = <O>(codec: JsonCodec<O>): JsonCodec<O[]> => {
     },
     serialise: (value: O[]): Json => {
       return value.map(v => codec.serialise(v)) as Json;
+    },
+  };
+};
+
+export const tupleOf = <Codecs extends readonly JsonCodec<any>[]>(
+  ...codecs: Codecs
+): JsonCodec<{ [K in keyof Codecs]: Codecs[K] extends JsonCodec<infer O> ? O : never }> => {
+  type TupleOut = { [K in keyof Codecs]: Codecs[K] extends JsonCodec<infer O> ? O : never };
+
+  return {
+    deserialise: (data: Json): Result<TupleOut, JsonError> => {
+      return onArray(
+        (value: Json) =>
+          err(`Expected array (for tupleOf) but got ${stringify(value)}`) as Result<TupleOut, JsonError>
+      )(items => {
+        if (items.length !== codecs.length) {
+          return err(
+            `Expected tuple of length ${codecs.length} but got array of length ${items.length}`
+          );
+        }
+
+        const result: any[] = [];
+        const errors: JsonError[] = [];
+        let hasErrors = false;
+
+        codecs.forEach((codec, index) => {
+          const value = items[index]!;
+          const decoded = codec.deserialise(value);
+          if (decoded.isOk()) {
+            result[index] = decoded.value;
+          } else {
+            errors.push(decoded.error);
+            hasErrors = true;
+          }
+        });
+
+        if (hasErrors) {
+          // Collect per-element errors as a JSON array
+          return err(errors as unknown as JsonError);
+        }
+
+        return ok(result as TupleOut);
+      })(data);
+    },
+
+    serialise: (value: TupleOut): Json => {
+      const arr: Json[] = [];
+
+      codecs.forEach((codec, index) => {
+        const v = (value as any)[index];
+        arr.push(codec.serialise(v));
+      });
+
+      return arr as Json;
     },
   };
 };

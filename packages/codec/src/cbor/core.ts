@@ -245,8 +245,7 @@ class CborNull {
 export const cborNull = new CborNull();
 export const isCborNull = (value: any): value is CborNull => value instanceof CborNull;
 
-/** Represents a CBOR data item. */
-
+// AST representation of the CBOR data
 export type Cbor =
   | CborNull
   | CborUndefined

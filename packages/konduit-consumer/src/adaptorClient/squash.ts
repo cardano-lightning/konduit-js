@@ -1,13 +1,13 @@
 import * as codec from "@konduit/codec";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import type { JsonCodec } from "@konduit/codec/json/codecs";
-import { json2SquashBodyCodec, json2SquashCodec, mkJson2VerifiedUnlockedCodec, VerifiedSquash, VerifiedUnlocked, type SquashBody } from "../channel/squash";
+import { json2SquashBodyCodec, json2SquashCodec, mkJson2VerifiedUnlockedCodec, VerifiedSquash, VerifiedUnlockedCheque, type SquashBody } from "../channel/squash";
 import type { ChannelTag, ConsumerEd25519VerificationKey } from "../channel";
 
 export type SquashProposal = {
   proposal: SquashBody;
   current: VerifiedSquash;
-  unlockeds: VerifiedUnlocked[];
+  unlockeds: VerifiedUnlockedCheque[];
 };
 
 export type SquashResponse = "Complete" | SquashProposal;

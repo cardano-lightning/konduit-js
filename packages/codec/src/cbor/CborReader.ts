@@ -530,7 +530,7 @@ export class CborReader {
       return err(UNEXPECTED_END_OF_BUFFER_MSG);
     }
 
-    const nextByte = CborInitialByte.from(this.#data[this.#offset]);
+    const nextByte = CborInitialByte.from(this.#data[this.#offset]!);
 
     switch (this.#currentFrame.type) {
       case CborMajorType.ByteString:
@@ -568,7 +568,7 @@ export class CborReader {
    */
   static #peekNextInitialByte(buffer: Uint8Array, expectedType?: CborMajorType): Result<CborInitialByte, JsonError> {
     return CborReader.ensureReadCapacityInArray(buffer, 1).andThen(() => {
-      const header = CborInitialByte.from(buffer[0]);
+      const header = CborInitialByte.from(buffer[0]!);
 
       if (header.getInitialByte() !== CborInitialByte.IndefiniteLengthBreakByte && header.getMajorType() !== expectedType)
         return err('Indefinite length string contains invalid data item');
@@ -744,7 +744,7 @@ export class CborReader {
     }
 
     // peek the next initial byte
-    const initialByte = CborInitialByte.from(this.#data[this.#offset]);
+    const initialByte = CborInitialByte.from(this.#data[this.#offset]!);
 
     if (initialByte.getInitialByte() === CborInitialByte.IndefiniteLengthBreakByte) {
       if (this.#isTagContext) {
@@ -974,7 +974,7 @@ export class CborReader {
     switch (header.getAdditionalInfo()) {
       case CborAdditionalInfo.Additional8BitData: {
         return CborReader.ensureReadCapacityInArray(data, 2).map(() => {
-          return { bytesRead: 2, unsignedInt: BigInt(data[1]) };
+          return { bytesRead: 2, unsignedInt: BigInt(data[1]!) };
         });
       }
       case CborAdditionalInfo.Additional16BitData: {
@@ -994,7 +994,7 @@ export class CborReader {
           let result = BigInt(0);
 
           for (let i = 1; i < 9; i++) {
-            result = (result << BigInt(8)) + BigInt(data[i]);
+            result = (result << BigInt(8)) + BigInt(data[i]!);
           }
 
           return { bytesRead: 9, unsignedInt: result };

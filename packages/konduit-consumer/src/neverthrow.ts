@@ -24,3 +24,16 @@ export const unwrapOrPanic = <T, E>(result: Result<T, E>, errorMessage: string):
     }
   );
 }
+
+export const unwrapOrPanicWith = <T, E>(result: Result<T, E>, mkMessageFn: (error: E) => string): T => {
+  return result.match(
+    (value) => value,
+    (error) => {
+      const errorMessage = mkMessageFn(error);
+      if(isJson(error)) {
+        throw new Error(`${errorMessage}: ${stringify(error)}`);
+      }
+      throw new Error(`${errorMessage}: ${String(error)}`);
+    }
+  );
+}

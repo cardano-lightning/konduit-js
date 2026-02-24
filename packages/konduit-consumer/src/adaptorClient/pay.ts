@@ -1,7 +1,7 @@
 import * as codec from "@konduit/codec";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import { json2Ed25519SignatureCodec } from "../cardano/keys";
-import { json2ChequeBodyCodec, type ChequeBody } from "../channel/squash";
+import { json2LockedChequeBodyCodec, type LockedChequeBody } from "../channel/squash";
 import { json2StringCodec, type JsonCodec, type JsonError } from "@konduit/codec/json/codecs";
 import type { Ed25519Signature } from "@konduit/cardano-keys";
 import { decodedInvoice2InvoiceDeserialiser, type Invoice } from "../bitcoin/bolt11";
@@ -10,14 +10,14 @@ import { mkJson2SquashResponseCodec, type SquashResponse } from "./squash";
 import type { ChannelTag, ConsumerEd25519VerificationKey } from "../channel";
 
 export type PayBody = {
-  chequeBody: ChequeBody;
+  chequeBody: LockedChequeBody;
   signature: Ed25519Signature;
   invoice: Invoice;
 };
 
 const json2PayBodyDeserialiser: jsonCodecs.JsonDeserialiser<PayBody> = (() => {
   const resRecordDeserialise = jsonCodecs.objectOf({
-    cheque_body: json2ChequeBodyCodec,
+    cheque_body: json2LockedChequeBodyCodec,
     signature: json2Ed25519SignatureCodec,
     invoice: json2StringCodec,
   }).deserialise;
@@ -35,7 +35,7 @@ const json2PayBodyDeserialiser: jsonCodecs.JsonDeserialiser<PayBody> = (() => {
 })();
 const json2PayBodySerialiser = (body: PayBody) => {
   return {
-    cheque_body: json2ChequeBodyCodec.serialise(body.chequeBody),
+    cheque_body: json2LockedChequeBodyCodec.serialise(body.chequeBody),
     signature: json2Ed25519SignatureCodec.serialise(body.signature),
     invoice: body.invoice.raw,
   };

@@ -24,6 +24,13 @@ export namespace ValidDate {
     const newDate = new Date(date.getTime() + milliseconds);
     return fromDate(newDate);
   }
+  export const ord = {
+    equal: (a: ValidDate, b: ValidDate): boolean => a.getTime() === b.getTime(),
+    isLessThan: (a: ValidDate, b: ValidDate): boolean => a.getTime() < b.getTime(),
+    isLessThanOrEqual: (a: ValidDate, b: ValidDate): boolean => a.getTime() <= b.getTime(),
+    isGreaterThan: (a: ValidDate, b: ValidDate): boolean => a.getTime() > b.getTime(),
+    isGreaterThanOrEqual: (a: ValidDate, b: ValidDate): boolean => a.getTime() >= b.getTime(),
+  }
 }
 
 export const json2ValidDateCodec:JsonCodec<ValidDate> = compose({
