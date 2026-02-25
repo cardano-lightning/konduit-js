@@ -1,0 +1,59 @@
+{
+  "dependencies": {
+    "@noble/ciphers": "^2.1.1",
+    "@noble/hashes": "^2.0.1",
+    "@scure/bip39": "^2.0.1",
+    "libsodium-wrappers-sumo": "^0.8.1",
+    "neverthrow": "^8.2.0",
+    "type-fest": "^5.4.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.4",
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^4.0.17"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./rfc8032": {
+      "types": "./dist/rfc8032.d.ts",
+      "default": "./dist/rfc8032.js"
+    },
+    "./cip3": {
+      "types": "./dist/cip3.d.ts",
+      "default": "./dist/cip3.js"
+    },
+    "./cip1852": {
+      "types": "./dist/cip1852.d.ts",
+      "default": "./dist/cip1852.js"
+    },
+    "./bip32Ed25519": {
+      "types": "./dist/bip32Ed25519.d.ts",
+      "default": "./dist/bip32Ed25519.js"
+    },
+    "./uint8Array": {
+      "types": "./dist/uint8Array.d.ts",
+      "default": "./dist/uint8Array.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "main": "dist/index.js",
+  "module": "dist/index.es.js",
+  "name": "@konduit/cardano-keys",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --build",
+    "extract-readme": "node scripts/extract-readme-example.js",
+    "test": "yarn extract-readme && vitest run",
+    "test:watch": "yarn extract-readme && vitest"
+  },
+  "type": "module",
+  "version": "0.0.0"
+}

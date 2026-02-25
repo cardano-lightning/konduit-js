@@ -15,6 +15,7 @@
   "files": [],
   "references": [
     { "path": "./packages/bln" },
+    { "path": "./packages/cardano-keys" },
     { "path": "./apps/bln-cli" },
     { "path": "./apps/konduit-app" }
   ]
