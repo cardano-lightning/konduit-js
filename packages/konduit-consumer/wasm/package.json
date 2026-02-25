@@ -1,0 +1,28 @@
+{
+  "name": "konduit-wasm",
+  "type": "module",
+  "collaborators": [
+    "waalge",
+    "KtorZ <matthias.benkort@gmail.com>"
+  ],
+  "description": "Konduit tools and other things",
+  "version": "0.0.0",
+  "license": "MPL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cardano-lightning/konduit"
+  },
+  "files": [
+    "konduit_wasm_bg.wasm",
+    "konduit_wasm.js",
+    "konduit_wasm_bg.js",
+    "konduit_wasm.d.ts"
+  ],
+  "main": "konduit_wasm.js",
+  "homepage": "https://github.com/cardano-lightning/konduit",
+  "types": "konduit_wasm.d.ts",
+  "sideEffects": [
+    "./konduit_wasm.js",
+    "./snippets/*"
+  ]
+}

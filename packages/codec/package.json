@@ -1,0 +1,94 @@
+{
+  "dependencies": {
+    "json-bigint": "^1.0.0",
+    "neverthrow": "^8.2.0"
+  },
+  "devDependencies": {
+    "@types/json-bigint": "^1",
+    "@types/node": "^24.10.1",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.4",
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^4.0.17"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./async": {
+      "types": "./dist/codec/async.d.ts",
+      "default": "./dist/codec/async.js"
+    },
+    "./base64String": {
+      "types": "./dist/base64String.d.ts",
+      "default": "./dist/base64String.js"
+    },
+    "./hexString": {
+      "types": "./dist/hexString.d.ts",
+      "default": "./dist/hexString.js"
+    },
+    "./uint8Array": {
+      "types": "./dist/uint8Array.d.ts",
+      "default": "./dist/uint8Array.js"
+    },
+    "./integers/big": {
+      "types": "./dist/integers/big.d.ts",
+      "default": "./dist/integers/big.js"
+    },
+    "./integers/smallish": {
+      "types": "./dist/integers/smallish.d.ts",
+      "default": "./dist/integers/smallish.js"
+    },
+    "./json": {
+      "types": "./dist/json.d.ts",
+      "default": "./dist/json.js"
+    },
+    "./json/codecs": {
+      "types": "./dist/json/codecs.d.ts",
+      "default": "./dist/json/codecs.js"
+    },
+    "./json/async": {
+      "types": "./dist/json/async.d.ts",
+      "default": "./dist/json/async.js"
+    },
+    "./cbor/core": {
+      "types": "./dist/cbor/core.d.ts",
+      "default": "./dist/cbor/core.js"
+    },
+    "./cbor/codecs/sync": {
+      "types": "./dist/cbor/codecs/sync.d.ts",
+      "default": "./dist/cbor/codecs/sync.js"
+    },
+    "./neverthrow": {
+      "types": "./dist/neverthrow.d.ts",
+      "default": "./dist/neverthrow.js"
+    },
+    "./tagged": {
+      "types": "./dist/tagged.d.ts",
+      "default": "./dist/tagged.js"
+    },
+    "./urlquery": {
+      "types": "./dist/urlquery/index.d.ts",
+      "default": "./dist/urlquery/index.js"
+    },
+    "./urlquery/codecs/sync": {
+      "types": "./dist/urlquery/codecs/sync.d.ts",
+      "default": "./dist/urlquery/codecs/sync.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "main": "dist/index.js",
+  "module": "dist/index.es.js",
+  "name": "@konduit/codec",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --build",
+    "test": "vitest"
+  },
+  "type": "module",
+  "version": "0.0.0"
+}

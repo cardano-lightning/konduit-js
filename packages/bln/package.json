@@ -3,7 +3,9 @@
     "@noble/hashes": "^2.0.1",
     "@noble/secp256k1": "^3.0.0",
     "@scure/base": "^2.0.0",
-    "neverthrow": "^8.2.0"
+    "bip21": "^3.0.0",
+    "neverthrow": "^8.2.0",
+    "type-fest": "^5.4.3"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
@@ -20,9 +22,21 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./bolt11": {
-      "types": "./dist/bolt11.d.ts",
-      "default": "./dist/bolt11.js"
+    "./invoice": {
+      "types": "./dist/invoice.d.ts",
+      "default": "./dist/invoice.js"
+    },
+    "./invoice/bolt11": {
+      "types": "./dist/invoice/bolt11.d.ts",
+      "default": "./dist/invoice/bolt11.js"
+    },
+    "./invoice/bip21": {
+      "types": "./dist/invoice/bip21.d.ts",
+      "default": "./dist/invoice/bip21.js"
+    },
+    "./network": {
+      "types": "./dist/network.d.ts",
+      "default": "./dist/network.js"
     }
   },
   "files": [
