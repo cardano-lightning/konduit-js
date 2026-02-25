@@ -19,6 +19,7 @@ import type { BlockNo, TxOutRef } from "../cardano/ledger";
 import { json2BlockNoCodec, json2TxOutRefCodec } from "../cardano/ledger";
 import { NonNegativeBigInt } from "@konduit/codec/integers/big";
 import type { ZeroToNine } from "@konduit/codec/integers/smallish";
+import { unwrapOrPanic } from "../neverthrow";
 
 export type TxBase = {
   txCbor: TxCborBytes | null;
@@ -83,6 +84,10 @@ export type AddTx = TxBase & {
   amount: Lovelace;
   lastSubmitted: ValidDate | null;
 };
+
+export const isAddTx = (tx: ConsumerTx): tx is AddTx => {
+  return tx.type === "AddTx";
+}
 
 export const json2AddTxCodec: JsonCodec<AddTx> = codec.rmap(
   jsonCodecs.objectOf({
@@ -282,30 +287,22 @@ export class L1Channel {
   get channelTag(): ChannelTag {
     return this.openTx.tag;
   }
+
+  get totalChannelFunds(): Lovelace {
+    const total:bigint = this._txHistory.slice(1).reduce(
+      (acc, tx) => {
+        if(isAddTx(tx)) return (acc + tx.amount as bigint);
+        return acc;
+      },
+      this.openTx.amount as bigint,
+    );
+    return unwrapOrPanic(
+      Lovelace.fromBigInt(total),
+      "Panic: total channel funds are negative or exceed total Lovelace supply"
+    );
+  }
 }
 
-  // getTotalChannelFunds(adaptorApprovedOnly: boolean = true): Lovelace {
-  //   const result = (() => {
-  //     let go = (acc: Lovelace, txs: IntermediateTx[]): Result<Lovelace, JsonError> => {
-  //       if (txs.length === 0) {
-  //         return ok(acc);
-  //       } else {
-  //         const [tx, ...rest] = txs;
-  //         switch (tx.type) {
-  //           case "AddTx":
-  //             if(adaptorApprovedOnly && !tx.adaptorApproved) {
-  //               return go(acc, rest);
-  //             }
-  //             return Lovelace.add(acc, tx.amount).andThen((newAcc) => go(newAcc, rest));
-  //           default:
-  //             return go(acc, rest);
-  //         }
-  //       }
-  //     };
-  //     return go(this.openTx.amount, this._intermediateTxs);
-  //   })();
-  //   return unwrapOrPanic(result, "Invalid channel state - getFunds computation failed)");
-  // }
   // get unsubmittedTxs (): ConsumerTx[] {
   //   return this.txs.filter(tx => tx.txHash == null) as ConsumerTx[];
   // }

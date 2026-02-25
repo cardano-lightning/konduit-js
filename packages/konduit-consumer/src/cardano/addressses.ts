@@ -109,9 +109,10 @@ export const string32ToAddressCodec: codec.Codec<string, Address, JsonError> = {
     // only way which I found working to narrow `void` result is this:
     if(!result) return err("Invalid bech32 address. Decoding failed.");
     const { prefix, words } = result;
+    if(words.length === 0) return err("Invalid bech32 address. No data words found.");
     const data = new Uint8Array(bech32.fromWords(words));
     // header byte: t | t | t | t | n | n | n | n
-    const headerByte = data[0];
+    const headerByte = data[0]!;
     return Result.combine([
       (() => {
         const networkNibble = headerByte & 0x0f;

@@ -12,15 +12,16 @@ import { json2Ed25519PrivateKeyCodec, Lovelace } from "./cardano";
 import { Connector, json2ConnectorAsyncCodec } from "./cardano/connector";
 import { hoistToResultAsync, resultAsyncToPromise } from "./neverthrow";
 import { ValidDate } from "./time/absolute";
-import type { Json } from "@konduit/codec/json";
 import type { HttpEndpointError } from "./http";
 import { NonNegativeInt } from "@konduit/codec/integers/smallish";
+import { Squash, SquashBody } from "./channel/squash";
 
 type ConsumerEvent<T> = CustomEvent<T>;
 
 export type ConsumerEvents = {
   "channel-opened": { channel: Channel; };
-  "channel-squashed": { channel: Channel; result: SquashResponse };
+  "channel-squashed": { channel: Channel; result: Squash };
+  "channel-squashing-failed": { channel: Channel; error: HttpEndpointError };
 };
 
 export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
@@ -101,14 +102,31 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
   private async poll() {
     // Go over the channels, identify those which needs approval from the adaptor
     for(const channel of this._channels.values()) {
-      if(!channel.isFullySquashed) {
-        const result = await channel.doSquash(this.sKey)
-        if(result == null) continue; // channel is already fully squashed, nothing to do
-        result.map((result) => {
-          if(result != null)
-            this.emit("channel-squashed", { channel, result });
-        });
+      const origSquashInfo = channel.squashingInfo.lastValue;
+      console.log("Polling channel - orig squash:", origSquashInfo);
+
+      const result = await channel.sync(this.sKey);
+      console.log("Polling channel - sync result:", result);
+
+      const newSquashInfo = channel.squashingInfo.lastValue;
+      console.log("Polling channel - new squash:", newSquashInfo);
+
+      if(newSquashInfo == null) continue;
+      if (origSquashInfo == null) {
+        this.emit("channel-squashed", { channel, result: newSquashInfo.squash });
+      } else if(SquashBody.areEqual(origSquashInfo.squash.body, newSquashInfo.squash.body)) {
+        this.emit("channel-squashed", { channel, result: newSquashInfo.squash });
       }
+      //   result.match(
+      //     (result) => {
+      //       if(result != null)
+      //         this.emit("channel-squashed", { channel, result });
+      //     },
+      //     (error) => {
+      //       this.emit("channel-squashing-failed", { channel, error });
+      //     }
+      //   );
+      // }
     }
   }
   // (Re)start polling
@@ -127,6 +145,13 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
       this.poll(),
       Number(intervalMs)
     );
+  }
+
+  public stopPolling() {
+    if (this.pollingTimer) {
+      clearInterval(this.pollingTimer);
+      this.pollingTimer = null;
+    }
   }
 
   private emit<K extends keyof ConsumerEvents>(event: K, payload: ConsumerEvents[K]) {
@@ -187,7 +212,7 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
               txHash: txHash,
               type: "OpenTx" as const,
             } as OpenTx;
-            const channel = Channel.open(openTx, adaptorUrl);
+            const channel = Channel.open(this.sKey, openTx, adaptorUrl);
             try {
               this._channels.set(channelTag, channel);
             } catch(e) {
@@ -199,15 +224,6 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
       })
     );
   };
-
-  public async squashChannel(
-    channelTag: ChannelTag,
-  ): Promise<null | Result<Json, HttpEndpointError | { type: "not-found", message: string }>> {
-    const channel = this._channels.get(channelTag);
-    if(channel == undefined)
-      return err({ type: "not-found" as const, message: "Channel not found" });
-    return channel.doSquash(this.sKey);
-  }
 }
 
 export const json2KonduitConsumerAsyncCodec: jsonAsyncCodecs.JsonAsyncCodec<KonduitConsumer<AnyWallet>> = (() => {

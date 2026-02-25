@@ -1,7 +1,15 @@
 {
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ES2022"
+  },
+  "exclude": ["node_modules", "dist"],
+  "extends": "../../tsconfig.json",
   "files": [],
   "references": [
     { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
+    { "path": "./tsconfig.config.json" }
   ]
 }

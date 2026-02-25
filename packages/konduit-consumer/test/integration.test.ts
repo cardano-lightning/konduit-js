@@ -1,11 +1,11 @@
-import { describe, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import * as fs from "fs";
 import { json2KonduitConsumerAsyncCodec, KonduitConsumer } from "../src";
 import { AdaptorFullInfo } from "../src/adaptorClient";
 import { Days, Milliseconds, Seconds } from "../src/time/duration";
 import { Address, AddressBech32, Network, PubKeyHash } from "../src/cardano";
 import { Ada } from "../src/cardano/assets";
-import { parse, stringify } from "@konduit/codec/json";
+import { parse, stringify, type Json } from "@konduit/codec/json";
 import { expectNotNull, expectOk } from "./assertions";
 import { HexString } from "@konduit/codec/hexString";
 import { Ed25519PrivateKey } from "@konduit/cardano-keys";
@@ -18,10 +18,9 @@ import { hoistToResultAsync, resultAsyncToPromise } from "../src/neverthrow";
 import { mkLndClient, type LndClient } from "../src/bitcoin/lndClient";
 import { Millisatoshi } from "../src/bitcoin/asset";
 import type { Invoice } from "../src/bitcoin/bolt11";
-import { Cheque, ChequeBody } from "../src/channel/squash";
 import { Lovelace } from "../src/cardano";
-import type { PayResponse } from "../src/adaptorClient/pay";
 import { ValidDate } from "../src/time/absolute";
+import { AnyPayment } from "../src/channel";
 
 
 const integrationTestEnv = (() => {
@@ -30,8 +29,8 @@ const integrationTestEnv = (() => {
   const signingKeySecretOpt = import.meta.env.VITE_TEST_SIGNING_KEY_SECRET;
   const blockfrostProjectIdOpt = import.meta.env.VITE_TEST_BLOCKFROST_PROJECT_ID;
   const konduitConsumerStateFile = import.meta.env.VITE_TEST_KONDUIT_CONSUMER_STATE_FILE;
-  const lndMacaroonOpt = import.meta.env.VITE_TEST_LND_MACAROON;
-  const lndBaseUrlOpt = import.meta.env.VITE_TEST_LND_BASE_URL;
+  const lndMacaroonOpt = import.meta.env.VITE_TEST_LND_INVOICING_MACAROON;
+  const lndBaseUrlOpt = import.meta.env.VITE_TEST_LND_INVOICING_BASE_URL;
 
   const mkKonduitConsumer = async (t: any): Promise<KonduitConsumer<AnyWallet>> => {
     if(!konduitConsumerStateFile) {
@@ -186,16 +185,23 @@ describe("End-to-end integration: open channel and poll adaptor squash", () => {
 
       integrationTestEnv.saveKonduitConsumerState(consumer);
       let squashed = false;
-      if(channel.isFullySquashed) {
+      if(channel.isOperational && channel.isFullySynced) {
         console.debug(`Channel with tag ${channel.channelTag} is already fully squashed!`);
         squashed = true;
       } else {
-        consumer.subscribe("channel-squashed", ({ channel: squashedChannel }) => { 
+        const unsubscribeFromChannelSquashed = consumer.subscribe("channel-squashed", ({ channel: squashedChannel }) => { 
           if(squashedChannel.channelTag === channel.channelTag) {
             console.debug(`Channel with tag ${channel.channelTag} was squashed!`);
             squashed = true;
           } else {
             console.debug(`Received squash event for channel with tag ${squashedChannel.channelTag}, but we are waiting for channel with tag ${channel.channelTag}`);
+          }
+        });
+        const unsubscribeFromChannelSquashFailed = consumer.subscribe("channel-squashing-failed", ({ channel: failedChannel, error }) => {
+          if(failedChannel.channelTag === channel.channelTag) {
+            console.error(`Squash failed for channel with tag ${channel.channelTag}. The error details: ${stringify(error as Json)}`);
+          } else {
+            console.debug(`Received squash failure event for channel with tag ${failedChannel.channelTag}, but we are waiting for channel with tag ${channel.channelTag}`);
           }
         });
         await consumer.startPolling(Seconds.fromSmallNumber(1));
@@ -204,6 +210,8 @@ describe("End-to-end integration: open channel and poll adaptor squash", () => {
         const delayMs = 3000;
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
           if(squashed) {
+            console.debug(`Channel with tag ${channel.channelTag} is squashed after ${attempt} attempts!`);
+            console.debug(`Leaving the loop that polls for channel squash, and proceeding with the rest of the integration test...`);
             break;
           }
           if (attempt < maxAttempts) {
@@ -213,59 +221,87 @@ describe("End-to-end integration: open channel and poll adaptor squash", () => {
             throw new Error("Channel was not squashed within the expected time frame in integration test");
           }
         }
+        consumer.stopPolling();
+        unsubscribeFromChannelSquashed();
+        unsubscribeFromChannelSquashFailed();
       }
+      integrationTestEnv.saveKonduitConsumerState(consumer);
 
+      console.debug("Channel is squashed, now creating invoice via LND and paying via adaptor...");
       const lnd = integrationTestEnv.mkLnd(test);
 
       // 100,000 millisatoshis = 100 satoshis ≈ $0.06 – $0.07 USD
       const msat = Millisatoshi.fromDigits(1, 0, 0, 0, 0, 0);
-      const memo = `An invoice from integration test at ${new Date().toISOString()}`;
-
-      const addInvoiceResult = await lnd.addLndInvoice(msat, memo);
-      const addInvoiceResponse = expectOk(addInvoiceResult, "Failed to add invoice via LND in integration test");
-      const invoice: Invoice = addInvoiceResponse.invoice;
+      const memo = `An invoice from konduit-js integration test at ${new Date().toISOString()}`;
+      const { invoice } = expectOk(await lnd.addLndInvoice(msat, memo), "Failed to add invoice via LND in integration test");
       const quoteResult = await channel.adaptorClient.chQuote(invoice.raw);
       const quote = expectOk(quoteResult);
+
       console.debug("Received quote from adaptor for LND invoice:", quote);
+      squashed = false;
+      const unsubscribeFromChannelSquashed = consumer.subscribe("channel-squashed", ({ channel: squashedChannel }) => { 
+        if(squashedChannel.channelTag === channel.channelTag) {
+          console.debug(`Channel with tag ${channel.channelTag} is squashed after payment!`);
+          squashed = true;
+        } else {
+          console.debug(`Received squash event for channel with tag ${squashedChannel.channelTag}, but we are waiting for channel with tag ${channel.channelTag}`);
+        }
+      });
+
+      const unsubscribeFromChannelSquashFailed = consumer.subscribe("channel-squashing-failed", ({ channel: failedChannel, error }) => {
+        if(failedChannel.channelTag === channel.channelTag) {
+          console.error(`Squash failed for channel with tag ${channel.channelTag} after payment. The error details: ${stringify(error as Json)}`);
+        } else {
+          console.debug(`Received squash failure event for channel with tag ${failedChannel.channelTag}, but we are waiting for channel with tag ${channel.channelTag}`);
+        }
+      });
+      await consumer.startPolling(Seconds.fromSmallNumber(1));
+
+      const maxAttempts = 40;
+      const delayMs = 3000;
 
       const timeout = expectOk(ValidDate.addMilliseconds(ValidDate.now(), quote.relativeTimeout));
-
-      // return ChequeBody.load(amount, index, lock, timeoutDate);
-      const chequeBody = expectOk(ChequeBody.load(
-        quote.amount,
-        quote.index,
-        invoice.paymentHash,
-        timeout,
-      ));
-      const cheque = Cheque.fromSigning(
-        channel.channelTag,
-        keys.sKey,
-        chequeBody
+      const payResult = await channel.pay(quote.amount, timeout, invoice, keys.sKey);
+      integrationTestEnv.saveKonduitConsumerState(consumer);
+      console.log("Received pay response from channel.pay:", payResult);
+      payResult.match(
+        (payment) => {
+          if(AnyPayment.isFailed(payment)) {
+            console.debug(`Payment failed - the cheque was issued but there was a processing error:`);
+            console.debug(stringify(payment as any as Json));
+          } else {
+            console.log("Payment succeeded, cheque was issued and processed successfully!");
+          }
+        },
+        (error) => {
+          console.log("Payment failed completely - the cheque was not even issued:");
+          console.error(stringify(error as Json));
+        }
       );
-      const payResult = await channel.adaptorClient.chPay(cheque, invoice);
-      const payResponse: PayResponse = expectOk(payResult);
-      console.debug("Received pay response from adaptor:", payResponse);
 
+      // await till squashed
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        if(squashed) {
+          console.debug(`Channel with tag ${channel.channelTag} is squashed after payment, and after ${attempt} attempts!`);
+          console.debug(`Leaving the loop that polls for channel squash, and proceeding with the rest of the integration test...`);
+          break;
+        }
+        if (attempt < maxAttempts) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        } else {
+          console.log(`Reached maximum attempts (${maxAttempts}) without channel being squashed after payment.`);
+          throw new Error("Channel was not squashed within the expected time frame after payment in integration test");
+        }
+      }
+      integrationTestEnv.saveKonduitConsumerState(consumer);
+      consumer.stopPolling();
+      unsubscribeFromChannelSquashed();
+      unsubscribeFromChannelSquashFailed();
+
+      expect(channel.isFullySquashed).toBe(true);
+      expect(squashed).toBe(true);
     },
     600000
   );
 });
 
-describe("LND client basic integration", () => {
-  it(
-    "creates an invoice via LND addInvoice endpoint",
-    async (test) => {
-      test.skip();
-
-      const lnd = integrationTestEnv.mkLnd(test);
-      const msat = Millisatoshi.fromDigits(1, 0, 0, 0, 0);
-      const memo = "integration-test-invoice";
-
-      const result = await lnd.addLndInvoice(msat, memo);
-
-      const response = expectOk(result);
-      console.debug("Received invoice from LND:", response);
-    },
-    60000
-  );
-});

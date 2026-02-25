@@ -28,3 +28,4 @@ dev-dist
 *.sln
 *.sw?
 .direnv/
+.env

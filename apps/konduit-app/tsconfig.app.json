@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
-    "erasableSyntaxOnly": true,
     "outDir": "./dist",
+    "module": "ESNext",
     "rootDir": "./src",
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
@@ -16,6 +16,9 @@
   "extends": "@vue/tsconfig/tsconfig.dom.json",
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"],
   "references": [
-    { "path": "../../packages/bln" }
+    { "path": "../../packages/bln" },
+    { "path": "../../packages/codec" },
+    { "path": "../../packages/konduit-consumer" },
+    { "path": "../../packages/currency-format" }
   ]
 }

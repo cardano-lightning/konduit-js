@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
+  altCborCodecs,
+  arrayOf,
   cbor2ArrayCodec,
   cbor2BooleanCodec,
   cbor2ByteStringCodec,
@@ -207,8 +209,9 @@ describe("tupleOf codec", () => {
     const reEncoded = outer.serialise(decoded);
     expect(Array.isArray(reEncoded)).toBe(true);
     const arr = reEncoded as Cbor[];
+    expect(arr).toHaveLength(2);
     expect(arr[0]).toBe("key");
-    let innerOut = arr[1];
+    let innerOut = arr[1]!;
     if(!isIndefiniteArray(innerOut)) throw new Error("expected indefinite array");
     expect(innerOut.items[0]).toBe(5n);
     expect(innerOut.items[1]).toBe(false);
@@ -351,6 +354,56 @@ describe("CBOR dictOf and homogeneousMapOf codecs", () => {
 });
 
 describe("CBOR end-to-end roundtrip with mixed/nested codecs", () => {
+
+  it("roundtrips a union of array of ints and array of strings via altCborCodecs", () => {
+    type IntArray = bigint[];
+    type StrArray = string[];
+    type Union = IntArray | StrArray;
+
+    const intArrayCodec = arrayOf(definiteLength, cbor2IntCodec);
+    const strArrayCodec = arrayOf(definiteLength, cbor2StringCodec);
+
+    // Use altCborCodecs to build a union codec
+    const unionCodec = altCborCodecs(
+      [intArrayCodec, strArrayCodec] as const,
+      (serInts, serStrs) => (value: Union) => {
+        // Dispatch based on the element type of the array
+        if (Array.isArray(value) && value.length > 0) {
+          const first = value[0];
+          if (typeof first === "bigint") {
+            return serInts(value as IntArray);
+          }
+          if (typeof first === "string") {
+            return serStrs(value as StrArray);
+          }
+        }
+        // Empty array is ambiguous; choose one branch deterministically
+        return serInts(value as IntArray);
+      }
+    );
+
+    const originalInts: IntArray = [1n, 2n, 3n];
+    const cborInts = unionCodec.serialise(originalInts);
+    const roundtrippedInts = unionCodec.deserialise(cborInts);
+    expect(roundtrippedInts.isOk()).toBe(true);
+    if (roundtrippedInts.isOk()) {
+      expect(roundtrippedInts.value).toEqual(originalInts);
+    }
+
+    const originalStrs: StrArray = ["a", "b", "c"];
+    const cborStrs = unionCodec.serialise(originalStrs);
+    const roundtrippedStrs = unionCodec.deserialise(cborStrs);
+    expect(roundtrippedStrs.isOk()).toBe(true);
+    if (roundtrippedStrs.isOk()) {
+      expect(roundtrippedStrs.value).toEqual(originalStrs);
+    }
+
+    // A type-mismatched CBOR array should fail deserialisation
+    const mixedArrayCbor = [1n, "oops"] as any;
+    const badResult = unionCodec.deserialise(mixedArrayCbor);
+    expect(badResult.isErr()).toBe(true);
+  });
+
   it("rountrips a definite map into a dict with typed fields", () => {
     type Person = {
       name: string;

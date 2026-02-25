@@ -81,8 +81,8 @@ describe('Wallet Events', () => {
 
     // Should have received at least 2 balance change events
     expect(balanceChanges.length).toBeGreaterThanOrEqual(2);
-    expect(balanceChanges[0].newBalance).toBe(1000000n);
-    expect(balanceChanges[1].newBalance).toBe(2000000n);
+    expect(balanceChanges[0]?.newBalance).toBe(1000000n);
+    expect(balanceChanges[1]?.newBalance).toBe(2000000n);
   });
 
   it('should emit tx-submitted event when transaction is submitted', async () => {
@@ -110,11 +110,11 @@ describe('Wallet Events', () => {
     expect(txSubmissions.length).toBe(2);
 
     // First submission with context
-    expect(txSubmissions[0].txHash).toBe(txHash1);
-    expect(txSubmissions[0].context).toEqual(context);
+    expect(txSubmissions[0]?.txHash).toBe(txHash1);
+    expect(txSubmissions[0]?.context).toEqual(context);
 
     // Second submission without context
-    expectToBe(txSubmissions[1].txHash, txHash2);
-    expect(txSubmissions[1].context).toBeUndefined();
+    expectToBe(txSubmissions[1]?.txHash, txHash2);
+    expect(txSubmissions[1]?.context).toBeUndefined();
   });
 });

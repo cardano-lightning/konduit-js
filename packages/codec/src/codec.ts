@@ -133,7 +133,13 @@ export const altCodecs = <Codecs extends readonly Codec<any, any, any>[]>(
   caseSerialisers: (
     ...serialisers: { [K in keyof Codecs]: Codecs[K] extends Codec<infer I, infer O, any> ? Serialiser<O, I> : never }
   ) => Serialiser<UnionOfCodecsOutputs<Codecs>, ExtractCodecInput<Codecs[number]>>,
-  combineErrs: (...errors: ExtractCodecError<Codecs[number]>[]) => ExtractCodecError<Codecs[number]> = (...errs) => errs[errs.length - 1]
+  combineErrs: (...errors: ExtractCodecError<Codecs[number]>[]) => ExtractCodecError<Codecs[number]> = (...errs) => {
+    const err = errs[errs.length - 1];
+    if (err === undefined) {
+      throw new Error("PANIC: combineErrs called with no errors, this should be impossible");
+    }
+    return err;
+  }
 ): Codec<ExtractCodecInput<Codecs[number]>, UnionOfCodecsOutputs<Codecs>, ExtractCodecError<Codecs[number]>> => {
   return {
     deserialise: (input: ExtractCodecInput<Codecs[number]>): Result<UnionOfCodecsOutputs<Codecs>, ExtractCodecError<Codecs[number]>> => {

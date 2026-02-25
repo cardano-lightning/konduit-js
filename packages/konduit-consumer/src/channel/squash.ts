@@ -1,7 +1,7 @@
 import type { Tagged } from "type-fest";
 import type { Result } from "neverthrow";
 import { ok, err } from "neverthrow";
-import { bigInt2LovelaceCodec, cbor2Ed25519SignatureCodec, json2Ed25519SignatureCodec, json2LovelaceCodec, Lovelace } from "../cardano";
+import { bigInt2LovelaceCodec, cbor2Ed25519SignatureCodec, json2Ed25519SignatureCodec, Lovelace } from "../cardano";
 import { bigInt2NonNegativeBigIntCodec, NonNegativeBigInt } from "@konduit/codec/integers/big";
 import * as cbor from "@konduit/codec/cbor/codecs/sync";
 import * as codec from "@konduit/codec";
@@ -13,15 +13,17 @@ import type { Ed25519Signature, Ed25519SigningKey, Ed25519VerificationKey } from
 import { ChannelTag } from "./core";
 import * as uint8Array from "@konduit/codec/uint8Array";
 import type { ConsumerEd25519VerificationKey } from "./l1Channel";
-import { uint8Array2CborCodec, type CborCodec } from "@konduit/codec/cbor/codecs/sync";
+import { altCborCodecs, uint8Array2CborCodec, type CborCodec } from "@konduit/codec/cbor/codecs/sync";
 import type { Cbor } from "@konduit/codec/cbor/core";
-import { cbor2HtlcLockCodec, HtlcLock, HtlcSecret } from "../bitcoin/bolt11";
+import { cbor2HtlcLockCodec, HtlcLock, HtlcSecret, json2HtlcSecretCodec } from "../bitcoin/bolt11";
+import { mkOrdForScalar } from "@konduit/codec/tagged";
 
 export type Index = Tagged<NonNegativeBigInt, "Index">;
 export namespace Index {
   export const zero = 0n as Index;
   export const successor = (index: Index): Index => (index + 1n) as Index;
   export const fromBigInt = (value: bigint): Result<Index, JsonError> => bigInt2IndexCodec.deserialise(value);
+  export const ord = mkOrdForScalar<Index>();
 }
 
 export const bigInt2IndexCodec: codec.Codec<bigint, Index, JsonError> = codec.rmap(
@@ -32,91 +34,79 @@ export const bigInt2IndexCodec: codec.Codec<bigint, Index, JsonError> = codec.rm
 export const json2IndexCodec: JsonCodec<Index> = codec.pipe(json2BigIntCodec, bigInt2IndexCodec);
 export const cbor2IndexCodec: CborCodec<Index> = codec.pipe(cbor.cbor2IntCodec, bigInt2IndexCodec);
 
-// Extra invariants:
-// * `amount` is positive
-type ChequeBodyComponents = {
-  readonly index: Index;
+export type LockedChequeBody = {
   readonly amount: Lovelace;
-  readonly timeout: ValidDate;
+  readonly index: Index;
   readonly lock: HtlcLock;
+  readonly timeout: ValidDate;
 };
 
-export type ChequeBody = Tagged<ChequeBodyComponents, "ChequeBody">;
-
-export namespace ChequeBody {
-  export const load = (
-    amount: Lovelace,
-    index: Index,
-    lock: HtlcLock,
-    timeout: ValidDate,
-  ): Result<ChequeBody, string> => {
-    if (amount < 0n) {
-      return err("Amount must be non-negative");
-    }
-    return ok({
-      amount,
-      index,
-      lock,
-      timeout,
-    } as ChequeBody);
-  };
-
-  export const fromSecret = async (
-    amount: Lovelace,
-    index: Index,
-    secret: HtlcSecret,
-    timeout: ValidDate,
-  ): Promise<Result<ChequeBody, string>> => {
-    const lock = await HtlcLock.fromSecret(secret);
-    return load(amount, index, lock, timeout);
+export namespace LockedChequeBody {
+  export const fromUnlockedBody = (unlockedBody: UnlockedChequeBody): LockedChequeBody => {
+    const { amount, index, secret, timeout } = unlockedBody;
+    const lock = HtlcLock.fromSecret(secret);
+    return { amount, index, lock, timeout };
   }
 
-  export const fromLocking = async (
+  export const fromLocking = (
     amount: Lovelace,
     index: Index,
     timeout: ValidDate,
-  ): Promise<Result<{ chequeBody: ChequeBody, secret: HtlcSecret }, string>> => {
-    const secret = await HtlcSecret.fromRandomBytes();
-    const lockResult = await ChequeBody.fromSecret(amount, index, secret, timeout);
-    return lockResult.map((chequeBody) => ({
+  ): { chequeBody: LockedChequeBody, secret: HtlcSecret } => {
+    const secret = HtlcSecret.fromRandomBytes();
+    const unlockedChequeBody = { amount, index, secret, timeout, };
+    const chequeBody = LockedChequeBody.fromUnlockedBody(unlockedChequeBody);
+    return {
       chequeBody,
       secret,
-    }));
+    };
   }
 
-  export const areEqual = (a: ChequeBody, b: ChequeBody): boolean =>
+  export const areEqual = (a: LockedChequeBody, b: LockedChequeBody): boolean => (
     a.amount === b.amount &&
     a.index === b.index &&
-    a.lock.length === b.lock.length &&
-    a.timeout === b.timeout &&
-    a.lock.every((value, i) => value === b.lock[i]);
+    uint8Array.equal(a.lock, b.lock) &&
+    ValidDate.ord.equal(a.timeout, b.timeout)
+  );
+
+  export const unlock = (secret: HtlcSecret, chequeBody: LockedChequeBody): Result<UnlockedChequeBody, string> => {
+    const lock = HtlcLock.fromSecret(secret);
+    if (!uint8Array.equal(lock, chequeBody.lock)) {
+      return err("Invalid secret for the cheque body");
+    }
+    return ok({
+      amount: chequeBody.amount,
+      index: chequeBody.index,
+      secret,
+      timeout: chequeBody.timeout,
+    } as UnlockedChequeBody);
+  }
+
+  export const areMatching = (unlocked: UnlockedChequeBody, locked: LockedChequeBody): boolean => {
+    const derivedLocked = LockedChequeBody.fromUnlockedBody(unlocked);
+    return LockedChequeBody.areEqual(derivedLocked, locked);
+  }
 }
 
-export const cbor2ChequeBodyCodec = codec.pipe(
+export const cbor2LockedChequeBodyCodec = codec.rmap(
   cbor.tupleOf(
     cbor.indefiniteLength,
     cbor2IndexCodec,
     codec.pipe(cbor.cbor2IntCodec, bigInt2LovelaceCodec),
     codec.pipe(cbor.cbor2IntCodec, bigInt2POSIXMillisecondsCodec),
     cbor2HtlcLockCodec,
-  ), {
-    deserialise: ([
-      index,
-      amount,
-      timeout,
-      lock,
-    ]: [Index, Lovelace, POSIXMilliseconds, HtlcLock ]): Result<ChequeBody, string> => {
-      const timeoutDate = ValidDate.fromPOSIXMilliseconds(timeout);
-      return ChequeBody.load(amount, index, lock, timeoutDate);
-    },
-    serialise: (chequeBody: ChequeBody): [Index, Lovelace, POSIXMilliseconds, HtlcLock] => {
-      return [
-        chequeBody.index,
-        chequeBody.amount,
-        POSIXMilliseconds.fromValidDate(chequeBody.timeout),
-        chequeBody.lock,
-      ];
-    },
+  ),
+  ([ index, amount, timeoutMs, lock, ]: [Index, Lovelace, POSIXMilliseconds, HtlcLock ]): LockedChequeBody => {
+    const timeout = ValidDate.fromPOSIXMilliseconds(timeoutMs);
+    return { amount, index, lock, timeout }
+  },
+  (chequeBody: LockedChequeBody): [Index, Lovelace, POSIXMilliseconds, HtlcLock] => {
+    return [
+      chequeBody.index,
+      chequeBody.amount,
+      POSIXMilliseconds.fromValidDate(chequeBody.timeout),
+      chequeBody.lock,
+    ];
   },
 );
 
@@ -125,68 +115,66 @@ const mkSigningPayload = (tag: ChannelTag, bodyCbor: Cbor) => {
   return new Uint8Array([...tag, ...bodyBytes]) as Uint8Array;
 }
 
-// We serialise cheque as cbor hex string
-export const json2ChequeBodyCodec: JsonCodec<ChequeBody> = codec.pipe(
+// We serialise cheque as cbor hex string in the API so we stick to that
+// convention. We could use a separate codec for state storage but
+// let's keep it simple for now.
+export const json2LockedChequeBodyCodec: JsonCodec<LockedChequeBody> = codec.pipe(
   codec.pipe(uint8Array.jsonCodec, uint8Array2CborCodec),
-  cbor2ChequeBodyCodec
+  cbor2LockedChequeBodyCodec
 )
 
-export type Cheque = Tagged<{ body: ChequeBody, signature: Ed25519Signature }, "Cheque">;
-export namespace Cheque {
+export type LockedCheque = Tagged<{ body: LockedChequeBody, signature: Ed25519Signature }, "LockedCheque">;
+export namespace LockedCheque {
   export type ChequeSigningData = Tagged<Uint8Array, "ChequeSigningData">;
 
-  export const fromLockingAndSigning = async (
+  export const fromLockingAndSigning = (
     tag: ChannelTag,
     sKey: Ed25519SigningKey,
     amount: Lovelace,
     index: Index,
     timeout: ValidDate,
-  ): Promise<Result<{ cheque: Cheque, secret: HtlcSecret }, string>> => {
-    const possibleChequeBodyWithSecret = await ChequeBody.fromLocking(amount, index, timeout);
-    return possibleChequeBodyWithSecret.map(({ chequeBody, secret }) => {
-      const cheque = fromSigning(tag, sKey, chequeBody);
-      return {
-        cheque,
-        secret,
-      };
-    });
+  ): { cheque: LockedCheque, secret: HtlcSecret } => {
+    const { chequeBody, secret } = LockedChequeBody.fromLocking(amount, index, timeout);
+    const cheque = fromSigning(tag, sKey, chequeBody);
+    return { cheque, secret, };
   }
 
-  export const signingData = (tag: ChannelTag, body: ChequeBody): ChequeSigningData => {
-    const bodyCbor = cbor2ChequeBodyCodec.serialise(body);
+  export const signingData = (tag: ChannelTag, body: LockedChequeBody): ChequeSigningData => {
+    const bodyCbor = cbor2LockedChequeBodyCodec.serialise(body);
     return mkSigningPayload(tag, bodyCbor) as ChequeSigningData;
   }
 
-  export const fromSigning = (tag: ChannelTag, sKey: Ed25519SigningKey, body: ChequeBody): Cheque => {
+  export const fromSigning = (tag: ChannelTag, sKey: Ed25519SigningKey, body: LockedChequeBody): LockedCheque => {
     const bytes = signingData(tag, body);
     console.log(bytes);
     const signature = sKey.sign(bytes);
     return {
       body,
       signature,
-    } as Cheque;
+    } as LockedCheque;
   }
 
-  export const verifySignature = (cheque: Cheque, vKey: ConsumerEd25519VerificationKey): boolean => {
-    const bodyBytes = cbor.serialiseCbor(cbor2ChequeBodyCodec.serialise(cheque.body));
-    return vKey.verify(bodyBytes, cheque.signature);
+  export const verifySignature = (tag: ChannelTag, vKey: ConsumerEd25519VerificationKey, cheque: LockedCheque): boolean => {
+    const bytes = LockedCheque.signingData(tag, cheque.body);
+    return vKey.verify(bytes, cheque.signature);
   }
 
-  export const verifySecret = async (cheque: Cheque, secret: HtlcSecret): Promise<boolean> => {
-    const lock = await HtlcLock.fromSecret(secret);
+  export const verifySecret = (secret: HtlcSecret, cheque: LockedCheque): boolean => {
+    const lock = HtlcLock.fromSecret(secret);
     return uint8Array.equal(lock, cheque.body.lock);
   }
 
-  export const verify = async (cheque: Cheque, vKey: ConsumerEd25519VerificationKey, secret: HtlcSecret): Promise<boolean> => {
-    return Cheque.verifySignature(cheque, vKey) && (await Cheque.verifySecret(cheque, secret));
+  export const verify = (tag: ChannelTag, vKey: ConsumerEd25519VerificationKey, secret: HtlcSecret, cheque: LockedCheque): boolean => {
+    return LockedCheque.verifySignature(tag, vKey, cheque) && LockedCheque.verifySecret(secret, cheque);
   }
 }
-export const json2ChequeCodec = codec.rmap(
+
+export const json2LockedChequeCodec = codec.rmap(
   jsonCodecs.objectOf({
-    "body": json2ChequeBodyCodec,
+    "body": json2LockedChequeBodyCodec,
     "signature": json2Ed25519SignatureCodec,
   }),
-  (obj) => obj as Cheque,
+  (obj) => obj as LockedCheque,
   (cheque) => cheque
 )
 
@@ -208,10 +196,7 @@ export namespace SquashBody {
     index: 0n as Index,
   } as SquashBody;
 
-  export const create = (index: Index, amount: Lovelace, excluded: Index[]): Result<SquashBody, string> => {
-    if (amount < 0n) {
-      return err("Amount must be non-negative");
-    }
+  export const load = (index: Index, amount: Lovelace, excluded: Index[]): Result<SquashBody, string> => {
     let prevIdx = -1n;
     for (const excludedIndex of excluded) {
       if (excludedIndex <= prevIdx) return err("Excluded indices must be in strictly increasing order");
@@ -228,7 +213,7 @@ export namespace SquashBody {
     && a.excluded.every((value, index) => value === b.excluded[index])
   );
 
-  export const squashCheque = (prev: SquashBody, cheque: ChequeBody): Result<SquashBody, JsonError> => {
+  export const squashCheque = (prev: SquashBody, cheque: LockedChequeBody): Result<SquashBody, JsonError> => {
     const excludePos = prev.excluded.indexOf(cheque.index);
     if (excludePos !== -1) {
       const newExcluded = [
@@ -264,27 +249,32 @@ export namespace SquashBody {
 export const cbor2SquashBodyCodec = codec.pipe(
   cbor.tupleOf(
     cbor.indefiniteLength,
-    cbor2IndexCodec,
     codec.pipe(cbor.cbor2IntCodec, bigInt2LovelaceCodec),
-    cbor.arrayOf(cbor.definiteLength, cbor2IndexCodec)
+    cbor2IndexCodec,
+    // Empty array is encoded as definite length that is why we use this alt.
+    altCborCodecs(
+      [cbor.arrayOf(cbor.indefiniteLength, cbor2IndexCodec), cbor.arrayOf(cbor.definiteLength, cbor2IndexCodec)],
+      (serIndefinite, serDefinite) => (arr: Index[]) => {
+        if (arr.length === 0) {
+          return serDefinite(arr);
+        }
+        return serIndefinite(arr);
+      }
+    ),
   ), {
-    deserialise: ([index, amount, excluded]: [Index, Lovelace, Index[]]): Result<SquashBody, string> => {
-      return SquashBody.create(index, amount, excluded);
+    deserialise: ([amount, index, excluded]: [Lovelace, Index, Index[]]): Result<SquashBody, string> => {
+      return SquashBody.load(index, amount, excluded);
     },
-    serialise: (squashBody: SquashBody): [Index, Lovelace, Index[]] => {
-      return [squashBody.index, squashBody.amount, squashBody.excluded];
+    serialise: (squashBody: SquashBody): [Lovelace, Index, Index[]] => {
+      return [squashBody.amount, squashBody.index, squashBody.excluded];
     }
   }
 );
 
-export const json2SquashBodyCodec: JsonCodec<SquashBody> = codec.rmap(
-  jsonCodecs.objectOf({
-    "amount": json2LovelaceCodec,
-    "index": json2IndexCodec,
-    "excluded": jsonCodecs.arrayOf(json2IndexCodec),
-  }),
-  (obj) => obj as SquashBody,
-  (squashBody) => squashBody
+// Used on the API level
+export const json2SquashBodyCodec: JsonCodec<SquashBody> = codec.pipe(
+  codec.pipe(uint8Array.jsonCodec, uint8Array2CborCodec),
+  cbor2SquashBodyCodec,
 );
 
 export type SquashComponents = {
@@ -301,7 +291,7 @@ export namespace Squash {
     signature,
   } as Squash);
 
-  export const fromBodySigning = (sKey: Ed25519SigningKey, tag: ChannelTag, body: SquashBody): Squash => {
+  export const fromBodySigning = (tag: ChannelTag, sKey: Ed25519SigningKey, body: SquashBody): Squash => {
     const signingData = Squash.signingData(tag, body);
     const signature = sKey.sign(signingData);
     return Squash.create(body, signature);
@@ -312,7 +302,7 @@ export namespace Squash {
     return mkSigningPayload(tag, bodyCbor) as SquashSigningData;
   }
 
-  export const verify = (tag: ChannelTag, squash: Squash, vKey: Ed25519VerificationKey): boolean => {
+  export const verify = (tag: ChannelTag, vKey: Ed25519VerificationKey, squash: Squash): boolean => {
     const signingData = Squash.signingData(tag, squash.body);
     return vKey.verify(signingData, squash.signature);
   }
@@ -330,9 +320,168 @@ export const cbor2SquashCodec = codec.rmap(
 
 export const json2SquashCodec: JsonCodec<Squash> = codec.rmap(
   jsonCodecs.objectOf({
-    "body": json2SquashBodyCodec,
-    "signature": json2Ed25519SignatureCodec,
+    body: json2SquashBodyCodec,
+    signature: json2Ed25519SignatureCodec,
   }),
   (obj) => obj as Squash,
   (squash) => squash
 );
+
+export type UnlockedChequeBody = {
+  readonly amount: Lovelace;
+  readonly index: Index;
+  readonly secret: HtlcSecret;
+  readonly timeout: ValidDate;
+};
+
+export namespace UnlockedChequeBody {
+  export const areEqual = (a: UnlockedChequeBody, b: UnlockedChequeBody): boolean => (
+    a.amount === b.amount &&
+    a.index === b.index &&
+    uint8Array.equal(a.secret, b.secret) &&
+    ValidDate.ord.equal(a.timeout, b.timeout)
+  );
+}
+
+export type UnlockedCheque = {
+  body: UnlockedChequeBody;
+  signature: Ed25519Signature;
+};
+
+export namespace UnlockedCheque {
+  export const verifySignature = (tag: ChannelTag, vKey: ConsumerEd25519VerificationKey, unlocked: UnlockedCheque): boolean => {
+    const cheque: LockedCheque = {
+      body: LockedChequeBody.fromUnlockedBody(unlocked.body),
+      signature: unlocked.signature,
+    } as LockedCheque;
+    return LockedCheque.verifySignature(tag, vKey, cheque);
+  }
+}
+
+export const json2UnlockedChequeCodec: JsonCodec<UnlockedCheque> = codec.pipe(
+  jsonCodecs.objectOf({
+    body: json2LockedChequeBodyCodec,
+    secret: json2HtlcSecretCodec,
+    signature: json2Ed25519SignatureCodec,
+  }), {
+    deserialise: (obj) => {
+      const unlockedBody = {
+          amount: obj.body.amount,
+          index: obj.body.index,
+          timeout: obj.body.timeout,
+          secret: obj.secret,
+      }
+      if(!LockedChequeBody.areMatching(unlockedBody, obj.body)) {
+        return err("Invalid secret for the cheque body");
+      }
+      return ok({
+        body: {
+          amount: obj.body.amount,
+          index: obj.body.index,
+          timeout: obj.body.timeout,
+          secret: obj.secret,
+        },
+        signature: obj.signature,
+      });
+    },
+    serialise: (unlocked) => ({
+      body: LockedChequeBody.fromUnlockedBody(unlocked.body),
+      secret: unlocked.body.secret,
+      signature: unlocked.signature,
+    })
+  }
+)
+
+export type AnyCheque = LockedCheque | UnlockedCheque;
+export namespace AnyCheque {
+  export const isUnlocked = (cheque: AnyCheque): cheque is UnlockedCheque => "secret" in cheque.body;
+  export const isLocked = (cheque: AnyCheque): cheque is LockedCheque => !isUnlocked(cheque);
+}
+
+export const json2AnyChequeCodec: JsonCodec<AnyCheque> = jsonCodecs.altJsonCodecs(
+  [json2LockedChequeCodec, json2UnlockedChequeCodec],
+  (serLocked, serUnlocked) => (cheque: AnyCheque) => {
+    if (AnyCheque.isUnlocked(cheque)) {
+      return serUnlocked(cheque);
+    }
+    return serLocked(cheque);
+  }
+);
+
+export type VerifiedUnlockedChequeComponents = {
+  readonly unlocked: UnlockedCheque;
+  readonly vKey: ConsumerEd25519VerificationKey;
+};
+export type VerifiedUnlockedCheque = Tagged<VerifiedUnlockedChequeComponents, "VerifiedUnlockedCheque">;
+export namespace VerifiedUnlockedCheque {
+  export const fromVerification = (tag: ChannelTag, vKey: ConsumerEd25519VerificationKey, unlocked: UnlockedCheque): Result<VerifiedUnlockedCheque, string> => {
+    const isChequeValid = UnlockedCheque.verifySignature(tag, vKey, unlocked);
+    if (!isChequeValid) {
+      return err("Invalid signature for the cheque");
+    }
+    return ok({
+      unlocked,
+      vKey,
+    } as VerifiedUnlockedCheque);
+  }
+}
+
+export const mkJson2VerifiedUnlockedCodec = (tag: ChannelTag, vKey: ConsumerEd25519VerificationKey): JsonCodec<VerifiedUnlockedCheque> => {
+  return codec.pipe(
+    json2UnlockedChequeCodec, {
+      deserialise: (unlocked) => VerifiedUnlockedCheque.fromVerification(tag, vKey, unlocked),
+      serialise: (verifiedUnlockedCheque) => verifiedUnlockedCheque.unlocked,
+    }
+  );
+}
+
+export type VerifiedLockedChequeComponents = {
+  readonly cheque: LockedCheque;
+  readonly vKey: ConsumerEd25519VerificationKey;
+};
+export type VerifiedLockedCheque = Tagged<VerifiedLockedChequeComponents, "VerifiedLockedCheque">;
+export namespace VerifiedLockedCheque {
+  export const fromVerification = (tag: ChannelTag, vKey: ConsumerEd25519VerificationKey, cheque: LockedCheque): Result<VerifiedLockedCheque, string> => {
+    if (!LockedCheque.verifySignature(tag, vKey, cheque)) {
+      return err("Invalid signature for the cheque");
+    }
+    return ok({
+      cheque,
+      vKey,
+    } as VerifiedLockedCheque);
+  }
+
+  export const fromSigning = (tag: ChannelTag, sKey: Ed25519SigningKey, body: LockedChequeBody): VerifiedLockedCheque => {
+    const cheque = LockedCheque.fromSigning(tag, sKey, body);
+    return {
+      cheque,
+      vKey: sKey.toVerificationKey(),
+    } as VerifiedLockedCheque;
+  }
+}
+
+export type VerifiedSquashComponents = {
+  readonly squash: Squash;
+  readonly vKey: Ed25519VerificationKey;
+};
+export type VerifiedSquash = Tagged<VerifiedSquashComponents, "VerifiedSquash">;
+export namespace VerifiedSquash {
+  export const fromVerification = (tag: ChannelTag, vKey: Ed25519VerificationKey, squash: Squash): Result<VerifiedSquash, string> => {
+    if (!Squash.verify(tag, vKey, squash)) {
+      return err("Invalid signature for the squash");
+    }
+    return ok({
+      squash,
+      vKey,
+    } as VerifiedSquash);
+  }
+
+  export const fromBodySigning = (tag: ChannelTag, sKey: Ed25519SigningKey, body: SquashBody): VerifiedSquash => {
+    const squash = Squash.fromBodySigning(tag, sKey, body);
+    return {
+      squash,
+      vKey: sKey.toVerificationKey(),
+    } as VerifiedSquash;
+  }
+}
+

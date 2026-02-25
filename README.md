@@ -24,17 +24,22 @@ We use `vue-tsc` as a TS compiler.
 
 Our nix shell provides the basic tools needed for the development - node, yarn, etc. To enter the nix shell, run: `$ nix develop`.
 
+Some of the project level binaries are exposed through simple shell script wrappers. So **after** `yarn install`, you should be able to use `vue-tsc`, `vue-language-server`, `typescript-language-server` from anywhere in the repo.
+
 ### Devel cycle
 
 At the root level of the repo:
 
 - `yarn install` to install dependencies
 - `yarn build` to build all packages and apps
-- `yarn dev` currently servers only the app in `apps/konduit-app` through vite.
+
+#### konduit-app
+
+Please check ./apps/konduit-app/README.md for more details about the devel cycle of the app.
 
 ### Nix build
 
-Our app build is nixified. To build the app with nix, run: `$ nix build .#app`. If you change dependencies please update the dependency hash `nix/default.nix` - more detailed instructions can be found there.
+The app is nixified so we can reliably build and deploy it. To build the app with nix, run: `$ nix build .#app`. If you change JS dependencies please update the hash in `nix/default.nix`. More detailed instructions can be found in the file.
 
 ## Learnings
 

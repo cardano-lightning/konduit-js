@@ -15,7 +15,7 @@ const queryValue2StringCodec: QueryValueCodec<string> = {
     }
     // An array
     if (input.length === 1) {
-      return ok(input[0]);
+      return ok(input[0]!);
     } else if (input.length === 0) {
       return err("Expecting a single value but got an empty array");
     } else {

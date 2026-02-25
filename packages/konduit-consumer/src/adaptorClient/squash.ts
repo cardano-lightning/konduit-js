@@ -1,12 +1,13 @@
 import * as codec from "@konduit/codec";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import type { JsonCodec } from "@konduit/codec/json/codecs";
-import { json2IndexCodec, type Index } from "../channel/squash";
-import { json2MillisatoshiCodec, type Millisatoshi } from "../bitcoin/asset";
+import { json2SquashBodyCodec, json2SquashCodec, mkJson2VerifiedUnlockedCodec, VerifiedSquash, VerifiedUnlockedCheque, type SquashBody } from "../channel/squash";
+import type { ChannelTag, ConsumerEd25519VerificationKey } from "../channel";
 
 export type SquashProposal = {
-  index: Index;
-  routingFee: Millisatoshi;
+  proposal: SquashBody;
+  current: VerifiedSquash;
+  unlockeds: VerifiedUnlockedCheque[];
 };
 
 export type SquashResponse = "Complete" | SquashProposal;
@@ -15,51 +16,60 @@ export const isCompleteSquashResponse = (resp: SquashResponse): resp is "Complet
 
 export const isIncompleteSquashResponse = (resp: SquashResponse): resp is SquashProposal => !isCompleteSquashResponse(resp);
 
-export const json2SquashResponseDeserialiser: jsonCodecs.JsonDeserialiser<SquashResponse> = (() => {
-  const json2SquashProposalCodec: JsonCodec<{ index: Index; routing_fee: Millisatoshi }> =
-    jsonCodecs.objectOf({
-      index: json2IndexCodec,
-      routing_fee: json2MillisatoshiCodec,
-    });
+export const mkJson2SquashProposalCodec = (tag: ChannelTag, vKey: ConsumerEd25519VerificationKey): JsonCodec<SquashProposal> => {
+  const dataCodec = jsonCodecs.objectOf({
+    proposal: json2SquashBodyCodec,
+    current: json2SquashCodec,
+    unlockeds: jsonCodecs.arrayOf(mkJson2VerifiedUnlockedCodec(tag, vKey)),
+  });
+  return codec.pipe(
+    dataCodec, {
+      deserialise: (res) => VerifiedSquash.fromVerification(tag, vKey, res.current).map((current) => {
+        return {
+          proposal: res.proposal,
+          current,
+          unlockeds: res.unlockeds,
+        };
+      }),
+      serialise: (res) => {
+        return {
+          proposal: res.proposal,
+          current: res.current.squash,
+          unlockeds: res.unlockeds,
+        };
+      }
+    }
+  );
+};
 
+export const mkJson2SquashResponseCodec = (tag: ChannelTag, vKey: ConsumerEd25519VerificationKey):jsonCodecs.JsonCodec<SquashResponse> => {
   const json2SquashResRecordCodec =
     jsonCodecs.altJsonCodecs(
       [
         jsonCodecs.constant("Complete" as const),
-        jsonCodecs.objectOf({ Incomplete: json2SquashProposalCodec }),
+        jsonCodecs.objectOf({ Incomplete: mkJson2SquashProposalCodec(tag, vKey) }),
       ],
-      (completeSer, incompleteSer) => (res) => {
+      (completeSer, incompleteSer) => (res: "Complete" | { Incomplete: SquashProposal }) => {
         if (res === "Complete") {
           return completeSer(res);
-        } else {
-          return incompleteSer(res);
         }
+        return incompleteSer(res);
       }
     );
-  return codec.rmapDeserialiser(
-    json2SquashResRecordCodec.deserialise,
-    (j): SquashResponse => {
-      if ("Complete" === j) {
-        return j;
-      } else {
-        return {
-          index: j.Incomplete.index,
-          routingFee: j.Incomplete.routing_fee,
-        };
+  return codec.rmap(
+    json2SquashResRecordCodec,
+    (j: "Complete" | { Incomplete: SquashProposal }): SquashResponse => {
+      if (j === "Complete") {
+        return "Complete";
       }
+      return j.Incomplete;
     },
-  );
-})();
-
-export const json2SquashResponseCodec: JsonCodec<SquashResponse> = {
-  deserialise: json2SquashResponseDeserialiser,
-  serialise: (resp) => {
-    if (isCompleteSquashResponse(resp)) {
-      return "Complete";
-    } else {
-      return { Incomplete: { index: resp.index, routing_fee: resp.routingFee } };
+    (resp: SquashResponse): { Incomplete: SquashProposal } | "Complete" => {
+      if (isCompleteSquashResponse(resp)) {
+        return "Complete";
+      }
+      return { Incomplete: resp };
     }
-  },
+  );
 };
-
 
