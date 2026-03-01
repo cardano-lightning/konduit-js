@@ -1,15 +1,18 @@
 <script setup lang="ts">
+import type { UnboundProps as RadioFieldProps } from './Form/RadioField.vue';
 import type { UnboundProps as SelectFieldProps } from './Form/SelectField.vue';
 import type { UnboundProps as TextFieldProps } from './Form/TextField.vue';
 import { type Props as ButtonProps } from "./Button.vue";
 import ButtonGroup from './ButtonGroup.vue';
+import RadioField from './Form/RadioField.vue';
 import SelectField from './Form/SelectField.vue';
 import TextField from './Form/TextField.vue';
 import { computed, type Ref } from 'vue';
 
 export type FieldProps =
   | TextFieldProps
-  | SelectFieldProps;
+  | SelectFieldProps
+  | RadioFieldProps;
 
 export type Props<Keys extends string = string> = {
   buttons: ButtonProps[];
@@ -102,6 +105,20 @@ const groupedFields = computed((): { fields: {name: string, field: FieldProps}[]
               :touch="() => props.touch(name)"
               :type="field.type"
             />
+            <RadioField
+              v-else-if="field.type === 'radio'"
+              :disabled="field.disabled"
+              :errors="field.errors"
+              :fieldWidth="field.fieldWidth"
+              :isValid="field.isValid"
+              :label="field.label"
+              :layout="field.layout"
+              :name="name"
+              :options="field.options"
+              :state="props.formState[name] as Ref<string>"
+              :touch="() => props.touch(name)"
+              :type="field.type"
+            />
           </div>
         </div>
         <ul class="errors" v-if="row.errors && row.errors.length > 0">
@@ -111,7 +128,7 @@ const groupedFields = computed((): { fields: {name: string, field: FieldProps}[]
         </ul>
       </div>
     </div>
-    <ButtonGroup :buttons="props.buttons" />
+    <ButtonGroup :buttons="props.buttons" v-if="props.buttons && props.buttons.length > 0" />
   </form>
 </template>
 
