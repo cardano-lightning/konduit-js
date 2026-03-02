@@ -109,10 +109,10 @@ export namespace NonNegativeInt {
   export const fromJson = (n: Json) => json2NonNegativeIntCodec.deserialise(n);
   export const ord = mkOrdForScalar<NonNegativeInt>();
   export const distance = (a: NonNegativeInt, b: NonNegativeInt): NonNegativeInt => Math.abs(a - b) as NonNegativeInt;
-  export const add = (a: NonNegativeInt, b: NonNegativeInt): Result<NonNegativeInt, JsonError> => NonNegativeInt.fromNumber(a + b);
+  export const add = (a: NonNegativeInt, b: NonNegativeInt): Result<NonNegativeInt, string> => NonNegativeInt.fromNumber(a + b);
 }
 
-export const int2NonNegativeIntCodec: Codec<Int, NonNegativeInt, JsonError> = {
+export const int2NonNegativeIntCodec: Codec<Int, NonNegativeInt, string> = {
   deserialise: (value: Int) => {
     if (value < 0) {
       return err(`Expected non-negative integer, got ${value}`);

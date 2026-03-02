@@ -916,7 +916,7 @@ export const string2CborCodec: Codec<string, Cbor, JsonError> = codec.pipe(
 export const json2CborCodec: JsonCodec<Cbor> = string2CborCodec as JsonCodec<Cbor>;
 
 
-export const mkTaggedCborCodec = <T>(tag: string, validate: (arr: Uint8Array) => boolean): Codec<Cbor, T, JsonError> => {
+export const mkTaggedBytesCborCodec = <T>(tag: string, validate: (arr: Uint8Array) => boolean): Codec<Cbor, T, JsonError> => {
   return codec.pipe(
     cbor2ByteStringCodec,
     uint8Array.mkTaggedUint8ArrayCodec<T>(tag, validate),

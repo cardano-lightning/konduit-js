@@ -7,6 +7,7 @@ import * as codec from '../codec';
 import type { Small, SmallPositive, ZeroToNine, OneToNine } from './smallish';
 import type { Json } from '../json';
 import { mkOrdForScalar } from '../tagged';
+import { cbor2IntCodec, type CborCodec } from '../cbor/codecs/sync';
 
 // Positive BigInt (> 0n)
 export type PositiveBigInt = Tagged<bigint, "PositiveBigInt">;
@@ -41,6 +42,7 @@ export const bigInt2PositiveBigIntCodec: Codec<bigint, PositiveBigInt, JsonError
 
 export const json2PositiveBigIntCodec: JsonCodec<PositiveBigInt> = codec.pipe(json2BigIntCodec, bigInt2PositiveBigIntCodec);
 export const json2PositiveBigIntThroughStringCodec: JsonCodec<PositiveBigInt> = codec.pipe(json2BigIntThroughStringCodec, bigInt2PositiveBigIntCodec);
+export const cbor2PositiveBigIntCodec: CborCodec<PositiveBigInt> = codec.pipe(cbor2IntCodec, bigInt2PositiveBigIntCodec);
 
 // Non-negative BigInt (>= 0n)
 export type NonNegativeBigInt = Tagged<bigint, "NonNegativeBigInt">;
@@ -79,4 +81,5 @@ export const bigInt2NonNegativeBigIntCodec: Codec<bigint, NonNegativeBigInt, Jso
 
 export const json2NonNegativeBigIntCodec: JsonCodec<NonNegativeBigInt> = codec.pipe(json2BigIntCodec, bigInt2NonNegativeBigIntCodec);
 export const json2NonNegativeBigIntThroughStringCodec: JsonCodec<NonNegativeBigInt> = codec.pipe(json2BigIntThroughStringCodec, bigInt2NonNegativeBigIntCodec);
+export const cbor2NonNegativeBigIntCodec: CborCodec<NonNegativeBigInt> = codec.pipe(cbor2IntCodec, bigInt2NonNegativeBigIntCodec);
 
