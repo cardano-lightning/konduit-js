@@ -44,6 +44,22 @@
     "./channel": {
       "types": "./dist/channel.d.ts",
       "default": "./dist/channel.js"
+    },
+    "./bitcoin": {
+      "types": "./dist/bitcoin.d.ts",
+      "default": "./dist/bitcoin.js"
+    },
+    "./bitcoin/bolt11": {
+      "types": "./dist/bitcoin/bolt11.d.ts",
+      "default": "./dist/bitcoin/bolt11.js"
+    },
+    "./neverthrow": {
+      "types": "./dist/neverthrow.d.ts",
+      "default": "./dist/neverthrow.js"
+    },
+    "./http": {
+      "types": "./dist/http.d.ts",
+      "default": "./dist/http.js"
     }
   },
   "files": [

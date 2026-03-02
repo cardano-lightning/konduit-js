@@ -22,8 +22,6 @@ import * as codec from "@konduit/codec";
 import * as uint8Array from "@konduit/codec/uint8Array";
 import { string2NumberCodec } from "@konduit/codec/urlquery/codecs/sync";
 import {
-  int2NonNegativeIntCodec,
-  json2NonNegativeIntCodec,
   NonNegativeInt,
   number2IntCodec,
 } from "@konduit/codec/integers/smallish";
@@ -132,7 +130,7 @@ const json2GraphRouteCodec: JsonCodec<GraphRoutesRoute> = jsonCodecs.objectOf({
   total_amt_msat: json2NonNegativeBigIntThroughStringCodec,
   total_fees: json2NonNegativeBigIntThroughStringCodec,
   total_fees_msat: json2NonNegativeBigIntThroughStringCodec,
-  total_time_lock: json2NonNegativeIntCodec,
+  total_time_lock: NonNegativeInt.jsonCodec,
 });
 
 
@@ -160,17 +158,17 @@ export type PaymentsFailureChannelUpdate = {
 };
 
 export const json2PaymentsFailureChannelUpdateCodec: JsonCodec<PaymentsFailureChannelUpdate> = jsonCodecs.objectOf({
-  base_fee: json2NonNegativeIntCodec,
+  base_fee: NonNegativeInt.jsonCodec,
   chain_hash: json2StringCodec,
   chan_id: json2NonNegativeBigIntThroughStringCodec,
-  channel_flags: json2NonNegativeIntCodec,
-  fee_rate: json2NonNegativeIntCodec,
+  channel_flags: NonNegativeInt.jsonCodec,
+  fee_rate: NonNegativeInt.jsonCodec,
   htlc_maximum_msat: json2NonNegativeBigIntThroughStringCodec,
   htlc_minimum_msat: json2NonNegativeBigIntThroughStringCodec,
-  message_flags: json2NonNegativeIntCodec,
+  message_flags: NonNegativeInt.jsonCodec,
   signature: json2StringCodec,
-  time_lock_delta: json2NonNegativeIntCodec,
-  timestamp: json2NonNegativeIntCodec,
+  time_lock_delta: NonNegativeInt.jsonCodec,
+  timestamp: NonNegativeInt.jsonCodec,
 });
 
 export type PaymentsFailure = {
@@ -187,8 +185,8 @@ export const json2PaymentsFailureCodec: JsonCodec<PaymentsFailure> = jsonCodecs.
   channel_update: jsonCodecs.optional(json2PaymentsFailureChannelUpdateCodec),
   htlc_msat: json2StringCodec,
   onion_sha_256: json2StringCodec,
-  cltv_expiry: json2NonNegativeIntCodec,
-  index: json2NonNegativeIntCodec,
+  cltv_expiry: NonNegativeInt.jsonCodec,
+  index: NonNegativeInt.jsonCodec,
 });
 
 export type PaymentsMppRecord = {
@@ -210,7 +208,7 @@ export type PaymentsAmpRecord = {
 const json2PaymentsAmpRecordCodec: JsonCodec<PaymentsAmpRecord> = jsonCodecs.objectOf({
   root_share: uint8Array.json2Uint8ArrayThroughBase64Codec,
   set_id: uint8Array.json2Uint8ArrayThroughBase64Codec,
-  child_index: json2NonNegativeIntCodec,
+  child_index: NonNegativeInt.jsonCodec,
 });
 
 export type PaymentsHop = {
@@ -235,7 +233,7 @@ const json2PaymentsHopCodec: JsonCodec<PaymentsHop> = jsonCodecs.objectOf({
   chan_capacity: json2NonNegativeBigIntThroughStringCodec,
   chan_id: json2NonNegativeBigIntThroughStringCodec,
   custom_records: codec.mkIdentityCodec(),
-  expiry: json2NonNegativeIntCodec,
+  expiry: NonNegativeInt.jsonCodec,
   fee: json2NonNegativeBigIntThroughStringCodec,
   fee_msat: json2NonNegativeBigIntThroughStringCodec,
   mpp_record: jsonCodecs.optional(json2PaymentsMppRecordCodec),
@@ -253,7 +251,7 @@ export type PaymentsRoute = {
 };
 
 export const json2PaymentsRouteCodec: JsonCodec<PaymentsRoute> = jsonCodecs.objectOf({
-  total_time_lock: json2NonNegativeIntCodec,
+  total_time_lock: NonNegativeInt.jsonCodec,
   total_fees: json2NonNegativeBigIntThroughStringCodec,
   total_amt: json2NonNegativeBigIntThroughStringCodec,
   total_fees_msat: json2NonNegativeBigIntThroughStringCodec,
@@ -342,7 +340,7 @@ const json2AddInvoiceResponseDeserialiser: JsonDeserialiser<AddInvoiceResponse> 
       .objectOf({
         add_index: codec.pipe(
           codec.pipe(json2StringCodec, string2NumberCodec),
-          codec.pipe(number2IntCodec, int2NonNegativeIntCodec)
+          codec.pipe(number2IntCodec, NonNegativeInt.intCodec),
         ),
         payment_addr: uint8Array.json2Uint8ArrayThroughBase64Codec,
         payment_request: json2StringCodec,
@@ -369,7 +367,7 @@ const json2GetInfoCodec: JsonCodec<GetInfoResponse> = jsonCodecs.objectOf({
   alias: json2StringCodec,
   best_header_timestamp: json2NonNegativeBigIntThroughStringCodec,
   block_hash: json2StringCodec,
-  block_height: json2NonNegativeIntCodec,
+  block_height: NonNegativeInt.jsonCodec,
   chains: jsonCodecs.arrayOf(
     jsonCodecs.objectOf({
       chain: json2StringCodec,
@@ -379,10 +377,10 @@ const json2GetInfoCodec: JsonCodec<GetInfoResponse> = jsonCodecs.objectOf({
   color: json2StringCodec,
   commit_hash: json2StringCodec,
   identity_pubkey: json2StringCodec,
-  num_active_channels: json2NonNegativeIntCodec,
-  num_inactive_channels: json2NonNegativeIntCodec,
-  num_peers: json2NonNegativeIntCodec,
-  num_pending_channels: json2NonNegativeIntCodec,
+  num_active_channels: NonNegativeInt.jsonCodec,
+  num_inactive_channels: NonNegativeInt.jsonCodec,
+  num_peers: NonNegativeInt.jsonCodec,
+  num_pending_channels: NonNegativeInt.jsonCodec,
   synced_to_chain: json2BooleanCodec,
   synced_to_graph: json2BooleanCodec,
   testnet: json2BooleanCodec,
@@ -439,7 +437,7 @@ export const json2RouterSendRequestCodec: JsonCodec<RouterSendRequest> = jsonCod
   allow_self_payment: jsonCodecs.optional(json2BooleanCodec),
   amp: jsonCodecs.optional(json2RouterSendAmpRecordCodec),
   amt_msat: jsonCodecs.optional(json2NonNegativeBigIntThroughStringCodec),
-  cltv_limit: jsonCodecs.optional(json2NonNegativeIntCodec),
+  cltv_limit: jsonCodecs.optional(NonNegativeInt.jsonCodec),
   dest: jsonCodecs.optional(json2RouterSendDestinationCodec),
   fee_limit_msat: jsonCodecs.optional(json2NonNegativeBigIntThroughStringCodec),
   last_hop_pubkey: jsonCodecs.optional(uint8Array.jsonCodec),
@@ -447,7 +445,7 @@ export const json2RouterSendRequestCodec: JsonCodec<RouterSendRequest> = jsonCod
     jsonCodecs.arrayOf(json2NonNegativeBigIntThroughStringCodec)
   ),
   payment_request: jsonCodecs.optional(json2StringCodec),
-  timeout_seconds: jsonCodecs.optional(json2NonNegativeIntCodec),
+  timeout_seconds: jsonCodecs.optional(NonNegativeInt.jsonCodec),
 });
 
 export type RouterSendFailureReason =
@@ -521,7 +519,7 @@ const json2RouterSendHtlcHopCodec: JsonCodec<RouterSendHtlcHop> =
     chan_capacity: json2NonNegativeBigIntThroughStringCodec,
     amt_to_forward: json2NonNegativeBigIntThroughStringCodec,
     fee: json2NonNegativeBigIntThroughStringCodec,
-    expiry: json2NonNegativeIntCodec,
+    expiry: NonNegativeInt.jsonCodec,
     amt_to_forward_msat: json2NonNegativeBigIntThroughStringCodec,
     fee_msat: json2NonNegativeBigIntThroughStringCodec,
     pub_key: uint8Array.jsonCodec,
@@ -547,7 +545,7 @@ export type RouterSendRoute = {
 };
 
 const json2RouterSendRouteCodec: JsonCodec<RouterSendRoute> = jsonCodecs.objectOf({
-  total_time_lock: json2NonNegativeIntCodec,
+  total_time_lock: NonNegativeInt.jsonCodec,
   total_fees: json2NonNegativeBigIntThroughStringCodec,
   total_amt: json2NonNegativeBigIntThroughStringCodec,
   hops: jsonCodecs.arrayOf(json2RouterSendHtlcHopCodec),

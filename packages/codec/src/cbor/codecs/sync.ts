@@ -5,6 +5,7 @@ import * as uint8Array from "../../uint8Array";
 import {
   Indefinite,
   isCborNull,
+  isCborTaggedValue,
   isCborUndefined,
   isIndefiniteArray,
   isIndefiniteMap,
@@ -102,7 +103,7 @@ export const matchCbor = <T>(cbor: Cbor, matcher: CborMatcher<T>): T => {
     return matcher.onNull();
   }
 
-  if (typeof cbor === "object" && "tag" in cbor && "value" in cbor) {
+  if (isCborTaggedValue(cbor)) {
     const { tag, value } = cbor as { tag: CborTag; value: Cbor };
     return matcher.onTag(tag, value);
   }
@@ -681,18 +682,41 @@ export const homogeneousMapOf = <K, V>(
   };
 };
 
-type KeyValueCodecs = readonly [CborCodec<any>, CborCodec<any>];
+export type KeyMissing = null;
+export const missing = null;
+export const isKeyMissing = (x: any): x is KeyMissing => x === missing;
+
+export type OptionalKeyCodec<K> = {
+  optional: CborCodec<K>;
+};
+
+export const mkOptionalEntry = (keyCodec: CborCodec<any>, valueCodec: CborCodec<any>): readonly [OptionalKeyCodec<any>, CborCodec<any>] => {
+  return [{ optional: keyCodec }, valueCodec] as const;
+}
+
+type KeyValueCodecs =
+  | readonly [CborCodec<any>, CborCodec<any>]
+  | readonly [OptionalKeyCodec<any>, CborCodec<any>];
 
 /**
  * PairTupleOutput:
  *  - Given an array of [KeyCodec, ValueCodec] pairs, produces an N‑tuple type:
  *    [[K1, V1], [K2, V2], ...]
  *  - This models “an N‑tuple of 2‑tuples” directly in TypeScript.
+ *  - If a KeyCodec is optional, the corresponding entry type becomes `[K, V] | KeyMissing`
  */
 type PairTupleOutput<Pairs extends readonly KeyValueCodecs[]> = {
   [I in keyof Pairs]:
-    Pairs[I] extends [CborCodec<infer K>, CborCodec<infer V>]
-      ? [K, V]
+    Pairs[I] extends readonly [infer KCodec, infer VCodec]
+      ? KCodec extends OptionalKeyCodec<infer K>
+        ? VCodec extends CborCodec<infer V>
+          ? [K, V] | KeyMissing
+          : never
+        : KCodec extends CborCodec<infer K>
+          ? VCodec extends CborCodec<infer V>
+            ? [K, V]
+            : never
+          : never
       : never;
 };
 
@@ -733,22 +757,28 @@ export const heterogeneousMapOf = <
 
       const entries = Array.from(src.entries());
 
-      if (entries.length !== pairs.length) {
-        return err(
-          `Expected map with ${pairs.length} entries but got ${entries.length}`
-        );
-      }
-
       const out: any[] = [];
       const errors: JsonError[] = [];
       let hasErrors = false;
 
-      pairs.forEach(([kCodec, vCodec], index) => {
-        const [rawKey, rawVal] = entries[index]!;
+      pairs.forEach(([kCodecOrOptionalCodec, vCodec], index) => {
+        const isOptional = "optional" in kCodecOrOptionalCodec;
+        const kCodec = isOptional ? kCodecOrOptionalCodec.optional : kCodecOrOptionalCodec;
 
+        if(entries.length == 0 && isOptional) {
+          out[index] = missing;
+          return;
+        }
+
+        const [rawKey, rawVal] = entries.shift()!;
         const dk = kCodec.deserialise(rawKey);
-        const dv = vCodec.deserialise(rawVal);
+        if(dk.isErr() && isOptional) {
+          out[index] = missing;
+          entries.unshift([rawKey, rawVal]);
+          return;
+        }
 
+        const dv = vCodec.deserialise(rawVal);
         if (dk.isOk() && dv.isOk()) {
           out[index] = [dk.value, dv.value];
         } else {
@@ -768,8 +798,14 @@ export const heterogeneousMapOf = <
     serialise: (value: OutTuple): Cbor => {
       const map = new Map<Cbor, Cbor>();
 
-      pairs.forEach(([kCodec, vCodec], index) => {
-        const [k, v] = value[index] as any;
+      pairs.forEach(([kCodecOrOptionalCodec, vCodec], index) => {
+        const pairOrMissing = value[index];
+        const isOptional = "optional" in kCodecOrOptionalCodec;
+        if(isOptional && pairOrMissing === missing) {
+          return;
+        }
+        const kCodec = isOptional ? kCodecOrOptionalCodec.optional : kCodecOrOptionalCodec;
+        const [k, v] = pairOrMissing as any;
         const cborKey = kCodec.serialise(k);
         const cborVal = vCodec.serialise(v);
         map.set(cborKey, cborVal);
@@ -915,11 +951,41 @@ export const string2CborCodec: Codec<string, Cbor, JsonError> = codec.pipe(
 );
 export const json2CborCodec: JsonCodec<Cbor> = string2CborCodec as JsonCodec<Cbor>;
 
-
 export const mkTaggedBytesCborCodec = <T>(tag: string, validate: (arr: Uint8Array) => boolean): Codec<Cbor, T, JsonError> => {
   return codec.pipe(
     cbor2ByteStringCodec,
     uint8Array.mkTaggedUint8ArrayCodec<T>(tag, validate),
   );
 }
+
+export const mkCbor2ConstBigIntCodec = <C extends bigint>(bigintConst: C): CborCodec<C> => {
+  return codec.pipe(
+    cbor2IntCodec, {
+      deserialise: (data: bigint) => {
+        if (data === bigintConst) {
+          return ok(data as C);
+        }
+        return err(`Expected constant int value: ${bigintConst} but got: ${data}`);
+      },
+      serialise: (value: bigint): bigint => value,
+    }
+  );
+}
+
+export const cbor2EmbededCborCodec: CborCodec<Cbor> = {
+  deserialise: (data: Cbor) => {
+    if(isCborTaggedValue(data) && data.tag === CborTag.EncodedCborDataItem) {
+      const embeddedBytes = cbor2ByteStringCodec.deserialise(data.value);
+      if(embeddedBytes.isErr()) {
+        return err(`Expected byte string in tag ${CborTag.EncodedCborDataItem} but got: ${String(data.value)}`);
+      }
+      return deserialiseCbor(embeddedBytes.value);
+    }
+    return err(`Expected CBOR tag ${CborTag.EncodedCborDataItem} for embedded CBOR but got: ${String(data)}`);
+  },
+  serialise: (value: Cbor): Cbor => {
+    const embeddedBytes = serialiseCbor(value);
+    return { tag: CborTag.EncodedCborDataItem, value: embeddedBytes };
+  },
+};
 

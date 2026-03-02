@@ -37,8 +37,8 @@ export namespace Ed25519ExpandedSecret {
     if (raw.length !== LENGTH) return err(`Invalid expanded secret length, expected ${LENGTH} bytes`);
     const kl = raw.subarray(0, 32);
     const isValidScalar =
-      (kl[0] & 0b0000_0111) === 0 && // Lowest 3 bits cleared
-      (kl[31] & 0b1100_0000) === 0b0100_0000 // highest 2 bits cleared BUT bit 254 == 1
+      (kl[0]! & 0b0000_0111) === 0 && // Lowest 3 bits cleared
+      (kl[31]! & 0b1100_0000) === 0b0100_0000 // highest 2 bits cleared BUT bit 254 == 1
     ;
     if (!isValidScalar) return err("Invalid scalar: bits do not match required clamping pattern");
     return ok(raw as Ed25519ExpandedSecret);
@@ -57,9 +57,9 @@ export namespace Ed25519ExpandedSecret {
   export const fromSecret = (secret: Ed25519Secret): Ed25519ExpandedSecret => {
     const material = sodium.crypto_hash_sha512(secret, "uint8array") as Uint8Array;
 
-    material[0] &= 0b1111_1000;  // Clear lowest 3 bits
-    material[31] &= 0b0011_1111; // Clear 2 highest bits
-    material[31] |= 0b0100_0000; // Set bit 254
+    material[0]! &= 0b1111_1000;  // Clear lowest 3 bits
+    material[31]! &= 0b0011_1111; // Clear 2 highest bits
+    material[31]! |= 0b0100_0000; // Set bit 254
 
     return material as Ed25519ExpandedSecret;
   }

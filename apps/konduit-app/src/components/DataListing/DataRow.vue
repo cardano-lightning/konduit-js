@@ -1,17 +1,20 @@
 <script lang="ts">
-export type ActionIcon = "pen" | "download" | "trash" | "copy" | "external-link";
+export type ActionIcon = "pen" | "download" | "trash" | "copy" | "external-link" | "loading" | "info";
 
 export type Href = string;
 export type Action =
   | [OnClick, ActionIcon]
   | { action: "copy", message: string, value: string | null }
   | { action: "external-link", url: string }
+  | { action: "loading" }
 
 export type ValueImportance = "missing" | "important" | "very-important";
-export type ValueConfig = string | {
-  string: string;
-  importance: ValueImportance;
-}
+export type ValueConfig =
+  string
+  | {
+    string: string;
+    importance: ValueImportance;
+  }
 export type Props = {
   actions?: Action[];
   label: string;
@@ -21,15 +24,18 @@ export type Props = {
 </script>
 
 <script setup lang="ts">
-import Download from "../../components/icons/Download.vue";
-import Pen from "../../components/icons/Pen.vue";
-import Copy from "../../components/icons/Copy.vue";
-import ExternalLink from "../../components/icons/SquareArrowOutUpRight.vue";
-import Trash from "../../components/icons/Trash.vue";
-import Link from "../../components/Link.vue";
-import type { OnClick } from "../../components/Link.vue";
+import ClockThrobber from "../ClockThrobber.vue";
+import Copy from "../icons/Copy.vue";
+import Download from "../icons/Download.vue";
+import ExternalLink from "../icons/SquareArrowOutUpRight.vue";
+import Info from "../icons/Info.vue";
+import Link from "../Link.vue";
+import Pen from "../icons/Pen.vue";
+import Trash from "../icons/Trash.vue";
+import type { OnClick } from "../Link.vue";
 import { useClipboard } from "@vueuse/core";
 import { useNotifications } from "../../composables/notifications";
+import { computed } from "vue";
 
 const props = defineProps<Props>();
 
@@ -57,10 +63,12 @@ const toBasicAction = (action: Action): BasicAction => {
       return [mkCopyHandler(action.message, action.value), "#", "copy"];
     case "external-link":
       return [action.url, action.url, "external-link"];
+    case "loading":
+      return ["", "#", "loading"];
   }
 };
 
-const basicActions = props.actions?.map(toBasicAction);
+const basicActions = computed(() => props.actions?.map(toBasicAction));
 
 </script>
 
@@ -69,19 +77,23 @@ const basicActions = props.actions?.map(toBasicAction);
     <dt>
         <div class="label">{{ props.label }}</div>
         <div class="actions" v-if="props.actions">
-          <Link
-            v-for="(action, index) in basicActions"
-            :key="index"
-            class="edit"
-            :href="action[1]"
-            :click="action[0]"
-          >
-            <Pen v-if="action[2] === 'pen' || !action[2]" />
-            <Download v-else-if="action[2] === 'download'" />
-            <Trash v-else-if="action[2] === 'trash'" />
-            <Copy v-else-if="action[2] === 'copy'" />
-            <ExternalLink v-else-if="action[2] === 'external-link'" />
-          </Link>
+          <template v-for="(action, index) in basicActions">
+            <ClockThrobber class="edit" v-if="action[2] === 'loading'" />
+            <Link
+              v-else
+              :key="index"
+              class="edit"
+              :href="action[1]"
+              :click="action[0]"
+            >
+              <Copy v-if="action[2] === 'copy'" />
+              <Download v-else-if="action[2] === 'download'" />
+              <ExternalLink v-else-if="action[2] === 'external-link'" />
+              <Info v-else-if="action[2] === 'info'" />
+              <Pen v-else-if="action[2] === 'pen' || !action[2]" />
+              <Trash v-else-if="action[2] === 'trash'" />
+            </Link>
+          </template>
         </div>
     </dt>
     <dd v-if="typeof props.formattedValue == 'string'">
@@ -95,10 +107,10 @@ const basicActions = props.actions?.map(toBasicAction);
 
 <style scoped>
 .data-pair {
-  align-items: center;
+  align-items: left;
   display: flex;
   line-height: 1.2rem;
-  gap: 0.3rem;
+  gap: calc(var(--data-listing-gap) / 3);
   overflow: hidden;
   width: 100%;
 }
@@ -108,7 +120,6 @@ const basicActions = props.actions?.map(toBasicAction);
 .data-pair.without-actions {
   flex-direction: row;
 }
-
   .data-pair dt {
     display: flex;
     flex-direction: row;
@@ -126,38 +137,38 @@ const basicActions = props.actions?.map(toBasicAction);
      */
     .data-pair dt .actions {
       display: flex;
-      gap: 0.3rem;
+      gap: 0.38rem;
       flex: 0 0 auto;
       height: 1.2rem;
       text-align: right;
     }
 
-      .data-pair dt .actions a {
+      .data-pair dt .actions .edit {
+        align-items: center;
         display: inline-block;
+        justify-content: center;
         line-height: 1.2rem;
       }
 
-        .data-pair dt .actions a.edit {
-          align-items: center;
-          cursor: pointer;
-          justify-content: center;
-        }
+      .data-pair dt .actions a.edit {
+        cursor: pointer;
+      }
 
-          .data-pair dt .actions a.edit svg {
-            color: var(--primary-color);
-            stroke-width: 1.5;
-            height: 1.2rem;
-          }
+        .data-pair dt .actions .edit svg {
+          color: var(--primary-color);
+          stroke-width: 1.5;
+          height: 1.2rem;
+        }
 
   .data-pair dd {
     color: var(--secondary-color);
-    font-size: 0.9rem;
+    font-size: 1.0rem;
     line-height: 1.2rem;
     overflow: hidden;
     margin-left: 0;
     text-overflow: ellipsis;
     white-space: nowrap;
-    width: 100%;
+    width: 90%;
   }
   .data-pair.without-actions dd {
     text-align: right;

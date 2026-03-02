@@ -9,12 +9,15 @@ import {
   cbor2NullCodec,
   cbor2StringCodec,
   cbor2UndefinedCodec,
+  CborCodec,
   definiteLength,
   deserialiseCbor,
   dictOf,
   heterogeneousMapOf,
   homogeneousMapOf,
   indefiniteLength,
+  missing,
+  mkOptionalEntry,
   serialiseCbor,
   tupleOf,
 } from "../../../src/cbor/codecs/sync";
@@ -433,6 +436,46 @@ describe("CBOR end-to-end roundtrip with mixed/nested codecs", () => {
     const cborOut = unwrapOk(deserialiseCbor(bytes));
     const result = unwrapOk(codec.deserialise(cborOut));
     expect(result).toEqual([42n, "hello", true]);
+  });
+
+  it("roundtrips a heterogeneous map with two mandatory and two optional fields [m, o, m, o]", () => {
+    // 1: mandatory string key, boolean value
+    // 2: optional string key, bigint value
+    // 3: mandatory bigint key, string value
+    // 4: optional bigint key, string value
+    const codec: CborCodec<[[string, boolean], [string, bigint] | null, [bigint, string], [bigint, string] | null]> = heterogeneousMapOf(
+      definiteLength,
+      [cbor2StringCodec, cbor2BooleanCodec],                 // mandatory
+      mkOptionalEntry(cbor2StringCodec, cbor2IntCodec),       // optional
+      [cbor2IntCodec, cbor2StringCodec],                     // mandatory
+      mkOptionalEntry(cbor2IntCodec, cbor2StringCodec),
+    );
+
+    // Build a CBOR map that has:
+    //  - 1st mandatory,
+    //  - 2nd optional present,
+    //  - 3rd mandatory present,
+    //  - 4th optional missing
+    const cborMap = new Map<any, any>();
+    cborMap.set(cbor2StringCodec.serialise("k1"), cbor2BooleanCodec.serialise(true));
+    cborMap.set(cbor2StringCodec.serialise("k2"), cbor2IntCodec.serialise(2n));
+    cborMap.set(cbor2IntCodec.serialise(3n), cbor2StringCodec.serialise("v3"));
+    // no entry for the 4th optional key
+
+    const decoded = codec.deserialise(cborMap);
+    console.log("Decoded heterogeneous map:", decoded);
+    expect(decoded.isOk()).toBe(true);
+    const value = decoded._unsafeUnwrap();
+
+    // Expected tuple structure: [ [k1,v1], [k2,v2], [k3,v3], missing ]
+    expect(value[0]).toEqual(["k1", true]);
+    expect(value[1]).toEqual(["k2", 2n]);
+    expect(value[2]).toEqual([3n, "v3"]);
+    expect(value[3]).toBe(missing);
+
+    // Serialise back; optional-missing field should not be encoded.
+    const reencoded = codec.serialise(value) as Map<any, any>;
+    expect(Array.from(reencoded.entries())).toEqual(Array.from(cborMap.entries()));
   });
 
   it("roundtrips a heterogeneous map with mixed key/value types", () => {

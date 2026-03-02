@@ -18,7 +18,6 @@ import * as jsonCodecs from "@konduit/codec/json/codecs";
 import { json2StringCodec, type JsonCodec } from "@konduit/codec/json/codecs";
 import { json2QuoteBodySerialiser, json2QuoteCodec, type Quote, type QuoteBody } from "./adaptorClient/quote";
 import { mkJson2SquashResponseCodec, type SquashResponse } from "./adaptorClient/squash";
-export type { SquashResponse } from "./adaptorClient/squash";
 import {
   json2PayBodyCodec,
   mkJson2PayResponseCodec,
@@ -26,6 +25,10 @@ import {
   type PayResponse,
 } from "./adaptorClient/pay";
 import type { Invoice } from "./bitcoin/bolt11";
+
+export { Quote } from "./adaptorClient/quote";
+export type { QuoteBody } from "./adaptorClient/quote";
+export type { SquashResponse } from "./adaptorClient/squash";
 
 export { AdaptorInfo } from "./adaptorClient/adaptorInfo";
 

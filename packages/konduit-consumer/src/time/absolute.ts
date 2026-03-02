@@ -1,12 +1,12 @@
 import type { Tagged } from "type-fest";
 import { err, ok, type Result } from "neverthrow";
-import type { Int, NonNegativeInt } from "@konduit/codec/integers/smallish";
+import { NonNegativeInt, type Int } from "@konduit/codec/integers/smallish";
 import { type Codec, compose } from "@konduit/codec";
 import { json2BigIntCodec, json2StringCodec, type JsonCodec, type JsonError } from "@konduit/codec/json/codecs";
-import { bigInt2NonNegativeIntCodec } from "@konduit/codec/integers/smallish";
 import * as codec from "@konduit/codec";
-import type { Milliseconds } from "./duration";
+import type { Milliseconds, Seconds } from "./duration";
 import { mkOrdForScalar } from "@konduit/codec/tagged";
+import type { NonNegativeBigInt } from "@konduit/codec/integers/big";
 
 export type ValidDate = Tagged<Date, "ValidDate">;
 export namespace ValidDate {
@@ -43,6 +43,7 @@ export const json2ValidDateCodec:JsonCodec<ValidDate> = compose({
   json2StringCodec,
 );
 
+// Please note that those two below types are range compatible with JavaScript's Date.
 
 export type POSIXMilliseconds = Tagged<NonNegativeInt, "POSIXMilliseconds">;
 export namespace POSIXMilliseconds {
@@ -60,7 +61,7 @@ export namespace POSIXMilliseconds {
   export const ord = mkOrdForScalar<POSIXMilliseconds>();
 }
 
-export const bigInt2POSIXMillisecondsCodec: Codec<bigint, POSIXMilliseconds, JsonError> = codec.pipe(bigInt2NonNegativeIntCodec, {
+export const bigInt2POSIXMillisecondsCodec: Codec<bigint, POSIXMilliseconds, JsonError> = codec.pipe(NonNegativeInt.bigIntCodec, {
   deserialise: (n: NonNegativeInt): Result<POSIXMilliseconds, JsonError> => POSIXMilliseconds.fromNonNegativeInt(n),
   serialise: (milliseconds: POSIXMilliseconds) => milliseconds
 });
@@ -77,6 +78,18 @@ export namespace POSIXSeconds {
   }
   export const fromPOSIXMillisecondsFloor = (milliseconds: POSIXMilliseconds): POSIXSeconds => (milliseconds / 1000) as POSIXSeconds;
   export const fromValidDate = (date: ValidDate): POSIXSeconds => (Math.floor(date.getTime() / 1000) as POSIXSeconds);
+  export const addSeconds = (seconds: POSIXSeconds, secondsToAdd: Seconds): Result<POSIXSeconds, string> => {
+    return NonNegativeInt.add(seconds, secondsToAdd).andThen(newSeconds => fromNonNegativeInt(newSeconds));
+  }
   export const ord = mkOrdForScalar<POSIXSeconds>();
 }
 
+export type ArbitraryPOSIXSeconds = Tagged<NonNegativeBigInt, "ArbitraryPOSIXSeconds">;
+export namespace ArbitraryPOSIXSeconds {
+  export const fromNonNegativeBigInt = (n: NonNegativeBigInt): ArbitraryPOSIXSeconds => n as ArbitraryPOSIXSeconds;
+  export const fromPOSIXMillisecondsFloor = (milliseconds: POSIXMilliseconds): ArbitraryPOSIXSeconds => (BigInt(milliseconds / 1000) as ArbitraryPOSIXSeconds);
+  export const addSeconds = (seconds: ArbitraryPOSIXSeconds, secondsToAdd: Seconds): ArbitraryPOSIXSeconds => {
+    return (BigInt(seconds) + BigInt(secondsToAdd)) as ArbitraryPOSIXSeconds;
+  }
+  export const ord = mkOrdForScalar<ArbitraryPOSIXSeconds>();
+}

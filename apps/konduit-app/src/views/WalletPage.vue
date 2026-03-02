@@ -15,7 +15,7 @@ import FancyAmount from "../components/FancyAmount.vue";
 import { useDefaultFormatters } from "../composables/l10n";
 import { POSIXSeconds } from "@konduit/konduit-consumer/time/absolute";
 import { AnyPreciseDuration, NormalisedDuration, Seconds } from "@konduit/konduit-consumer/time/duration";
-import { NetworkMagicNumber } from "@konduit/konduit-consumer/cardano";
+import { Lovelace, NetworkMagicNumber } from "@konduit/konduit-consumer/cardano";
 import { MISSING_PLACEHOLDER, orPlaceholder } from "../utils/formatters";
 
 // Amount section:
@@ -24,7 +24,7 @@ const amount = computed(() => {
   if (walletBalance.value != null) {
     return mkLovelaceAmount(walletBalance.value);
   }
-  return null;
+  return mkLovelaceAmount(Lovelace.zero);
 });
 
 // * Sync info section

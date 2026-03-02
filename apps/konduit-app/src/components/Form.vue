@@ -8,6 +8,7 @@ import RadioField from './Form/RadioField.vue';
 import SelectField from './Form/SelectField.vue';
 import TextField from './Form/TextField.vue';
 import { computed, type Ref } from 'vue';
+import { extractFieldErrorsMessages } from './Form/core';
 
 export type FieldProps =
   | TextFieldProps
@@ -35,34 +36,55 @@ const groupedFields = computed((): { fields: {name: string, field: FieldProps}[]
   let currentRowFields:{name: string, field: FieldProps }[] = [];
   let currentRowErrors: string[] = [];
 
+  const extractFieldErrors = (field: { name: string, field: FieldProps }): string[] => {
+    const fieldValue = props.formState[field.name]?.value || null;
+    return extractFieldErrorsMessages(fieldValue, field.field.errors || []);
+  };
+
   for(const [name, field] of Object.entries(props.fields)) {
     // Logic to group fields can be added here if needed
     if(field.fieldWidth === 'half') {
       if(currentRowFields.length === 1) {
         currentRowFields.push({ name, field });
-        currentRowErrors = currentRowErrors.concat(field.errors || []);
+        currentRowErrors = currentRowErrors.concat(extractFieldErrors({ name, field }));
 
         result.push({ fields: currentRowFields, errors: currentRowErrors });
         currentRowFields = [];
         currentRowErrors = [];
       } else {
         currentRowFields = [{ name, field }];
-        currentRowErrors = field.errors ? [...field.errors] : [];
+        currentRowErrors = extractFieldErrors({ name, field });
       }
     } else {
       if(currentRowFields.length === 1) {
-        result.push({ fields: currentRowFields, errors: currentRowErrors });
+        result.push({
+          fields: currentRowFields,
+          errors: currentRowErrors
+        });
         currentRowFields = [];
         currentRowErrors = [];
       }
-      result.push({ fields: [{ name, field }], errors: field.errors || [] });
+      result.push({
+        fields: [{ name, field }],
+        errors: extractFieldErrors({ name, field })
+      });
     }
   }
   if(currentRowFields.length === 1) {
-    result.push({ fields: currentRowFields, errors: currentRowErrors });
+    result.push({
+      fields: currentRowFields,
+      errors: currentRowErrors
+    });
   }
   return result;
 });
+
+// const extractRowErrors = (row: { fields: {name: string, field: FieldProps}[], errors: Errors }): string[] => {
+//   // const fieldErrors = row.fields.flatMap(f => extractErrorMessages(f.field.state.value, f.field.errors || []));
+//   // const rowErrors = extractErrorMessages(row.errors);
+//   return [...fieldErrors, ...rowErrors];
+// };
+
 </script>
 
 <template>
@@ -105,6 +127,7 @@ const groupedFields = computed((): { fields: {name: string, field: FieldProps}[]
               :touch="() => props.touch(name)"
               :type="field.type"
             />
+
             <RadioField
               v-else-if="field.type === 'radio'"
               :disabled="field.disabled"

@@ -5,16 +5,18 @@ import * as asyncCodec from "@konduit/codec/async";
 import { type Wallet as WalletBase, type AnyWallet, BlockfrostWallet, CardanoConnectorWallet, json2AnyWalletAsyncCodec, type WalletBackendBase } from "./wallets/embedded";
 import { err, ok, Result } from "neverthrow";
 import { Ed25519PrivateKey, Mnemonic } from "@konduit/cardano-keys";
-import { AdaptorFullInfo, type SquashResponse } from "./adaptorClient";
-import { Channel, ChannelTag, type ConsumerEd25519VerificationKey, json2ChannelCodec, type OpenTx } from "./channel";
+import { AdaptorFullInfo, Quote } from "./adaptorClient";
+import { Channel, ChannelTag, type ChequeIssuingError, type ConfirmedPayment, type ConsumerEd25519VerificationKey, json2ChannelCodec, type OpenTx, type PendingPayment } from "./channel";
 import { Milliseconds, Seconds } from "./time/duration";
 import { json2Ed25519PrivateKeyCodec, Lovelace } from "./cardano";
 import { Connector, json2ConnectorAsyncCodec } from "./cardano/connector";
-import { hoistToResultAsync, resultAsyncToPromise } from "./neverthrow";
+import { promiseToResultAsync, resultAsyncToPromise } from "./neverthrow";
 import { ValidDate } from "./time/absolute";
 import type { HttpEndpointError } from "./http";
 import { NonNegativeInt } from "@konduit/codec/integers/smallish";
 import { Squash, SquashBody } from "./channel/squash";
+import type { InvoiceString } from "@konduit/bln/invoice/bolt11";
+import type { Invoice } from "./bitcoin/bolt11";
 
 type ConsumerEvent<T> = CustomEvent<T>;
 
@@ -23,6 +25,25 @@ export type ConsumerEvents = {
   "channel-squashed": { channel: Channel; result: Squash };
   "channel-squashing-failed": { channel: Channel; error: HttpEndpointError };
 };
+
+export type ChannelQuoteResult = {
+  channel: Channel;
+  quoteResult: Result<Quote, HttpEndpointError>
+}
+
+export type ChannelQuoteInfo = {
+  channel: Channel;
+  quote: Quote;
+}
+
+type OnQuoteInfo = (
+  snapshot: ChannelQuoteResult[],
+  bestSoFar: ChannelQuoteInfo | null
+) => void;
+
+export type PayError =
+  | { type: "TimeoutCalculation"; error: string }
+  | ChequeIssuingError
 
 export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
   // We keep the signing key separate from wallet
@@ -57,6 +78,59 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
 
   public get channels(): Channel[] {
     return Array.from(this._channels.values());
+  }
+
+  public get maximumCapacity(): Lovelace | null {
+    const anyOperational = this.channels.reduce((acc, channel) => channel.isOperational || acc, false);
+    if(!anyOperational)
+      return null;
+    return this.channels.reduce(
+      (acc, channel) =>
+        channel.availableApprovedCapacity != null?
+          Lovelace.ord.max(acc, channel.availableApprovedCapacity)
+          : acc,
+      Lovelace.zero
+    );
+  }
+
+  public async queryQuotes(
+    invoice: InvoiceString,
+    onQuoteInfo: OnQuoteInfo,
+  ): Promise<[ChannelQuoteResult[], ChannelQuoteInfo | null]> {
+    const results: ChannelQuoteResult[] = [];
+    const findBestQuote = (results: ChannelQuoteResult[]) => {
+      const reduceStep = (best: ChannelQuoteInfo | null, current: ChannelQuoteResult): ChannelQuoteInfo | null => {
+        if (best == null) {
+          const newBest: ChannelQuoteInfo | null = current.quoteResult.match(
+            (quote) => ({ channel: current.channel, quote } as ChannelQuoteInfo),
+            (_error) => null
+          );
+          return newBest;
+        }
+        const { quote: bestQuote }: ChannelQuoteInfo = best;
+        const newBest: ChannelQuoteInfo | null = current.quoteResult.match(
+          (quote) => (quote.amount < bestQuote.amount ? { channel: current.channel, quote } as ChannelQuoteInfo: best),
+          (_error) => best
+        );
+        return newBest;
+      };
+      const bestSoFar: ChannelQuoteInfo | null = results.reduce<ChannelQuoteInfo | null>(
+        reduceStep,
+        null as (ChannelQuoteInfo | null)
+      );
+      return bestSoFar;
+    };
+    const probes = this.channels.map(async (channel) => {
+      const quoteResult = await channel.adaptorClient.chQuote(invoice);
+      results.push({ channel, quoteResult } as ChannelQuoteResult);
+      const bestSoFar = findBestQuote(results);
+      onQuoteInfo([...results], bestSoFar);
+    });
+
+    return Promise.allSettled(probes).then(() => {
+      const theBest = findBestQuote(results);
+      return [[...results], theBest];
+    });
   }
 
   public static async createUsingConnector(
@@ -105,7 +179,7 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
       const origSquashInfo = channel.squashingInfo.lastValue;
       console.log("Polling channel - orig squash:", origSquashInfo);
 
-      const result = await channel.sync(this.sKey);
+      const result = await channel.doAdaptorSync(this.sKey);
       console.log("Polling channel - sync result:", result);
 
       const newSquashInfo = channel.squashingInfo.lastValue;
@@ -179,6 +253,17 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
     };
   }
 
+  public pay = async (channel: Channel, quote: Quote, invoice: Invoice): Promise<Result<ConfirmedPayment | PendingPayment, PayError>> => {
+    const timeout = ValidDate.addMilliseconds(ValidDate.now(), quote.relativeTimeout);
+    return timeout.match(
+      async (timeout) => {
+        const payResult = await channel.doPay(quote.amount, timeout, invoice, this.sKey);
+        return payResult;
+      },
+      async (error) => err({ type: "TimeoutCalculation" as const, error } as PayError)
+    );
+  }
+
   public async openChannel(
     adaptorFullInfo: AdaptorFullInfo,
     amount: Lovelace,
@@ -187,17 +272,17 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
     const channelTag = await ChannelTag.fromRandomBytes();
     const [adaptorUrl, adaptorInfo] = adaptorFullInfo;
     return await resultAsyncToPromise(
-      hoistToResultAsync(this.txBuilder.buildOpenTx(
+      promiseToResultAsync(this.txBuilder.buildOpenTx(
         channelTag,
         this.vKey,
         adaptorInfo.adaptorEd25519VerificationKey,
         closePeriod,
         amount,
       )).andThen((openTx) =>
-        hoistToResultAsync(this.wallet.sign(openTx))
+        promiseToResultAsync(this.wallet.sign(openTx))
       ).andThen((signedTx) => {
         const now = ValidDate.now();
-        return hoistToResultAsync(this.wallet.submit(signedTx))
+        return promiseToResultAsync(this.wallet.submit(signedTx))
           .andThen((txHash) => {
             const openTx = {
               adaptor: adaptorInfo.adaptorEd25519VerificationKey,
@@ -212,7 +297,7 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
               txHash: txHash,
               type: "OpenTx" as const,
             } as OpenTx;
-            const channel = Channel.open(this.sKey, openTx, adaptorUrl);
+            const channel = Channel.open(openTx, adaptorUrl);
             try {
               this._channels.set(channelTag, channel);
             } catch(e) {

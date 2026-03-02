@@ -40,8 +40,8 @@ const formattedAddress = computed(() => orPlaceholder(wallet.value?.addressBech3
 </script>
 
 <template>
-  <TheHeader :back-page-name="'home'" />
   <MainContainer>
+    <TheHeader :back-page-name="'home'" />
     <DataListing :rows="[
       { label: 'Cardano connector', formattedValue: formattedConnector, actions: [['edit-cardano-connector-url', 'pen']] },
       'separator',
@@ -50,6 +50,5 @@ const formattedAddress = computed(() => orPlaceholder(wallet.value?.addressBech3
       { label: 'Forget', formattedValue: '', actions: [[forgetReload, 'trash']] },
     ]" />
   </MainContainer>
-  <NavBar />
 </template>
 

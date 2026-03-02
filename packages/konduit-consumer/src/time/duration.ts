@@ -1,7 +1,7 @@
 import * as codec from "@konduit/codec";
 import type { Tagged } from "type-fest";
 import type { Small } from "@konduit/codec/integers/smallish";
-import { json2NonNegativeIntCodec, NonNegativeInt } from "@konduit/codec/integers/smallish";
+import { NonNegativeInt } from "@konduit/codec/integers/smallish";
 import type { POSIXMilliseconds, POSIXSeconds } from "./absolute";
 import { altJsonCodecs, type JsonCodec } from "@konduit/codec/json/codecs";
 import { ok, err } from "neverthrow";
@@ -40,7 +40,7 @@ export namespace Milliseconds {
   }
   export const ord = mkOrdForScalar<Milliseconds>();
 }
-export const json2MillisecondsCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Milliseconds.fromNonNegativeInt(n), (ms) => ms);
+export const json2MillisecondsCodec = codec.rmap(NonNegativeInt.jsonCodec, (n) => Milliseconds.fromNonNegativeInt(n), (ms) => ms);
 
 export type Seconds = Tagged<NonNegativeInt, "Seconds">;
 export namespace Seconds {
@@ -56,7 +56,7 @@ export namespace Seconds {
   }
   export const ord = mkOrdForScalar<Seconds>();
 }
-export const json2SecondsCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Seconds.fromNonNegativeInt(n), (s) => s);
+export const json2SecondsCodec = codec.rmap(NonNegativeInt.jsonCodec, (n) => Seconds.fromNonNegativeInt(n), (s) => s);
 
 export type Minutes = Tagged<NonNegativeInt, "Minutes">;
 export namespace Minutes {
@@ -68,7 +68,7 @@ export namespace Minutes {
   export const fromSecondsFloor = (seconds: Seconds): Minutes => (Math.floor(seconds / 60)) as Minutes;
   export const ord = mkOrdForScalar<Minutes>();
 }
-export const json2MinutesCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Minutes.fromNonNegativeInt(n), (m) => m);
+export const json2MinutesCodec = codec.rmap(NonNegativeInt.jsonCodec, (n) => Minutes.fromNonNegativeInt(n), (m) => m);
 
 export type Hours = Tagged<NonNegativeInt, "Hours">;
 export namespace Hours {
@@ -80,7 +80,7 @@ export namespace Hours {
   export const fromDays = (days: Days): Hours => (days * 24) as Hours;
   export const ord = mkOrdForScalar<Hours>();
 }
-export const json2HoursCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Hours.fromNonNegativeInt(n), (h) => h);
+export const json2HoursCodec = codec.rmap(NonNegativeInt.jsonCodec, (n) => Hours.fromNonNegativeInt(n), (h) => h);
 
 export type Days = Tagged<NonNegativeInt, "Days">;
 export namespace Days {
@@ -92,7 +92,7 @@ export namespace Days {
   export const fromWeeks = (weeks: Weeks): Days => (weeks * 7) as Days;
   export const ord = mkOrdForScalar<Days>();
 }
-export const json2DaysCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Days.fromNonNegativeInt(n), (d) => d);
+export const json2DaysCodec = codec.rmap(NonNegativeInt.jsonCodec, (n) => Days.fromNonNegativeInt(n), (d) => d);
 
 export type Weeks = Tagged<NonNegativeInt, "Weeks">;
 export namespace Weeks {
@@ -103,7 +103,7 @@ export namespace Weeks {
   export const fromDaysFloor = (days: Days): Weeks => (Math.floor(days / 7)) as Weeks;
   export const ord = mkOrdForScalar<Weeks>();
 }
-export const json2WeeksCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Weeks.fromNonNegativeInt(n), (w) => w);
+export const json2WeeksCodec = codec.rmap(NonNegativeInt.jsonCodec, (n) => Weeks.fromNonNegativeInt(n), (w) => w);
 
 // Non precise unit. TODO: Provide some helpers to work with that as well.
 export type Months = Tagged<NonNegativeInt, "Months">;
@@ -114,7 +114,7 @@ export namespace Months {
   export const fromSmallNumber = (n: Small) => NonNegativeInt.fromSmallNumber(n) as Months;
   export const ord = mkOrdForScalar<Months>();
 }
-export const json2MonthsCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Months.fromNonNegativeInt(n), (m) => m);
+export const json2MonthsCodec = codec.rmap(NonNegativeInt.jsonCodec, (n) => Months.fromNonNegativeInt(n), (m) => m);
 
 // This precise unit. TODO: Provide some helpers to work with that as well.
 export type Years = Tagged<NonNegativeInt, "Years">;
@@ -127,7 +127,7 @@ export namespace Years {
   export const ord = mkOrdForScalar<Years>();
 }
 
-export const json2YearsCodec = codec.rmap(json2NonNegativeIntCodec, (n) => Years.fromNonNegativeInt(n), (y) => y);
+export const json2YearsCodec = codec.rmap(NonNegativeInt.jsonCodec, (n) => Years.fromNonNegativeInt(n), (y) => y);
 
 export type AnyPreciseDuration =
   | { type: "milliseconds"; value: Milliseconds }

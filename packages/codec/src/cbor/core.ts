@@ -245,6 +245,12 @@ class CborNull {
 export const cborNull = new CborNull();
 export const isCborNull = (value: any): value is CborNull => value instanceof CborNull;
 
+export type CborTaggedValue = { tag: CborTag; value: Cbor };
+
+export const isCborTaggedValue = (cbor: Cbor): cbor is CborTaggedValue => {
+  return typeof cbor === "object" && cbor !== null && "tag" in cbor && "value" in cbor;
+}
+
 // AST representation of the CBOR data
 export type Cbor =
   | CborNull
@@ -261,4 +267,4 @@ export type Cbor =
   | Indefinite<Cbor[]>
   | Map<Cbor, Cbor>
   | Indefinite<Map<Cbor, Cbor>>
-  | { tag: CborTag; value: Cbor }
+  | CborTaggedValue;

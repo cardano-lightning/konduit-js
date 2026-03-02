@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import KonduitLogoText from "../components/KonduitLogo/Text.vue";
 import { type Props as ButtonProps } from "../components/Button.vue";
 import ButtonGroup from "../components/ButtonGroup.vue";
 import { loadJson } from "../utils/dom";
@@ -59,7 +60,7 @@ const buttons: ButtonProps[] = [
 
 <template>
   <div id="container">
-    <img id="logo" src="../assets/logo.svg" alt="Konduit logo" />
+    <div id="logo"><KonduitLogoText /></div>
     <p>A Cardano to Bitcoin Lightning Pipe</p>
     <ButtonGroup :buttons="buttons" />
     <div class="link">
@@ -77,12 +78,14 @@ const buttons: ButtonProps[] = [
 }
 
 #logo {
-  height: 15vh;
-  padding: 33vh 4rem 2vh;
+  display: flex;
+  font-size: 3em;
+  justify-content: center;
+  padding: 20vh 0 2vh;
 }
 
 .button-group {
-  padding: 10vh 0rem 10vh;
+  padding: 8vh 0rem 12vh;
   display: flex;
   flex-direction: row;
   justify-content: space-around;

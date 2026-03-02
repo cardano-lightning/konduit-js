@@ -12,10 +12,10 @@ import SettingsPage from "./views/SettingsPage.vue";
 import WalletPage from "./views/WalletPage.vue";
 
 const routes = [
-  { name: "add-channel",
-    path: "/add-channel",
+  { name: "open-channel",
+    path: "/open-channel",
     component: AddChannelPage,
-    meta: { title: "Add Channel" },
+    meta: { title: "Open Channel" },
   },
   {
     name: "create",

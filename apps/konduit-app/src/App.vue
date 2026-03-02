@@ -16,30 +16,51 @@ import '@formatjs/intl-durationformat/polyfill-force.js';
  * Exception to the rule is overwrite of the notification styles.
  */
 :root {
-  /* You should rely and wrap your main content in the `MainContainer` by default */
-  --main-container-padding: 2rem;
+  --max-app-width: 85vh;
+  /* The main container provides what you need (navbar) so just wrap your content in it.
+   * Currently the header has to be included by the page itself.
+   */
+  --main-container-padding: 1.2rem;
   --navbar-padding-bottom: calc(60px + env(safe-area-inset-bottom)); /* Navbar height + safe area */
 
-  /* FIXME: The theming should be reorganized properly - it is still messy
-   * as we use it for buttons and text etc. without distinction.
+  /* This variable is used usually for spacing and gaps in the main body of the app.
+   * We use it or its multiples or halves.
+   */
+  --data-listing-gap: 1.2rem;
+
+  /* FIXME: The theming should be reorganized properly - it is still a bit messy
+   * but in the future should simplify the refactoring. Ideally we should avoid
+   * "custom" colors in the components.
+   * In some sens we are still using "global" styling but with proper, restricted balance :-P
    */
   --primary-background-color: #162456;
   --primary-color: #fff1f2;
 
   --secondary-background-color: #2c3a70;
   --secondary-color: #888;
-  /* A lighter version of primary-color */
+
   --missing-data-color: #fff8fa;
 
   --error-background-color: #ffe2e2;
   --error-color: #e57373;
   --error-border-color: var(--error-color);
 
+  --hint-background-color: #f5f3f7;
+  --hint-color: #4a4a4a; /* or #5c5c5c (warm dark gray) */
+
+  --warning-background-color: #FFFAA0;
+  --warning-color: #FFEA61;
+
+  /* Nice green but doesn't necessarily play nicely with our background. */
   --success-background-color: #f4fbf8; /* #f0f8f2 #e6f4ea; */
   --success-color: #4caf50;
   --success-border-color: var(--success-color);
+  /* Maybe this is even nicer??
+  --succeess-background-color: #F0F9E6;
+  --success-color: #C4E4A8;
+  */
 
-  /* Inputs, frames around qr codes, video preview etc. */
+  /* Inputs, frames, hrs around qr codes, video preview etc. */
   --frame-border-color: #d1d5db;
 }
 
@@ -66,7 +87,7 @@ html, body {
   text-rendering: optimizeLegibility;
   color-scheme: light dark;
 
-  height: 100vh; /* Or 100% */
+  height: 100dvh; /* Or 100% */
   margin: 0;
   padding: 0;
   overflow-x: hidden; /* Prevent horizontal scroll */
@@ -85,7 +106,7 @@ body {
   flex-direction: column;
   height: 100vh;
   margin: 0;
-  max-width: 80vh;
+  max-width: var(--max-app-width);
   min-width: 320px;
   width: 100vw;
 }

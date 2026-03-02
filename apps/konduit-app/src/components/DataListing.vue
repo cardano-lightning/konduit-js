@@ -31,7 +31,7 @@ const props = defineProps<Props>();
 .data-listing {
   display: flex;
   flex-direction: column;
-  gap: 1.2rem;
+  gap: var(--data-listing-gap);
   margin: 0;
 }
 </style>

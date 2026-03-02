@@ -5,11 +5,11 @@ export type CryptoCurrency = "ADA" | "BTC";
 
 export type Satoshi = bigint;
 
-export const mkLovelaceAmount = (value: Lovelace): Amount => {
+export const mkLovelaceAmount = (value: Lovelace | "uknown-yet"): Amount => {
   return { currency: "ADA", value };
 };
 
-export const mkSatoshiAmount = (value: Satoshi): Amount => {
+export const mkSatoshiAmount = (value: Satoshi | "uknown-yet"): Amount => {
   return { currency: "BTC", value };
 };
 </script>
@@ -22,8 +22,8 @@ import { computed } from 'vue';
 // Currencies like Lovelace is just bigint marked on the type level.
 // We require explicit tagging in here to avoid mistakes on the caller side.
 export type Amount =
-  | { currency: "ADA", value: Lovelace }
-  | { currency: "BTC", value: Satoshi }
+  | { currency: "ADA", value: Lovelace  | "uknown-yet" }
+  | { currency: "BTC", value: Satoshi | "uknown-yet" };
 
 export type Props = {
   amount: Amount | null
@@ -40,11 +40,32 @@ const btcFormatter = useCurrencyFormatter({
 });
 
 const parts = computed(() => {
+  const mkUknownAmount = (parts: Decimal.DecimalFormat.FormatPart[]) => {
+    return parts.map(part => {
+      if(part.type === "integer") {
+        return { ...part, value: "??" };
+      } else if(part.type === "fraction") {
+        return { ...part, value: "??" };
+      }
+      return part;
+    });
+  };
+
   if(props.amount === null) {
     return null;
   }
-  if(props.amount.currency === "ADA") return adaFormatter.value.formatToParts(props.amount.value);
-  if(props.amount.currency === "BTC") return btcFormatter.value.formatToParts(props.amount.value);
+  // TODO: Move uknown amount handling down the stream
+  if(props.amount.currency === "ADA")
+    if(props.amount.value === "uknown-yet")
+      return mkUknownAmount(adaFormatter.value.formatToParts(Decimal("1000000")));
+    else
+      return adaFormatter.value.formatToParts(props.amount.value);
+
+  if(props.amount.currency === "BTC")
+    if(props.amount.value === "uknown-yet")
+      return mkUknownAmount(btcFormatter.value.formatToParts(Decimal("10000000")));
+    else
+      return btcFormatter.value.formatToParts(props.amount.value);
 });
 
 </script>

@@ -1,108 +1,170 @@
+<script setup lang="ts">
+import LogoText from "./KonduitLogo/Text.vue";
+import Logo from "./KonduitLogo/Icon.vue";
+</script>
+
 <template>
-  <svg
-    id="screenshot-47fe3fba-537f-803b-8006-ad37a7494710"
-    width="80"
-    xmlns="http://www.w3.org/2000/svg"
-    height="80"
-    viewBox="0 0 38 38"
-    xmlns:xlink="http://www.w3.org/1999/xlink"
-    fill="none"
-    version="1.1"
-  >
-    <g id="shape-47fe3fba-537f-803b-8006-ad37a7494710">
-      <defs>
-        <clipPath
-          id="frame-clip-47fe3fba-537f-803b-8006-ad37a7494710-render-1"
-          class="frame-clip frame-clip-def"
-        >
-          <rect
-            rx="0"
-            ry="0"
-            x="0"
-            y="0"
-            width="38"
-            height="38"
-            transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)"
-          />
-        </clipPath>
-      </defs>
-      <g class="frame-container-wrapper">
-        <g class="frame-container-blur">
-          <g class="frame-container-shadows">
-            <g
-              clip-path="url(#frame-clip-47fe3fba-537f-803b-8006-ad37a7494710-render-1)"
-              fill="none"
-            >
-              <g id="fills-47fe3fba-537f-803b-8006-ad37a7494710" class="fills">
-                <rect
-                  rx="0"
-                  ry="0"
-                  x="0"
-                  y="0"
-                  width="38"
-                  height="38"
-                  transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)"
-                  class="frame-background"
-                />
-              </g>
-              <g class="frame-children">
-                <g id="shape-47fe3fba-537f-803b-8006-ad3a2e680e71">
-                  <defs>
-                    <radialGradient
-                      id="fill-color-gradient-render-2-0"
-                      cx="0.7775293557948544"
-                      cy="-0.03956647893031828"
-                      r="2.1079178931103972"
-                      gradientTransform="matrix(-0.843025, -0.505887, 0.514549, -0.857461, 1.453365, 0.319849)"
-                    >
-                      <stop offset="0" stop-color="#000000" stop-opacity="1" />
-                      <stop
-                        offset="0.34"
-                        stop-color="#922256"
-                        stop-opacity="1"
-                      />
-                      <stop
-                        offset="0.86"
-                        stop-color="#ffdbf3"
-                        stop-opacity="1"
-                      />
-                    </radialGradient>
-                    <pattern
-                      id="fill-0-render-2"
-                      patternUnits="userSpaceOnUse"
-                      x="3"
-                      y="3"
-                      width="32"
-                      height="32"
-                      patternTransform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)"
-                    >
-                      <g>
-                        <rect
-                          width="32"
-                          height="32"
-                          style="
-                            fill: url(&quot;#fill-color-gradient-render-2-0&quot;);
-                            fill-opacity: 1;
-                          "
-                        />
-                      </g>
-                    </pattern>
-                  </defs>
-                  <g
-                    id="fills-47fe3fba-537f-803b-8006-ad3a2e680e71"
-                    class="fills"
-                  >
-                    <path
-                      d="M18.9998779296875,20.50006103515625L14.0001220703125,22.0001220703125L19.0001220703125,3L19.0001220703125,3L19.0001220703125,17.49993896484375L23.9998779296875,15.9998779296875L18.9998779296875,35L18.9998779296875,35L18.9998779296875,20.50006103515625M18.9998779296875,17.5L19.0001220703125,17.49993896484375M30.1197509765625,7.5C27.2401123046875,4.71478271484375,23.3187255859375,3.00006103515625,19.0001220703125,3C14.6812744140625,3,10.760009765625,4.71478271484375,7.8802490234375,7.5L10.5,7.5L10.5,30.5L7.8802490234375,30.5C10.7598876953125,33.28521728515625,14.6812744140625,34.99993896484375,18.9998779296875,35C23.3187255859375,35,27.239990234375,33.28521728515625,30.1197509765625,30.5L27.5,30.5L27.5,7.5L30.1197509765625,7.5M6.1279296875,28.5L8.5,28.5L8.5,9.5L6.1279296875,9.5C4.16259765625,12.15753173828125,3,15.444091796875,3,19C3,22.555908203125,4.16259765625,25.84246826171875,6.1279296875,28.5M31.8720703125,9.5L29.5,9.5L29.5,28.5L31.8720703125,28.5C33.83740234375,25.84246826171875,35,22.555908203125,35,19C35,15.444091796875,33.83740234375,12.15753173828125,31.8720703125,9.5M22.265380859375,3.33087158203125C21.2427978515625,3.12054443359375,20.184814453125,3.00701904296875,19.1015625,3.00030517578125C19.0677490234375,3.0001220703125,19.033935546875,3,19.0001220703125,3"
-                      fill="url(#fill-0-render-2)"
-                    />
-                  </g>
-                </g>
-              </g>
-            </g>
-          </g>
+<!--  <span class="konduit-logo"><Logo /><span class="text"><LogoText /></span></span> -->
+<!--  <span class="konduit-logo"><span class="text"><LogoText /></span></span> -->
+<svg
+   width="23.560802mm"
+   height="4.0160403mm"
+   viewBox="0 0 23.560802 4.0160403"
+   version="1.1"
+   id="svg1"
+   sodipodi:docname="logo-konduit.svg"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="5.6568543"
+     inkscape:cx="258.18236"
+     inkscape:cy="309.62438"
+     inkscape:window-width="3440"
+     inkscape:window-height="1440"
+     inkscape:window-x="1920"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1">
+    <inkscape:page
+       x="0"
+       y="0"
+       width="23.560802"
+       height="4.0160403"
+       id="page2"
+       margin="0"
+       bleed="0" />
+  </sodipodi:namedview>
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(144.54913,-21.129953)">
+    <text
+       xml:space="preserve"
+       style="font-size:4.51424px;line-height:0.7;font-family:'Major Mono Display';-inkscape-font-specification:'Major Mono Display, Normal';font-variant-ligatures:none;text-align:center;text-anchor:middle;stroke-width:0.188093"
+       x="-128.93791"
+       y="24.673141"
+       id="text415"
+       inkscape:export-filename="text415.svg"
+       inkscape:export-xdpi="96"
+       inkscape:export-ydpi="96"><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.188093"
+         x="-128.93791"
+         y="24.673141"
+         id="tspan415">nduit</tspan></text>
+    <circle
+       style="fill:#1a1a1a;fill-opacity:1;stroke:none;stroke-width:0.0200027"
+       id="circle415"
+       cx="139.15326"
+       cy="23.137333"
+       r="1.6564758"
+       transform="scale(-1,1)" />
+    <circle
+       style="fill:#ffeeaaff;fill-opacity:1;stroke:none;stroke-width:0.017994"
+       id="circle416"
+       cx="139.15327"
+       cy="23.137333"
+       r="1.4901466"
+       transform="scale(-1,1)" />
+    <text
+       xml:space="preserve"
+       style="font-size:5.77018px;line-height:0.7;font-family:'Major Mono Display';-inkscape-font-specification:'Major Mono Display, Normal';font-variant-ligatures:none;text-align:center;text-anchor:middle;stroke-width:0.240424"
+       x="-143.04889"
+       y="25.145992"
+       id="text416"><tspan
+         sodipodi:role="line"
+         style="stroke-width:0.240424"
+         x="-143.04889"
+         y="25.145992"
+         id="tspan416">k</tspan></text>
+    <g
+       id="g421"
+       transform="translate(-104.69541,-3.6380211)">
+      <g
+         id="g415"
+         transform="matrix(0.85826781,0,0,1,-100.49805,12.469266)">
+        <g
+           id="g413"
+           transform="matrix(-1,0,0,1,129.09921,-0.093545)">
+          <path
+             id="path412"
+             style="font-size:5.77018px;line-height:0.7;font-family:'Major Mono Display';-inkscape-font-specification:'Major Mono Display, Normal';font-variant-ligatures:none;text-align:center;text-anchor:middle;stroke-width:0.255963"
+             d="m 54.421727,12.392252 v 0.148697 h -4.536835 v -0.148697 z"
+             sodipodi:nodetypes="ccccc" />
+          <path
+             id="path416"
+             style="font-size:5.77018px;line-height:0.7;font-family:'Major Mono Display';-inkscape-font-specification:'Major Mono Display, Normal';font-variant-ligatures:none;text-align:center;text-anchor:middle;stroke-width:0.255963"
+             d="m 54.421727,12.392252 v 0.148697 h -4.536835 v -0.148697 z"
+             sodipodi:nodetypes="ccccc" />
         </g>
+        <g
+           id="g414"
+           transform="matrix(-1,0,0,1,127.51171,-0.093545)" />
+      </g>
+      <g
+         id="g420"
+         transform="matrix(0.85826781,0,0,1,-100.49805,16.33661)">
+        <g
+           id="g418"
+           transform="matrix(-1,0,0,1,129.09921,-0.093545)">
+          <path
+             id="path417"
+             style="font-size:5.77018px;line-height:0.7;font-family:'Major Mono Display';-inkscape-font-specification:'Major Mono Display, Normal';font-variant-ligatures:none;text-align:center;text-anchor:middle;stroke-width:0.255963"
+             d="m 54.421727,12.392252 v 0.148697 h -4.536835 v -0.148697 z"
+             sodipodi:nodetypes="ccccc" />
+          <path
+             id="path418"
+             style="font-size:5.77018px;line-height:0.7;font-family:'Major Mono Display';-inkscape-font-specification:'Major Mono Display, Normal';font-variant-ligatures:none;text-align:center;text-anchor:middle;stroke-width:0.255963"
+             d="m 54.421727,12.392252 v 0.148697 h -4.536835 v -0.148697 z"
+             sodipodi:nodetypes="ccccc" />
+        </g>
+        <g
+           id="g419"
+           transform="matrix(-1,0,0,1,127.51171,-0.093545)" />
       </g>
     </g>
-  </svg>
+  </g>
+</svg>
 </template>
+
+<style scoped>
+svg {
+fill: #344480ff;
+}
+
+/*
+ffd42a;fill-opacity:1;stroke:none;stroke-width:0.017994"
+.konduit-logo {
+  align-items: center;
+  display: flex;
+  font-size: 2.5em;
+  height: 2.5em;
+  line-height: 2.5em;
+}
+
+.konduit-logo svg {
+  height: 3em;
+  margin-right: 0.08em;
+  width: 1.7em;
+}
+
+.konduit-logo span.text {
+  text-align: left;
+}
+*/
+</style>

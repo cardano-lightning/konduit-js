@@ -156,17 +156,17 @@ describe('Cardano Addresses', () => {
             stakingCredential: staking
           };
           const bech32 = addresses.AddressBech32.fromAddress(address);
-          const decoded = expectOk(addresses.string32ToAddressCodec.deserialise(bech32));
+          const decoded = expectOk(addresses.Address.stringCodec.deserialise(bech32));
           expect(decoded).toEqual(address);
         }
       });
     });
   });
 
-  describe('string32ToAddressCodec error cases', () => {
+  describe('Address.stringCodec error cases', () => {
     it('should reject invalid bech32 string', () => {
       const invalid = "not-a-valid-bech32-address";
-      const result = addresses.string32ToAddressCodec.deserialise(invalid);
+      const result = addresses.Address.stringCodec.deserialise(invalid);
       expectErrWithSubstring(result, 'Invalid bech32 address');
     });
 
@@ -175,7 +175,7 @@ describe('Cardano Addresses', () => {
       const mainnetBytes = new Uint8Array([0x01, ...pubKeyHash]);
       const words = bech32.toWords(mainnetBytes);
       const invalid = bech32.encode('addr_test', words, 90);
-      const result = addresses.string32ToAddressCodec.deserialise(invalid);
+      const result = addresses.Address.stringCodec.deserialise(invalid);
       expectErrWithSubstring(result, 'Invalid address prefix');
     });
 
@@ -183,7 +183,7 @@ describe('Cardano Addresses', () => {
       const invalidData = new Uint8Array([0x01, ...new Uint8Array(27)]);
       const words = bech32.toWords(invalidData);
       const invalid = bech32.encode('addr', words, 90);
-      const result = addresses.string32ToAddressCodec.deserialise(invalid);
+      const result = addresses.Address.stringCodec.deserialise(invalid);
       expectErrWithSubstring(result, 'Invalid address length');
     });
 
@@ -191,12 +191,12 @@ describe('Cardano Addresses', () => {
       const pointerData = new Uint8Array([0x41, ...new Uint8Array(28)]);
       const words = bech32.toWords(pointerData);
       const pointerAddr = bech32.encode('addr', words, 90);
-      const result = addresses.string32ToAddressCodec.deserialise(pointerAddr);
+      const result = addresses.Address.stringCodec.deserialise(pointerAddr);
       expectErrWithSubstring(result, 'Pointer addresses');
     });
   });
 
-  describe('json2AddressCodec', () => {
+  describe('Address.jsonCodec', () => {
     it('should deserialize JSON string to Address', () => {
       const address: addresses.Address = {
         network: Network.MAINNET,
@@ -205,7 +205,7 @@ describe('Cardano Addresses', () => {
       };
       const bech32Str = addresses.AddressBech32.fromAddress(address);
       const json = expectOk(parse(`"${bech32Str}"`));
-      const decoded = expectOk(addresses.json2AddressCodec.deserialise(json));
+      const decoded = expectOk(addresses.Address.jsonCodec.deserialise(json));
       expect(decoded).toEqual(address);
     });
 
@@ -214,7 +214,7 @@ describe('Cardano Addresses', () => {
         network: Network.TESTNET,
         paymentCredential: { type: "ScriptHash", hash: new Uint8Array(28).fill(0x77) as addresses.ScriptHash }
       };
-      const json = addresses.json2AddressCodec.serialise(address);
+      const json = addresses.Address.jsonCodec.serialise(address);
       expect(typeof json).toBe('string');
       expect(json).toMatch(/^addr_test1/);
     });
@@ -225,8 +225,8 @@ describe('Cardano Addresses', () => {
         paymentCredential: { type: "PubKeyHash", hash: new Uint8Array(28).fill(0x88) as addresses.PubKeyHash },
         stakingCredential: { type: "ScriptHash", hash: new Uint8Array(28).fill(0x99) as addresses.ScriptHash }
       };
-      const json = addresses.json2AddressCodec.serialise(original);
-      const decoded = expectOk(addresses.json2AddressCodec.deserialise(json));
+      const json = addresses.Address.jsonCodec.serialise(original);
+      const decoded = expectOk(addresses.Address.jsonCodec.deserialise(json));
       expect(decoded).toEqual(original);
     });
   });

@@ -9,7 +9,7 @@ import {
 import { Address, address2AddressBech32Iso, AddressBech32, Network, NetworkMagicNumber } from "./cardano/addressses";
 import * as codec from "@konduit/codec";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
-import { json2TxHashCodec, Lovelace, TxCborBytes } from "./cardano";
+import { TxHash, Lovelace, TxCborBytes } from "./cardano";
 import { Ed25519VerificationKey } from "@konduit/cardano-keys";
 import { json2BigIntThroughStringCodec, json2BooleanCodec, json2StringCodec, nullable } from "@konduit/codec/json/codecs";
 import type { JsonError } from "@konduit/codec/json/codecs";
@@ -112,7 +112,7 @@ export const mkBlockfrostClient = (projectId: string) => { // WalletBackendBase 
     const submitEndpoint = mkPostEndpoint(
       `${baseUrl}/tx/submit`,
       RequestSerialiser.fromOtherSerialiser("application/cbor", (data: ArrayBuffer) => data),
-      ResponseDeserialiser.fromJsonDeserialiser(json2TxHashCodec.deserialise)
+      ResponseDeserialiser.fromJsonDeserialiser(TxHash.jsonCodec.deserialise)
     );
 
     return {

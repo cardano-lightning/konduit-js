@@ -11,7 +11,7 @@ import { NonNegativeInt } from "@konduit/codec/integers/smallish";
 import { Milliseconds, type Seconds } from "../time/duration";
 import { json2Ed25519PrivateKeyCodec } from "../cardano/keys";
 import { Connector, type Transaction } from "../cardano/connector";
-import { hoistToResultAsync, resultAsyncToPromise } from "../neverthrow";
+import { promiseToResultAsync, resultAsyncToPromise } from "../neverthrow";
 import { mkIdentityCodec } from "@konduit/codec";
 import { json2ValidDateCodec, ValidDate } from "../time/absolute";
 import type { JsonAsyncCodec } from "@konduit/codec/json/async";
@@ -312,7 +312,7 @@ export namespace CardanoConnectorWallet {
       const walletBackend =  mkWalletBackend(connector);
       return ok(new Wallet(privateKey, walletBackend, balanceInfo));
     }
-    return resultAsyncToPromise(hoistToResultAsync(createBackend(connector)).map(async (backend) => {
+    return resultAsyncToPromise(promiseToResultAsync(createBackend(connector)).map(async (backend) => {
       return new Wallet(privateKey, backend, balanceInfo);
     }));
   }
@@ -324,7 +324,7 @@ export namespace CardanoConnectorWallet {
       const walletBackend =  mkWalletBackend(connector);
       return ok(await Wallet.create(walletBackend));
     }
-    return resultAsyncToPromise(hoistToResultAsync(createBackend(connector)).map(async (backend) => {
+    return resultAsyncToPromise(promiseToResultAsync(createBackend(connector)).map(async (backend) => {
       return Wallet.create(backend);
     }));
   }
@@ -337,7 +337,7 @@ export namespace CardanoConnectorWallet {
       const walletBackend =  mkWalletBackend(connector);
       return ok(await Wallet.restore(walletBackend, mnemonic));
     }
-    return resultAsyncToPromise(hoistToResultAsync(createBackend(connector)).map(async (connector) => {
+    return resultAsyncToPromise(promiseToResultAsync(createBackend(connector)).map(async (connector) => {
       return Wallet.restore(connector, mnemonic);
     }));
   }

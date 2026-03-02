@@ -10,9 +10,10 @@ import { Notifications } from "./composables/notifications";
 createApp(App)
   .use(router)
   .use(Toastification, {
-    maxToasts: 3,
+    maxToasts: 1,
     newestOnTop: true,
     position: "top-center",
+    timeout: 500000,
     toastClassName: "cl-toast",
     // transition: "fade",
     transition: "Vue-Toastification__bounce",

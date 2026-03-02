@@ -11,7 +11,7 @@ import type { Channel } from '@konduit/konduit-consumer/channel';
 import { err, ok, type Result } from 'neverthrow';
 import type { JsonError } from '@konduit/codec/json/codecs';
 import type { Json } from "@konduit/codec/json";
-import type { InvoiceInfo } from "@konduit/bln/invoice";
+import type { Invoice } from "@konduit/konduit-consumer/bitcoin/bolt11";
 
 export type AppPhase = "loading" | "launching" | "running";
 
@@ -160,9 +160,9 @@ export const forgetKonduitConsumer = (): void => {
   _subscriptions.forEach(unsub => unsub());
 }
 
-// We keep the "current invoice" as the pay flow can be interrupted:
-// - User can be redirected to the adaptor and channel setup
-export const currentInvoice = ref<InvoiceInfo | null>(null);
+// We keep the "current invoice" as the pay flow can be interrupted.
+// User can be redirected to the adaptor and channel setup etc.
+export const invoice = ref<Invoice | null>(null);
 
 let initPromise: Promise<Result<null, string>> | null = null;
 

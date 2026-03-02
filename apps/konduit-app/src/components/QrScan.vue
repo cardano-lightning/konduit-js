@@ -6,8 +6,6 @@ const emit = defineEmits(["payload"]);
 
 const props = { scanRate: 500 };
 
-//const barcode = ref(null);
-const qrWorker: Ref<Worker | null> = ref(null);
 const videoRef: Ref<HTMLVideoElement | null> = ref(null);
 const containerRef: Ref<HTMLElement | null> = ref(null);
 const snapshotCanvasRef: Ref<HTMLCanvasElement | null> = ref(null);
@@ -21,8 +19,10 @@ const isFrontCamera = ref(false);
 
 let lastScanTime = 0;
 
+let stopAnimationLoop = false;
+
 const animationLoop = (currentTime: number) => {
-  if (!videoRef.value || !snapshotCanvasRef.value) return;
+  if (!videoRef.value || !snapshotCanvasRef.value || stopAnimationLoop) return;
 
   const video = videoRef.value;
   const canvas = snapshotCanvasRef.value;
@@ -57,58 +57,56 @@ const animationLoop = (currentTime: number) => {
       qrWorker.value.postMessage(imageData, [imageData.data.buffer]);
     }
   }
-  // Continue the loop as long as no barcode has been found
-  // if (!barcode.value) {
   animationFramId.value = requestAnimationFrame(animationLoop);
-  // }
 };
+
+const videoStream = ref<MediaStream | null>(null);
 const initializeCamera = async () => {
   if (videoRef.value) {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      videoStream.value = await navigator.mediaDevices.getUserMedia({
         audio: false,
         video: { facingMode: "environment" },
       });
-      const videoTrack = stream.getVideoTracks()[0];
+      const videoTrack = videoStream.value.getVideoTracks()[0];
       if (videoTrack) {
         const settings = videoTrack.getSettings();
         isFrontCamera.value = settings.facingMode === "user" || settings.facingMode === undefined;
       }
-      videoRef.value.srcObject = stream;
+      videoRef.value.srcObject = videoStream.value;
     } catch (error) {
       console.error("Camera access was denied or an error occurred:", error);
     }
   }
 };
-
-const stopScanner = () => {
-  // Stop the video stream
-  if (videoRef.value?.srcObject) {
-    const stream = videoRef.value.srcObject;
-    if( stream instanceof MediaStream ) {
-      stream.getTracks().forEach((track) => track.stop());
-      videoRef.value.srcObject = null;
-    }
+const stopCamera = () => {
+  if (videoStream.value != null) {
+    videoStream.value.getTracks().forEach((track) => track.stop());
+    if(videoRef.value) videoRef.value.srcObject = null;
   }
-  // Stop the animation loop
   if (animationFramId.value) {
     cancelAnimationFrame(animationFramId.value);
     animationFramId.value = null;
   }
 };
 
-// --- LIFECYCLE HOOKS ---
-
-onMounted(() => {
+const qrWorker: Ref<Worker | null> = ref(null);
+const initializeWorker = () => {
   qrWorker.value = new Worker();
   qrWorker.value.onmessage = (event) => {
-    console.log("Received message from worker:", event.data);
     if (event.data && event.data.length > 0) {
       emit("payload", event.data[0].rawValue);
-      stopScanner();
     }
   };
-  initializeCamera();
+}
+const stopWorker = () => {
+  if (qrWorker.value) {
+    qrWorker.value.terminate();
+    qrWorker.value = null;
+  }
+};
+
+const initializePreviewResizing = () => {
   // Set up a resize observer to keep the video element square
   if (containerRef.value) {
     resizeObserver.value = new ResizeObserver((entries) => {
@@ -122,21 +120,35 @@ onMounted(() => {
     });
     resizeObserver.value.observe(containerRef.value);
   }
-  // Start the animation loop
-  animationFramId.value = requestAnimationFrame(animationLoop);
-});
-
-onUnmounted(() => {
-  stopScanner();
-  // Terminate the worker
-  if (qrWorker.value) {
-    qrWorker.value.terminate();
-  }
-  // Disconnect the observer
+}
+const stopPreviewResizing = () => {
   if (resizeObserver.value) {
     resizeObserver.value.disconnect();
   }
+};
+
+const init = async () => {
+  initializeWorker();
+  await initializeCamera();
+  initializePreviewResizing();
+}
+
+const cleanup = () => {
+  stopWorker();
+  stopCamera();
+  stopPreviewResizing();
+  stopAnimationLoop = true;
+}
+
+onMounted(async () => {
+  await init();
+  if(stopAnimationLoop) {
+    cleanup();
+  } else {
+    animationFramId.value = requestAnimationFrame(animationLoop);
+  }
 });
+onUnmounted(cleanup);
 </script>
 
 <template>

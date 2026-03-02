@@ -261,8 +261,7 @@ describe("LND client basic interactions", () => {
         timeout_seconds: undefined,
       });
       console.debug(`Router send response on paying node: ${stringify(sendResult as unknown as Json)}`);
-      const sendResponse = expectOk(sendResult);
-
+      expectOk(sendResult);
 
       // At minimum, we expect LND to have a concrete status and failure_reason.
       // expectNotNull(sendResponse.status);

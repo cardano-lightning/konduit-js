@@ -1,6 +1,6 @@
 import type { Tagged } from "type-fest";
 import { Ed25519VerificationKey } from "@konduit/cardano-keys";
-import { json2TxHashCodec, TxCborBytes, TxHash, unsafeTxCborBytes } from "../cardano/tx";
+import { TxCborBytes, TxHash, unsafeTxCborBytes } from "../cardano/tx";
 import { ValidDate } from "../time/absolute";
 import { ChannelTag, json2ChannelTagCodec } from "./core";
 import type { AdaptorEd25519VerificationKey } from "../adaptorClient/adaptorInfo";
@@ -47,7 +47,7 @@ export const json2OpenTxCodec: JsonCodec<OpenTx> = codec.rmap(
     consumer: json2Ed25519VerificationKeyCodec,
     last_submitted: jsonCodecs.nullable(json2ValidDateCodec),
     tx_cbor: jsonCodecs.nullable(codec.rmap(uint8Array.jsonCodec, unsafeTxCborBytes, (bytes) => bytes)),
-    tx_hash: json2TxHashCodec,
+    tx_hash: TxHash.jsonCodec,
     type: jsonCodecs.constant("OpenTx" as const),
   }),
   (r) => {
@@ -94,7 +94,7 @@ export const json2AddTxCodec: JsonCodec<AddTx> = codec.rmap(
     amount: json2LovelaceCodec,
     last_submitted: jsonCodecs.nullable(json2ValidDateCodec),
     tx_cbor: jsonCodecs.nullable(codec.rmap(uint8Array.jsonCodec, unsafeTxCborBytes, (bytes) => bytes)),
-    tx_hash: json2TxHashCodec,
+    tx_hash: TxHash.jsonCodec,
     type: jsonCodecs.constant("AddTx" as const),
   }),
   (r) => {
@@ -136,7 +136,7 @@ export const json2CloseTxCodec: JsonCodec<CloseTx> = codec.rmap(
   jsonCodecs.objectOf({
     last_submitted: jsonCodecs.nullable(json2ValidDateCodec),
     tx_cbor: jsonCodecs.nullable(codec.rmap(uint8Array.jsonCodec, unsafeTxCborBytes, (bytes) => bytes)),
-    tx_hash: json2TxHashCodec,
+    tx_hash: TxHash.jsonCodec,
     type: jsonCodecs.constant("CloseTx" as const),
   }),
   (r) => {
@@ -288,7 +288,7 @@ export class L1Channel {
     return this.openTx.tag;
   }
 
-  get totalChannelFunds(): Lovelace {
+  get totalSubmittedCapacity(): Lovelace {
     const total:bigint = this._txHistory.slice(1).reduce(
       (acc, tx) => {
         if(isAddTx(tx)) return (acc + tx.amount as bigint);
@@ -300,6 +300,15 @@ export class L1Channel {
       Lovelace.fromBigInt(total),
       "Panic: total channel funds are negative or exceed total Lovelace supply"
     );
+  }
+
+  // FIXME: This is not true.
+  get totalOnChainCapacity(): Lovelace {
+    return this.totalSubmittedCapacity;
+  }
+
+  get totalApprovedCapacity(): Lovelace {
+    return this.totalSubmittedCapacity;
   }
 }
 

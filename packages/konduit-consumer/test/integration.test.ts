@@ -14,10 +14,9 @@ import * as wasm from "../wasm/konduit_wasm.js";
 import { Connector } from "../src/cardano/connector";
 import { BlockfrostWallet, type AnyWallet } from "../src/wallets/embedded";
 import { Ed25519Secret } from "@konduit/cardano-keys/rfc8032";
-import { hoistToResultAsync, resultAsyncToPromise } from "../src/neverthrow";
+import { hoistToResultAsync, promiseToResultAsync, resultAsyncToPromise } from "../src/neverthrow";
 import { mkLndClient, type LndClient } from "../src/bitcoin/lndClient";
 import { Millisatoshi } from "../src/bitcoin/asset";
-import type { Invoice } from "../src/bitcoin/bolt11";
 import { Lovelace } from "../src/cardano";
 import { ValidDate } from "../src/time/absolute";
 import { AnyPayment } from "../src/channel";
@@ -38,13 +37,13 @@ const integrationTestEnv = (() => {
     }
     if(fs.existsSync(konduitConsumerStateFile)) {
       const fileContent: string = fs.readFileSync(konduitConsumerStateFile, "utf-8");
-      return expectOk(await resultAsyncToPromise(hoistToResultAsync(Promise.resolve(parse(fileContent))).andThen((json) => {
+      return expectOk(await resultAsyncToPromise(hoistToResultAsync(parse(fileContent)).andThen((json) => {
         const result = (async () => {
           const result = await json2KonduitConsumerAsyncCodec.deserialise(json);
           result.mapErr((e) => console.error(stringify(e)));
           return result;
         })();
-        return hoistToResultAsync(result);
+        return promiseToResultAsync(result);
       })));
     } else {
       const connector = await mkConnector(t);
@@ -185,7 +184,7 @@ describe("End-to-end integration: open channel and poll adaptor squash", () => {
 
       integrationTestEnv.saveKonduitConsumerState(consumer);
       let squashed = false;
-      if(channel.isOperational && channel.isFullySynced) {
+      if(channel.isOperational && channel.isFullySubmitted) {
         console.debug(`Channel with tag ${channel.channelTag} is already fully squashed!`);
         squashed = true;
       } else {
@@ -230,14 +229,7 @@ describe("End-to-end integration: open channel and poll adaptor squash", () => {
       console.debug("Channel is squashed, now creating invoice via LND and paying via adaptor...");
       const lnd = integrationTestEnv.mkLnd(test);
 
-      // 100,000 millisatoshis = 100 satoshis ≈ $0.06 – $0.07 USD
-      const msat = Millisatoshi.fromDigits(1, 0, 0, 0, 0, 0);
-      const memo = `An invoice from konduit-js integration test at ${new Date().toISOString()}`;
-      const { invoice } = expectOk(await lnd.addLndInvoice(msat, memo), "Failed to add invoice via LND in integration test");
-      const quoteResult = await channel.adaptorClient.chQuote(invoice.raw);
-      const quote = expectOk(quoteResult);
 
-      console.debug("Received quote from adaptor for LND invoice:", quote);
       squashed = false;
       const unsubscribeFromChannelSquashed = consumer.subscribe("channel-squashed", ({ channel: squashedChannel }) => { 
         if(squashedChannel.channelTag === channel.channelTag) {
@@ -260,13 +252,21 @@ describe("End-to-end integration: open channel and poll adaptor squash", () => {
       const maxAttempts = 40;
       const delayMs = 3000;
 
+      // 100,000 millisatoshis = 100 satoshis ≈ $0.06 – $0.07 USD
+      const msat = Millisatoshi.fromDigits(1, 0, 0, 0, 0, 0);
+      const memo = `An invoice from konduit-js integration test at ${new Date().toISOString()}`;
+      const { invoice } = expectOk(await lnd.addLndInvoice(msat, memo), "Failed to add invoice via LND in integration test");
+      const quoteResult = await channel.adaptorClient.chQuote(invoice.raw);
+      const quote = expectOk(quoteResult);
+      console.debug("Received quote from adaptor for LND invoice:", quote);
       const timeout = expectOk(ValidDate.addMilliseconds(ValidDate.now(), quote.relativeTimeout));
-      const payResult = await channel.pay(quote.amount, timeout, invoice, keys.sKey);
+      const payResult = await channel.doPay(quote.amount, timeout, invoice, keys.sKey);
+
       integrationTestEnv.saveKonduitConsumerState(consumer);
       console.log("Received pay response from channel.pay:", payResult);
       payResult.match(
         (payment) => {
-          if(AnyPayment.isFailed(payment)) {
+          if(AnyPayment.isPending(payment)) {
             console.debug(`Payment failed - the cheque was issued but there was a processing error:`);
             console.debug(stringify(payment as any as Json));
           } else {

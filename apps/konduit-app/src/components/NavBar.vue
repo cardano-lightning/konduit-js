@@ -27,7 +27,7 @@ import Zap from "./icons/Zap.vue";
   justify-content: space-around;
   left: 0;
   padding-bottom: env(safe-area-inset-bottom); /* Adds space for iOS home bar/notch */
-  padding-top: 1rem;
+  /* padding-top: 1rem; */
   position: fixed;
   right: 0;
   z-index: 1000; /* Ensure it's above other content */
@@ -41,7 +41,7 @@ import Zap from "./icons/Zap.vue";
   flex-direction: row;
   justify-content: space-around;
   min-width: 320px;
-  max-width: 60vh;
+  max-width: var(--max-app-width);
   width: calc(100vw - 2rem);
 }
 

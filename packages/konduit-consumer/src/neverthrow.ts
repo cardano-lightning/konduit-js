@@ -9,8 +9,12 @@ export const resultAsyncToPromise = async <T, E>(resultAsync: ResultAsync<T, E>)
   );
 }
 
-export const hoistToResultAsync = <T, E>(promise: Promise<Result<T, E>>): ResultAsync<T, E> => {
+export const promiseToResultAsync = <T, E>(promise: Promise<Result<T, E>>): ResultAsync<T, E> => {
   return new ResultAsync(promise);
+}
+
+export const hoistToResultAsync = <T, E>(result: Result<T, E>): ResultAsync<T, E> => {
+  return promiseToResultAsync(Promise.resolve(result));
 }
 
 export const unwrapOrPanic = <T, E>(result: Result<T, E>, errorMessage: string): T => {

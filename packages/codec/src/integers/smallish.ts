@@ -5,8 +5,8 @@ import type { Tagged } from 'type-fest';
 import type { Codec } from '../codec';
 import type { Json } from '../json';
 import { mkOrdForScalar } from '../tagged';
+import { cbor2IntCodec, type CborCodec } from '../cbor/codecs/sync';
 
-// Up to 100
 export type SmallPositive = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30 | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 | 40 | 41 | 42 | 43 | 44 | 45 | 46 | 47 | 48 | 49 | 50 | 51 | 52 | 53 | 54 | 55 | 56 | 57 | 58 | 59 | 60 | 61 | 62 | 63 | 64 | 65 | 66 | 67 | 68 | 69 | 70 | 71 | 72 | 73 | 74 | 75 | 76 | 77 | 78 | 79 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 87 | 88 | 89 | 90 | 91 | 92 | 93 | 94 | 95 | 96 | 97 | 98 | 99 | 100;
 export type Small = 0 | SmallPositive;
 
@@ -104,27 +104,37 @@ export namespace NonNegativeInt {
     }
     return value as NonNegativeInt;
   }
-  export const fromNumber = (n: number) => int2NonNegativeIntCodec.deserialise(n as Int);
+  export const fromNumber = (n: number) => intCodec.deserialise(n as Int);
   export const fromAbs = (n: Int) => (n < 0 ? -n : n) as NonNegativeInt;
-  export const fromJson = (n: Json) => json2NonNegativeIntCodec.deserialise(n);
+  export const fromJson = (n: Json) => jsonCodec.deserialise(n);
   export const ord = mkOrdForScalar<NonNegativeInt>();
   export const distance = (a: NonNegativeInt, b: NonNegativeInt): NonNegativeInt => Math.abs(a - b) as NonNegativeInt;
   export const add = (a: NonNegativeInt, b: NonNegativeInt): Result<NonNegativeInt, string> => NonNegativeInt.fromNumber(a + b);
+
+  export const intCodec: Codec<Int, NonNegativeInt, string> = {
+    deserialise: (value: Int) => {
+      if (value < 0) {
+        return err(`Expected non-negative integer, got ${value}`);
+      }
+      return ok(value as NonNegativeInt);
+    },
+    serialise: (tagged: NonNegativeInt) => tagged as Int
+  };
+  export const bigIntCodec: Codec<bigint, NonNegativeInt, JsonError> = codec.pipe(
+    bigInt2IntCodec,
+    intCodec,
+  );
+  export const jsonCodec: JsonCodec<NonNegativeInt> = codec.pipe(
+    json2IntCodec,
+    intCodec
+  );
+  export const jsonThroughStringCodec: JsonCodec<NonNegativeInt> = codec.pipe(
+    json2IntThroughStringCodec,
+    intCodec
+  );
+  export const cborCodec: CborCodec<NonNegativeInt> = codec.pipe(
+    cbor2IntCodec,
+    bigIntCodec,
+  );
 }
 
-export const int2NonNegativeIntCodec: Codec<Int, NonNegativeInt, string> = {
-  deserialise: (value: Int) => {
-    if (value < 0) {
-      return err(`Expected non-negative integer, got ${value}`);
-    }
-    return ok(value as NonNegativeInt);
-  },
-  serialise: (tagged: NonNegativeInt) => tagged as Int
-};
-
-export const json2NonNegativeIntCodec: JsonCodec<NonNegativeInt> = codec.pipe(json2IntCodec, int2NonNegativeIntCodec);
-export const bigInt2NonNegativeIntCodec: Codec<bigint, NonNegativeInt, JsonError> = codec.pipe(
-  bigInt2IntCodec,
-  int2NonNegativeIntCodec,
-);
-export const json2NonNegativeIntThroughStringCodec: JsonCodec<NonNegativeInt> = codec.pipe(json2IntThroughStringCodec, int2NonNegativeIntCodec);

@@ -85,31 +85,31 @@ describe('Integer Codecs', () => {
   describe('NonNegativeInt codec', () => {
     it('should successfully deserialize zero', () => {
       const zero = 0n;
-      const result = smallish.json2NonNegativeIntCodec.deserialise(zero);
+      const result = smallish.NonNegativeInt.jsonCodec.deserialise(zero);
       const decoded = unwrapOk(result);
       expect(decoded).toBe(0);
     });
 
     it('should successfully deserialize positive integer', () => {
       const positive = 50n;
-      const result = smallish.json2NonNegativeIntCodec.deserialise(positive);
+      const result = smallish.NonNegativeInt.jsonCodec.deserialise(positive);
       const decoded = unwrapOk(result);
       expect(decoded).toBe(50);
     });
 
     it('should fail to deserialize negative integer', () => {
       const negative = -10n;
-      const result = smallish.json2NonNegativeIntCodec.deserialise(negative);
+      const result = smallish.NonNegativeInt.jsonCodec.deserialise(negative);
       unwrapErr(result);
     });
 
     it('should roundtrip correctly', () => {
       const original = unwrapOk(
         smallish.number2IntCodec.deserialise(0)
-        .andThen(smallish.int2NonNegativeIntCodec.deserialise)
+        .andThen(smallish.NonNegativeInt.intCodec.deserialise)
       );
-      const encoded = smallish.json2NonNegativeIntCodec.serialise(original);
-      const decoded = unwrapOk(smallish.json2NonNegativeIntCodec.deserialise(encoded));
+      const encoded = smallish.NonNegativeInt.jsonCodec.serialise(original);
+      const decoded = unwrapOk(smallish.NonNegativeInt.jsonCodec.deserialise(encoded));
       expect(decoded).toBe(0);
     });
 

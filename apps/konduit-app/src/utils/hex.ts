@@ -26,7 +26,7 @@ export const decode = (hex: string): Result<Uint8Array, HexDecodingError> => {
 export const unsafeDecode = (hex: string): Uint8Array => {
   const result = decode(hex);
   if (result.isErr()) {
-    throw new Error(`Failed to decode hex string: ${JSON.stringify(result.error)}`);
+    throw new Error(`Failed to decode hex string: ${(result.error)}`);
   }
   return result.value;
 }

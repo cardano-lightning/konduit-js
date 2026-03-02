@@ -3,8 +3,9 @@ import { useLocale } from './locale';
 import { CurrencyFormat, type CurrencyFormatOptions, type Notation } from '@konduit/currency-format';
 import Decimal from 'decimal.js-i18n';
 import type { Lovelace } from '@konduit/konduit-consumer/cardano';
+import type { Satoshi } from '@konduit/konduit-consumer/bitcoin';
 import type { AnyPreciseDuration, NormalisedDuration } from '@konduit/konduit-consumer/time/duration';
-import type { ValidDate } from '@konduit/konduit-consumer/time/absolute';
+import type { POSIXMilliseconds, ValidDate } from '@konduit/konduit-consumer/time/absolute';
 
 export type FormatterOptions = Intl.NumberFormatOptions & Intl.DateTimeFormatOptions;
 
@@ -127,10 +128,10 @@ export function useDefaultFormatters() {
     durationLongFormatter: durationLongFormatter.value,
     relativeTimeFormatter: relativeTimeFormatter.value,
     formatAda: mkSafeFn1Formatter((value: Lovelace) => adaFormatter.value.format(value)),
-    formatBtc: mkSafeFn1Formatter((value: number | bigint) => btcFormatter.value.format(value)),
+    formatBtc: mkSafeFn1Formatter((value: Satoshi) => btcFormatter.value.format(value)),
     formatDurationShort: mkSafeFn1Formatter((value: NormalisedDuration) => durationShortFormatter.value.format(value)),
     formatDurationLong: mkSafeFn1Formatter((value: NormalisedDuration) => durationLongFormatter.value.format(value)),
     formatRelativeTime: mkSafeFn2Formatter((value: AnyPreciseDuration, timeDirection: TimeDirection) => relativeTimeFormatter.value.format(value, timeDirection)),
-    formatShortDate: mkSafeFn1Formatter((value: ValidDate | number) => shortDateFormatter.value.format(value)),
+    formatShortDate: mkSafeFn1Formatter((value: ValidDate | POSIXMilliseconds) => shortDateFormatter.value.format(value)),
   };
 }

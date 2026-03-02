@@ -1,5 +1,6 @@
 <script lang="ts">
-import type { BaseFieldProps } from "./core";
+import { stringify, type Json } from "@konduit/codec/json";
+import { extractFieldErrorsMessages, type BaseFieldProps } from "./core";
 import type { Ref } from "vue";
 
 export type RadioFieldType = "radio";
@@ -38,12 +39,15 @@ const props = defineProps<Props>();
 function optValue(opt: Option): string {
   return typeof opt === "string" ? opt : opt.value;
 }
+
 function optLabel(opt: Option): string {
   return typeof opt === "string" ? opt : opt.label;
 }
-function optDisabled(opt: Option): boolean {
-  return typeof opt === "string" ? false : !!opt.disabled;
-}
+
+// function optDisabled(opt: Option): boolean {
+//   return typeof opt === "string" ? false : !!opt.disabled;
+// }
+
 function optIcon(opt: Option): string | undefined {
   return typeof opt === "string" ? undefined : opt.icon;
 }
@@ -88,8 +92,8 @@ function optIcon(opt: Option): string | undefined {
         </label>
         -->
         <label
-          :key="typeof opt === 'string' ? opt : opt.value"
-          :class="{ 'has-icon': !!optIcon(opt), 'radio-option': true }"
+          :key="optValue(opt)"
+          :class="{ 'has-icon': !!optIcon(opt), 'radio-option': true, error: extractFieldErrorsMessages(optValue(opt), props.errors || []).length > 0 }"
         >
           <input
             type="radio"
@@ -139,6 +143,7 @@ legend {
   display: grid;
   gap: 1em;
   grid-template-columns: repeat(var(--max-items-per-row), 1fr);
+  padding: 1em;
 }
 .radio-option {
   display: flex;
@@ -165,6 +170,11 @@ legend {
   filter: grayscale(0%);
   opacity: 1;
 }
+
+.has-icon.error img.radio-icon {
+  border-color: var(--error-border-color);
+}
+
 
 input.visually-hidden {
   position: absolute;

@@ -1,36 +1,57 @@
+<script lang="ts">
+import type { Invoice } from "@konduit/konduit-consumer/bitcoin/bolt11";
+
+export type Props = {
+  previousInvoice: Invoice | null;
+};
+
+</script>
+
 <script setup lang="ts">
-import type { InvoiceInfo, InvoiceError } from "@konduit/bln/invoice";
-import * as invoice from "@konduit/bln/invoice";
-import { computed, onMounted, ref, watch, type ComputedRef, type Ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch, type ComputedRef, type Ref } from "vue";
 import { type Props as ButtonProps } from "../../components/Button.vue";
 import ButtonGroup from "../../components/ButtonGroup.vue";
 import QrScan from "../../components/QrScan.vue";
 import { Result } from "neverthrow";
+import { string2InvoiceCodec } from "@konduit/konduit-consumer/bitcoin/bolt11";
+import type { JsonError } from "@konduit/codec/json/codecs";
+import { stringify } from "@konduit/codec/json";
+
+const props = defineProps<Props>();
 
 // InvoiceInfo is just a tuple of `[InvoiceString, DecodedInvoice]`
-const emit: ((event: "invoice", value: InvoiceInfo) => void) = defineEmits(["invoice"]);
+const emit: ((event: "invoice", value: Invoice) => void) & ((event: "title", value: string) => void) = defineEmits(["invoice", "title"]);
+// const emitTitle: ((event: "title", value: string) => void) = defineEmits(["title"]);
 
 const useQrScan: Ref<boolean> = ref(true);
 
+watch(useQrScan, (newVal) => {
+  if(newVal) {
+    emit("title", "Scan invoice");
+  } else {
+    emit("title", "Enter invoice");
+  }
+});
+
 // Both QR scan and manual input use the same decodedInvoice ref to emit results
-const decodedInvoice: Ref<InvoiceInfo | null> = ref(null);
+const decodedInvoice: Ref<Invoice | null> = ref(null);
 watch(decodedInvoice, (newVal) => {
   if (newVal !== null) {
+    console.log(newVal.raw);
     emit("invoice", newVal);
   }
 });
 
 const validateInvoiceString = (
   raw: string,
-  resultRef: Ref<Result<InvoiceInfo, InvoiceError> | null>
+  resultRef: Ref<Result<Invoice, JsonError> | null>
 ) => {
   let val = raw.trim();
   if (val === "") {
     resultRef.value = null;
     return;
   }
-  console.log(invoice.parse(raw));
-  resultRef.value = invoice.parse(raw);
+  resultRef.value = string2InvoiceCodec.deserialise(raw);
 };
 
 
@@ -48,10 +69,21 @@ const textAreaRef: Ref<HTMLElement | null> = ref(null);
 const resizeObserver: Ref<ResizeObserver | null> = ref(null);
 const textAreaSize: Ref<{ width: number; height: number }> = ref({ width: 0, height: 0 });
 
-const testing = {
-  invoice: "lightning:LNTB60U1P5EG5P2PP5NXSKU3D3GX6HZ8Q4HU2Q6VC0DACHYNLR5J6U08FQGN5HT2DTD4JSDQQCQZZSXQRRSSSP5QN2CWRQ9QSLU86GQZQF90Q3836GQZ0RPVQRLSVQREELTRZWWMPYS9QXPQYSGQKVM2UDCHS9M35DCA766N9K58JEMTKSCFFME2KRLKDAC0YQTCZNKSTMMFPXSL0NKC3M65605MPXLZTSZDHHZT3A04C43V2DLHVCYWNKSPFTALSW",
-  autoTrigger: false,
-};
+const testingInvoices = [
+  {
+    // ~10 ADA
+    invoice: "lightning:LNTB60U1P5EG5P2PP5NXSKU3D3GX6HZ8Q4HU2Q6VC0DACHYNLR5J6U08FQGN5HT2DTD4JSDQQCQZZSXQRRSSSP5QN2CWRQ9QSLU86GQZQF90Q3836GQZ0RPVQRLSVQREELTRZWWMPYS9QXPQYSGQKVM2UDCHS9M35DCA766N9K58JEMTKSCFFME2KRLKDAC0YQTCZNKSTMMFPXSL0NKC3M65605MPXLZTSZDHHZT3A04C43V2DLHVCYWNKSPFTALSW",
+    autoTrigger: false,
+  }, {
+    // ~24 ADA
+    invoice: "LNTB146870N1P56QW8DPP544PK5QXFCY4PGYVRT2MVLCW2KW960U36WP6A54PMUUW70Y68YGXSDQQCQZZSXQRRSSSP5L2GA492ZCW2SXCVHCGY0NPX6LGWJCHT4HY5WVX0K293YL7MG0GYQ9QXPQYSGQ5FXRKFSJXASRYW73SQVYC9N6GXGH850TV5LR9U7PY6VCGW4TA2F4KERZ27TUC575NZMUJNPCSDXPXEKXPZTNRULE3C7EZGZGX6MS0XCP4MJ6QX",
+    autoTrigger: false,
+  }, {
+    // ~1 BTC
+    invoice: "LNTB11P56RYSPPP5JYQU0EUUG7745QREFW2GG4SS875WF744WLMF3SCEVZEKX6ENXKMQDQQCQZZSXQRRSSSP5XTM2LYY46PCUCTYCDJ92PFP2D4G3F78RP285JZVYVH2PFP3GLVYQ9QXPQYSGQ6H8URLRJ2C3RQD39Y3SPJQ6K3JCN0RAH77G09N8U3VVGEV0U77KNW855EDYMM48UKHC3JKF37LYZ55TY26H0H4DHRWXGU3ZFPM60XTSQFLRSN0",
+    autoTrigger: true,
+  }
+];
 
 onMounted(() => {
   if (textAreaRef.value) {
@@ -66,15 +98,24 @@ onMounted(() => {
     });
     resizeObserver.value.observe(textAreaRef.value);
   }
-  if(testing.autoTrigger) {
-    setTimeout(() => {
-      invoiceInputContent.value = testing.invoice;
-    }, 500);
+  for(const testing of testingInvoices) {
+    if(testing.autoTrigger) {
+      setTimeout(() => {
+        invoiceInputContent.value = testing.invoice;
+      }, 500);
+      break; // Only trigger the first one that has autoTrigger enabled
+    }
   }
+  onUnmounted(() => {
+    if (resizeObserver.value && textAreaRef.value) {
+      resizeObserver.value.unobserve(textAreaRef.value);
+    }
+  });
+
 });
 
 const invoiceInputContent: Ref<string | null> = ref(null);
-const invoiceInputValidationResult: Ref<Result<InvoiceInfo, InvoiceError> | null> = ref(null);
+const invoiceInputValidationResult: Ref<Result<Invoice, JsonError> | null> = ref(null);
 watch(invoiceInputValidationResult, (newVal) => {
   newVal?.match(
     (invoiceInfo) => {
@@ -88,11 +129,18 @@ watch(invoiceInputValidationResult, (newVal) => {
   );
 });
 
-const invoiceInputValidationError: ComputedRef<InvoiceError | null> = computed(() => {
+const invoiceInputValidationError: ComputedRef<string | null> = computed(() => {
   if(invoiceInputValidationResult.value === null) return null;
   return invoiceInputValidationResult.value.match(
     () => null,
-    (error) => error
+    (error: JsonError) => {
+      // TODO: Introduce a better helper for generic error processing
+      if(error != null && typeof error === "object" && "message" in error && typeof error.message === "string") {
+        return error.message;
+      }
+      // TODO: This should be a rather a DEBUG mode
+      return `Invalid invoice format. Detailed error information: ${stringify(error)}`;
+    }
   );
 });
 
@@ -109,9 +157,9 @@ watch(invoiceInputContent, (val) => {
 });
 
 
-const qrPayloadValidationResult: Ref<Result<InvoiceInfo, InvoiceError> | null> = ref(null);
+const qrPayloadValidationResult: Ref<Result<Invoice, JsonError> | null> = ref(null);
 
-const qrPayloadValidationError: ComputedRef<InvoiceError | null> = computed(() => {
+const qrPayloadValidationError: ComputedRef<JsonError | null> = computed(() => {
   if(qrPayloadValidationResult.value === null) return null;
   return qrPayloadValidationResult.value.match(
     () => null,
@@ -121,9 +169,9 @@ const qrPayloadValidationError: ComputedRef<InvoiceError | null> = computed(() =
 
 watch(qrPayloadValidationResult, (newVal) => {
   newVal?.match(
-    (invoiceInfo) => {
+    (invoice) => {
       // Valid invoice
-      decodedInvoice.value = invoiceInfo;
+      decodedInvoice.value = invoice;
     },
     (_err) => {
       // Invalid invoice
@@ -136,29 +184,24 @@ const onQrScan = (payload: string) => {
   validateInvoiceString(payload, qrPayloadValidationResult);
 };
 
+const qrButtons: ButtonProps[] = [{
+  label: "Enter Manually",
+  action: () => useQrScan.value = false,
+  primary: false,
+}];
 
-const qrButtons: ButtonProps[] = [
-  {
-    label: "Enter Manually",
-    action: () => useQrScan.value = false,
-    primary: false,
-  },
-];
-
-const manualButtons: ButtonProps[] = [
-  {
+const manualButtons: ButtonProps[] = [{
     label: "Use QR Scanner",
     action: () => useQrScan.value = true,
     primary: false,
-  }
-];
+}];
 </script>
 
 
 <template>
   <div v-if="useQrScan">
     <div v-if="qrPayloadValidationError" class="parsing-error">
-      {{ qrPayloadValidationError.message || 'Invalid invoice format.' }}
+      {{ qrPayloadValidationError || 'Invalid invoice format.' }}
     </div>
     <QrScan @payload="onQrScan" />
     <div class="alternative">or</div>
@@ -166,7 +209,7 @@ const manualButtons: ButtonProps[] = [
   </div>
   <div v-else>
     <div v-if="invoiceInputValidationError" class="parsing-error">
-      {{ invoiceInputValidationError.message || 'Invalid invoice format.' }}
+      {{ invoiceInputValidationError || 'Invalid invoice format.' }}
     </div>
     <form>
       <textarea
@@ -181,6 +224,14 @@ const manualButtons: ButtonProps[] = [
     <div class="alternative">or</div>
     <ButtonGroup :buttons="manualButtons" />
   </div>
+  <template v-if="props.previousInvoice">
+    <div class="alternative">or</div>
+    <ButtonGroup :buttons="[{
+      label: 'Use Existing Invoice',
+      action: () => decodedInvoice = props.previousInvoice || null,
+      primary: false,
+    }]" />
+  </template>
 </template>
 
 <style scoped>
