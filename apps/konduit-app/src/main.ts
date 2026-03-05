@@ -1,8 +1,6 @@
 import { createApp } from "vue";
-import "normalize.css";
 import router from "./router";
 import App from "./App.vue";
-import "vue-toastification/dist/index.css";
 import Toastification from "vue-toastification";
 import { Notifications } from "./composables/notifications";
 
@@ -13,7 +11,8 @@ createApp(App)
     maxToasts: 1,
     newestOnTop: true,
     position: "top-center",
-    timeout: 500000,
+    // Good for styling testing:
+    // timeout: 500000,
     toastClassName: "cl-toast",
     // transition: "fade",
     transition: "Vue-Toastification__bounce",

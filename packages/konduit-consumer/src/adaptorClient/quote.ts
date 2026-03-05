@@ -5,7 +5,7 @@ import { json2MillisatoshiCodec, type Millisatoshi } from "../bitcoin/asset";
 import { json2PayeePubKeyCodec, type PayeePubKey } from "../bitcoin/bolt11";
 import type { Json } from "@konduit/codec/json";
 import { json2IndexCodec, type Index } from "../channel/squash";
-import { json2LovelaceCodec, type Lovelace } from "../cardano";
+import { Lovelace } from "../cardano";
 import { json2MillisecondsCodec, type Milliseconds } from "../time/duration";
 import type { InvoiceString } from "@konduit/bln/invoice/bolt11";
 
@@ -46,7 +46,7 @@ export namespace Quote {
 export const json2QuoteCodec: JsonCodec<Quote> = codec.rmap(
   jsonCodecs.objectOf({
     index: json2IndexCodec,
-    amount: json2LovelaceCodec,
+    amount: Lovelace.jsonCodec,
     relative_timeout: json2MillisecondsCodec,
     routing_fee: json2MillisatoshiCodec,
   }),

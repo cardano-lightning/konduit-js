@@ -1,13 +1,14 @@
 <script setup lang="ts">
+import Link from "../components/Link.vue";
+import Square from "../components/icons/Square.vue";
+import SquareCheckBig from "../components/icons/SquareCheckBig.vue";
+import BatteryLow from "../components/icons/BatteryLow.vue";
+import Ban from "../components/icons/Ban.vue";
+import BatteryThrobber from "../components/BatteryThrobber.vue";
 import HandCoins from "../components/icons/HandCoins.vue";
 import Callout from "../components/Callout.vue";
-import Button from "../components/Button.vue";
-import Zap from "../components/icons/Zap.vue";
 import type { Props as ButtonProps } from "../components/Button.vue";
-import TriangleAlert from "../components/icons/TriangleAlert.vue";
-import ButtonGroup from "../components/ButtonGroup.vue";
 import FancyAmount, { mkLovelaceAmount } from "../components/FancyAmount.vue";
-import Hr from "../components/Hr.vue";
 import { mkSatoshiAmount } from "../components/FancyAmount.vue";
 import MissingDataPlaceholder from "../components/MissingDataPlaceholder.vue";
 import DataListing from "../components/DataListing.vue";
@@ -15,22 +16,18 @@ import MainContainer from "../components/MainContainer.vue";
 import { computed, onMounted, ref, type Ref} from "vue";
 import InvoiceInput from "./PayPage/InvoiceInput.vue";
 import TheHeader from "../components/TheHeader.vue";
-import NavBar from "../components/NavBar.vue";
 import * as l10n from "../composables/l10n";
 import { hex, MISSING_PLACEHOLDER, orPlaceholder } from "../utils/formatters";
-import { ValidDate } from "@konduit/konduit-consumer/time/absolute";
+import { POSIXMilliseconds, ValidDate } from "@konduit/konduit-consumer/time/absolute";
 import { konduitConsumer, type AppKonduitConsumer } from "../store";
 import { useRouter } from "vue-router";
-import type { Channel } from "@konduit/konduit-consumer/channel";
 import type { ChannelQuoteInfo, ChannelQuoteResult } from "@konduit/konduit-consumer";
-import type { Quote } from "@konduit/konduit-consumer/adaptorClient";
 import { Invoice } from "@konduit/konduit-consumer/bitcoin/bolt11";
 import { Lovelace } from "@konduit/konduit-consumer/cardano";
 import { invoice as previousStoreInvoice } from "../store";
-import { stringify, type Json } from "@konduit/codec/json";
 import { Millisatoshi, Satoshi } from "@konduit/konduit-consumer/bitcoin";
 import { PositiveBigInt } from "@konduit/codec/integers/big";
-import type { Result } from "neverthrow";
+import { Milliseconds, NormalisedDuration } from "@konduit/konduit-consumer/time/duration";
 
 
 onMounted(() => {
@@ -62,14 +59,16 @@ const currentStep = computed(() => {
 });
 
 
-const DEBUGGING_NO_CHANNELS_AT_ALL=true;
+const DEBUGGING_NO_CHANNELS_AT_ALL = false;
+const DEBUGGING_CHANNELS_NOT_READY = true;
+
 type BlockedReason =
   | 'invoice-expired' // TODO: 1 +
   | 'invoice-invalid' // TODO: 1 +
-  | 'no-channels-at-all' // TODO: 2 ~
+  | 'no-channels-at-all' // TODO: 2 +
   | 'channels-not-ready' // TODO: 3 -
-  | 'not-enough-capacity' // TODO: 4 -
-  | 'all-channels-closed' // TODO: 5 -
+  | 'not-enough-capacity' // TODO: 4 ~ (Message is displayed. Flow not implemented)
+  | 'all-channels-closed' // TODO: 5 + (Not tested yet).
 
 type QuotingProgress =
   | {
@@ -86,6 +85,7 @@ type QuotingProgress =
   };
 
 type InvoiceDetailsStep = {
+  expirationInfo: InvoiceExpirationInfo;
   invoice: Invoice;
   quotingProgress: QuotingProgress;
   title: string;
@@ -104,7 +104,7 @@ const getInvoiceExpirationInfo = (invoice: Invoice): InvoiceExpirationInfo => {
       return { type: 'invalid' };
     }
     const now = ValidDate.now();
-    if(ValidDate.ord.isGreaterThan(now, possibleExpirationDate.value) && !DEBUGGING_NO_CHANNELS_AT_ALL) {
+    if(ValidDate.ord.isGreaterThan(now, possibleExpirationDate.value) && !(DEBUGGING_NO_CHANNELS_AT_ALL || DEBUGGING_CHANNELS_NOT_READY)) {
       return { type: 'expired', expiredAt: possibleExpirationDate.value };
     } else {
       return { type: 'valid', expiresAt: possibleExpirationDate.value };
@@ -113,19 +113,18 @@ const getInvoiceExpirationInfo = (invoice: Invoice): InvoiceExpirationInfo => {
   return { type: 'never' };
 }
 
-const checkInvoicePayable = (invoice: Invoice, consumer: AppKonduitConsumer): BlockedReason | null => {
-  const invoiceExpirationInfo = getInvoiceExpirationInfo(invoice);
-  if(invoiceExpirationInfo.type === 'invalid') {
+const checkInvoicePayable = (invoice: Invoice, expirationInfo: InvoiceExpirationInfo, consumer: AppKonduitConsumer): BlockedReason | null => {
+  if(expirationInfo.type === 'invalid') {
     return 'invoice-invalid';
   }
-  if(invoiceExpirationInfo.type === 'expired') {
+  if(expirationInfo.type === 'expired' && !(DEBUGGING_NO_CHANNELS_AT_ALL || DEBUGGING_CHANNELS_NOT_READY)) {
     return 'invoice-expired';
   }
 
-  if(consumer.maximumCapacity === null) {
-    if(consumer.channels.length == 0)
+  if(consumer.maximumCapacity === null || DEBUGGING_NO_CHANNELS_AT_ALL || DEBUGGING_CHANNELS_NOT_READY) {
+    if(consumer.channels.length == 0 || DEBUGGING_NO_CHANNELS_AT_ALL)
       return 'no-channels-at-all';
-    else if(consumer.channels.some(ch => !ch.wasApproved))
+    else if(consumer.channels.some(ch => !ch.wasApproved) || DEBUGGING_CHANNELS_NOT_READY)
       return 'channels-not-ready';
     else
       return 'all-channels-closed';
@@ -136,7 +135,8 @@ const checkInvoicePayable = (invoice: Invoice, consumer: AppKonduitConsumer): Bl
   return null;
 }
 
-const mkInvoiceDetailsBlockedState = (invoice: Invoice, reason: BlockedReason): InvoiceDetailsStep => ({
+const mkInvoiceDetailsBlockedState = (invoice: Invoice, expirationInfo: InvoiceExpirationInfo, reason: BlockedReason): InvoiceDetailsStep => ({
+  expirationInfo,
   invoice,
   quotingProgress: {
     type: 'blocked',
@@ -150,11 +150,13 @@ const mkInvoiceDetailsBlockedState = (invoice: Invoice, reason: BlockedReason): 
 const onInvoice = async (invoice: Invoice): Promise<void> => {
   const consumer = konduitConsumer.value as AppKonduitConsumer | null;
   if(consumer == null) return;
-  const possibleBlockedReason = checkInvoicePayable(invoice, consumer);
+  const expirationInfo = getInvoiceExpirationInfo(invoice);
+  const possibleBlockedReason = checkInvoicePayable(invoice, expirationInfo, consumer);
+  console.log('Possible blocked reason', possibleBlockedReason);
   if(possibleBlockedReason) {
-    invoiceDetailsStep.value = mkInvoiceDetailsBlockedState(invoice, possibleBlockedReason);
+    invoiceDetailsStep.value = mkInvoiceDetailsBlockedState(invoice, expirationInfo, possibleBlockedReason);
     if(possibleBlockedReason === 'invoice-expired' || possibleBlockedReason === 'invoice-invalid') {
-      // If the invoice is already expired, we can clear the previous invoice to avoid confusion.
+      // If the invoice is already expired, we can clear the invoice cache to avoid confusion.
       previousStoreInvoice.value = null;
     } else {
       previousStoreInvoice.value = invoice;
@@ -162,6 +164,7 @@ const onInvoice = async (invoice: Invoice): Promise<void> => {
     return;
   }
   invoiceDetailsStep.value = {
+    expirationInfo,
     invoice,
     quotingProgress: {
       type: 'loading',
@@ -173,6 +176,7 @@ const onInvoice = async (invoice: Invoice): Promise<void> => {
 
   const [results, theBest] = await consumer.queryQuotes(invoice.raw, (results, bestSoFar) => {
     invoiceDetailsStep.value = {
+      expirationInfo,
       invoice,
       quotingProgress: {
         type: 'loading',
@@ -183,6 +187,7 @@ const onInvoice = async (invoice: Invoice): Promise<void> => {
     };
   });
   invoiceDetailsStep.value = {
+    expirationInfo,
     invoice,
     quotingProgress: {
       type: 'loaded',
@@ -212,13 +217,28 @@ const title = computed(() => {
 
 const formatters = l10n.useDefaultFormatters();
 
+const hasExpired = computed(() => {
+  if(currentStep.value.index !== 'invoice-details') return false;
+  const expirationInfo = currentStep.value.step.expirationInfo;
+  return expirationInfo.type === 'expired';
+});
+
 const formattedExpiresAt = computed((): string => {
-  if(currentStep.value.index !== 'invoice-details') return MISSING_PLACEHOLDER;
-  const expirationInfo = getInvoiceExpirationInfo(currentStep.value.step.invoice);
+  const expirationInfo = currentStep.value.index === 'invoice-details' ? currentStep.value.step.expirationInfo : null;
+  if(expirationInfo == null) return MISSING_PLACEHOLDER;
   if(expirationInfo.type === 'invalid') return MISSING_PLACEHOLDER;
   if(expirationInfo.type === 'never') return 'Never';
   if(expirationInfo.type === 'expired') return formatters.formatShortDate(expirationInfo.expiredAt);
   return formatters.formatShortDate(expirationInfo.expiresAt);
+});
+
+const formattedExpiredAgo = computed((): string | null => {
+  const expirationInfo = currentStep.value.index === 'invoice-details' ? currentStep.value.step.expirationInfo : null;
+  if(expirationInfo == null || expirationInfo.type !== 'expired') return null;
+  const nowTimestamp = POSIXMilliseconds.now();
+  const expirationTimestamp = POSIXMilliseconds.fromValidDate(expirationInfo.expiredAt);
+  const expiredMillisecondsAgo = Milliseconds.fromDiffTime(nowTimestamp, expirationTimestamp)
+  return formatters.formatDurationLong(expiredMillisecondsAgo);
 });
 
 const router = useRouter();
@@ -288,33 +308,78 @@ const buttons = computed((): ButtonProps[] => {
   if(currentStep.value.index !== 'invoice-details') return [];
   const quotingProgress = currentStep.value.step.quotingProgress;
   if(quotingProgress.type === 'blocked') {
-    if(quotingProgress.reason === 'no-channels-at-all') {
-      return [
+    switch(quotingProgress.reason) {
+      case 'no-channels-at-all':
+        return [
+        {
+          label: 'Cancel',
+          action: () => router.push({ name: 'home' }),
+          primary: false,
+        },
+        {
+          label: 'Open channel',
+          action: () => router.push({
+            name: 'channel-open-wallet-select',
+            query: { redirectTo: router.currentRoute.value.fullPath }
+          }),
+          primary: true,
+        }];
+      case 'not-enough-capacity':
+        return [
+          {
+            label: 'Cancel',
+            action: () => router.push({ name: 'home' }),
+            primary: false,
+          },
+          {
+            label: 'Top up',
+            action: () => router.push({
+              name: 'channel-top-up',
+              query: { redirectTo: router.currentRoute.value.fullPath }
+            }),
+            primary: true,
+          },
+        ];
+      case 'channels-not-ready':
+        return [
+          {
+            label: 'Cancel',
+            action: () => router.push({ name: 'home' }),
+            primary: false,
+          },
+          mkPayButton(true),
+        ];
+      case 'all-channels-closed':
+        return [
+          {
+            label: 'Cancel',
+            action: () => router.push({ name: 'home' }),
+            primary: false,
+          },
+          {
+            label: 'Open channel',
+            action: () => router.push({
+              name: 'channel-open-wallet-select',
+              query: { redirectTo: router.currentRoute.value.fullPath }
+            }),
+            primary: true,
+          },
+        ];
+      case 'invoice-expired':
+        return [];
+      case 'invoice-invalid':
+        return [];
+    }
+  } else {
+    return [
       {
         label: 'Cancel',
         action: () => router.push({ name: 'home' }),
         primary: false,
       },
-      {
-        label: 'Open channel',
-        action: () => router.push({
-          name: 'open-channel',
-          query: { redirectTo: router.currentRoute.value.fullPath }
-        }),
-        primary: true,
-      }];
-    }
-    return [];
+      mkPayButton(quotingProgress.type === 'loading'),
+    ];
   }
-  return [
-    {
-      label: 'Forget',
-      action: () => router.push({ name: 'home' }),
-      primary: false,
-    },
-    mkPayButton(quotingProgress.type === 'loading'),
-  ];
-
 });
 
 const pay = () => {
@@ -348,10 +413,13 @@ const pay = () => {
 
   // console.log('Paying invoice with quote', currentStep.value.quote);
 }
+
+const txURL = "test"
+
 </script>
 
 <template>
-  <MainContainer>
+  <MainContainer :buttons="buttons">
     <TheHeader :back-page-name="goBack" :title="title" />
     <template v-if="currentStep.index === 'invoice-details'">
       <div id="invoice-amount">
@@ -360,48 +428,70 @@ const pay = () => {
         </span>
         <div class="description">
           <MissingDataPlaceholder v-if="!currentStep.step.invoice.description">
-            No description provided
+            No description provided.
           </MissingDataPlaceholder>
           <span v-else>{{ currentStep.step.invoice.description }}</span>
         </div>
       </div>
-      <!--
-        // title: (() => {
-        //   switch(reason) {
-        //     case 'invoice-expired':
-        //       return 'Invoice expired';
-        //     case 'invoice-invalid':
-        //       return 'Invoice invalid';
-        //     case 'no-channels-at-all':
-        //       return 'No channels available';
-        //     case 'channels-not-ready':
-        //       return 'Channels not ready';
-        //     case 'not-enough-capacity':
-        //       return 'Not enough capacity';
-        //     case 'all-channels-closed':
-        //       return 'All channels closed';
-        //   }
-        // })(),
-      -->
       <template v-if="currentStep.step.quotingProgress.type === 'blocked'">
-        <p v-if="currentStep.step.quotingProgress.reason === 'invoice-expired'">
-          <b>Invoice expired</b>
-          This invoice has expired at {{ formattedExpiresAt }}.
-        </p>
-        <p v-else-if="currentStep.step.quotingProgress.reason === 'invoice-invalid'">
-          <b>Invalid invoice</b>
+        <Callout
+          v-if="currentStep.step.quotingProgress.reason === 'invoice-expired'"
+          :title="'Invoice expired'"
+          :variant="'error'"
+        >
+          <template #icon>
+            <Ban />
+          </template>
+          It has expired {{ formattedExpiredAgo ? `${formattedExpiredAgo} ago` : '' }}. <br />
+        </Callout>
+        <Callout
+          v-else-if="currentStep.step.quotingProgress.reason === 'invoice-invalid'"
+          :title="'Invalid invoice'"
+          :variant="'error'"
+        >
+          <template #icon>
+            <Ban />
+          </template>
           The app had problems parsing the invoice, so it cannot be paid. This can be caused by an invalid invoice format or by unsupported features in the invoice.
-        </p>
-        <p v-else-if="currentStep.step.quotingProgress.reason === 'channels-not-ready'">
-          You have channels that are not ready yet. Once they are ready, you will be able to pay this invoice.
-        </p>
-        <p v-else-if="currentStep.step.quotingProgress.reason === 'not-enough-capacity'">
-          You don't have enough capacity in your channels to pay this invoice.
-        </p>
-        <p v-else-if="currentStep.step.quotingProgress.reason === 'all-channels-closed'">
-          All your channels are closed, so you cannot pay this invoice.
-        </p>
-
+        </Callout>
+        <Callout
+          v-else-if="currentStep.step.quotingProgress.reason === 'channels-not-ready'"
+          :title="'Lightning charging in progress'"
+          :variant="'info'"
+        >
+          <template #icon>
+            <BatteryThrobber />
+          </template>
+          <!-- Should we add this: It usually takes just a few minutes. -->
+          <ul id="opening-steps">
+            <li>
+              <SquareCheckBig />
+              The opening transaction was submitted.
+            </li>
+            <li>
+              <template v-if="txURL">
+                <SquareCheckBig />
+                The transaction <Link :href="txURL" :use-bold="true" :show-icon="true">was&nbsp;confirmed</Link>.
+              </template>
+              <span v-else>
+                <Square />
+                Opening transaction is being added to the chain
+              </span>
+            </li>
+            <li><Square /> The adaptor approved the channel.</li>
+          </ul>
+        </Callout>
+        <Callout
+          v-else-if="currentStep.step.quotingProgress.reason === 'not-enough-capacity'"
+          :title="'Low on capacity!'"
+          :variant="'warning'"
+        >
+          <template #icon>
+            <BatteryLow />
+          </template>
+          Oops, your lighting channel can't cover this invoice amount.<br />
+          Please top up your channel to proceed.
+        </Callout>
         <Callout
           v-else-if="currentStep.step.quotingProgress.reason === 'no-channels-at-all'"
           :title="'First payment – almost there!'"
@@ -416,7 +506,11 @@ const pay = () => {
           in a few minutes you will be ready to pay.
           </div>
         </Callout>
-        <!-- <Hr id="error-separator" /> -->
+
+        <p v-else-if="currentStep.step.quotingProgress.reason === 'all-channels-closed'">
+          All your channels are closed, so you cannot pay this invoice.
+        </p>
+
       </template>
       <DataListing :rows="[
         {
@@ -439,7 +533,9 @@ const pay = () => {
           actions: [{ action: 'loading' }]
         },
         'separator',
-        { label: 'Expires', formattedValue: formattedExpiresAt, actions: [] },
+        { label: hasExpired?'Expired':'Expires',
+          formattedValue: formattedExpiresAt, actions: []
+        },
         { label: 'Destination',
           formattedValue: orPlaceholder(hex(currentStep.step.invoice.payee)),
           actions: [
@@ -450,7 +546,7 @@ const pay = () => {
           ]
         },
       ]" />
-      <ButtonGroup class="buttons" v-if="currentStep.index === 'invoice-details' && buttons" :buttons="buttons" />
+      <!--<ButtonGroup class="buttons" v-if="currentStep.index === 'invoice-details' && buttons" :buttons="buttons" /> -->
       <!-- { label: 'Payment hash', formattedValue: hex(currentStep.step.invoice.paymentHash), actions: [] } -->
     </template>
     <InvoiceInput
@@ -471,41 +567,26 @@ const pay = () => {
   margin-bottom: calc(var(--data-listing-gap));
 }
 
-#error-block {
-  background-color: var(--hint-background-color);
-  border: 1px solid var(--frame-border-color);
-  color: var(--hint-color);
+#opening-steps {
   display: flex;
   flex-direction: column;
-  padding: 1em 1em;
-  place-items: center;
+  gap: calc(var(--data-listing-gap) * 0.5);
+  list-style: none;
+  margin: 0;
+  margin-bottom: 0;
+  margin-left: var(--data-listing-gap);
+  padding: 0;
+  text-align: left;
 }
-  #error-block h2 {
-    align-items: center;
-    display: flex;
-    font-size: 1em;
-    gap: 0.5em;
-    margin: 0 0 1em 0;
-  }
-    #error-block h2 svg {
-      width: 1.5em;
-      height: 1.5em;
-      flex-shrink: 0;
-    }
-
-  #error-block p {
-    flex: 1;
-    line-height: 1.4em;
+  #opening-steps li {
     margin: 0;
     padding: 0;
-    text-align: center;
   }
-
-hr#error-separator {
-  margin-bottom: var(--data-listing-gap);
-  margin-top: var(--data-listing-gap);
-  padding-top: 0;
-}
+    #opening-steps li svg {
+      height: 1em;
+      width: auto;
+      vertical-align: middle;
+    }
 
 #invoice-amount {
   margin-bottom: calc(var(--data-listing-gap) * 2);

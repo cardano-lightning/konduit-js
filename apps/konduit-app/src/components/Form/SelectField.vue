@@ -5,7 +5,9 @@ export const select: SelectFieldType = "select";
 
 <script setup lang="ts">
 import type { Ref } from "vue";
-import type { BaseFieldProps } from "./core"
+import Info from "../icons/Info.vue";
+import Link from "../Link.vue";
+import { extractFieldErrorsMessages, type BaseFieldProps } from "./core"
 
 export type UnboundProps = BaseFieldProps & {
   type: SelectFieldType;
@@ -19,14 +21,20 @@ export type Props = UnboundProps & {
 }
 
 const props = defineProps<Props>();
+const hasErrors = (): boolean => {
+  return extractFieldErrorsMessages(null, props.errors || []).length > 0;
+};
 </script>
 
 <template>
-  <label :for="props.name">{{ props.label }}</label>
+  <label :for="props.name">
+    <span>{{ props.label }}</span>
+    <Link v-if="props.info" :href="'#'" @click="props.info" class="info"><Info /></Link>
+  </label>
   <span class="select-wrapper">
     <select
       v-model="props.state.value"
-      :class="{ error: props.isValid === false || (props.errors?.length || 0) > 0, success: props.isValid === true }"
+      :class="{ error: props.isValid === false || hasErrors() }"
       :disabled="props.disabled || options.length === 0"
       @blur="props.touch()"
       @change="props.touch()"
@@ -44,13 +52,25 @@ const props = defineProps<Props>();
 </template>
 
 <style scoped>
+/* We position text label on the left and the icon on the far right. */
 label {
   color: var(--primary-color);
+  display: flex;
   font-weight: normal;
   font-size: 1em;
+  line-height: 1em;
   margin-bottom: 0.5em;
-  display: block;
+  padding: 0 0.25em;
 }
+  label .info {
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+  label .info svg {
+    color: var(--secondary-color);
+    height: 1.1em;
+    width: 1.1em;
+  }
 
 .select-wrapper {
   position: relative;

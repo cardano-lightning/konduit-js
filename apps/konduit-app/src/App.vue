@@ -2,6 +2,15 @@
 import { RouterView } from 'vue-router';
 // Side effecting import to polyfill missing Intl API
 import '@formatjs/intl-durationformat/polyfill-force.js';
+
+/* The only externals styles are loaded in the main.ts
+ * (css does not load in the `.vue` files). We specifically
+ * restricted ourselves there to: normalize.css, toastification and
+ * colar extension over open-colors.
+ */
+import "normalize.css";
+import "../public/colar.css"
+import "vue-toastification/dist/index.css";
 </script>
 
 <template>
@@ -9,14 +18,15 @@ import '@formatjs/intl-durationformat/polyfill-force.js';
 </template>
 
 <style>
-/* The **only** global styles should only reference
- * the html and body elements, and #app container.
+/* The **only** global styles should reference
+ * the html and body elements, and #app container at minimum.
+ * Nothing more.
  * Everything else should be scoped to the component.
  *
- * Exception to the rule is overwrite of the notification styles.
+ * Exception to the rule is the customization of the notification styles.
  */
 :root {
-  --max-app-width: 85vh;
+  --max-app-width: 1240px;
   /* The main container provides what you need (navbar) so just wrap your content in it.
    * Currently the header has to be included by the page itself.
    */
@@ -33,44 +43,57 @@ import '@formatjs/intl-durationformat/polyfill-force.js';
    * "custom" colors in the components.
    * In some sens we are still using "global" styling but with proper, restricted balance :-P
    */
-  --primary-background-color: #162456;
-  --primary-color: #fff1f2;
+  --primary-background-color: var(--colar-blue-12);
+  --primary-color: var(--colar-pink-0);
 
-  --secondary-background-color: #2c3a70;
-  --secondary-color: #888;
+  /* Inputs, frames, hrs around qr codes, video preview etc. */
+  /* TODO: rename this to primary-border-color? */
+  --frame-border-color: #d1d5db;
 
-  --missing-data-color: #fff8fa;
+  /* TODO: Drop "secondary color" - use more semantically named colors instead. */
+  --secondary-background-color: var(--colar-gray-1);
+  --secondary-color: var(--colar-gray-5);
 
-  --error-background-color: #ffe2e2;
-  --error-color: #e57373;
+  --error-color: #ffe2e2;
+  --error-background-color: #4b0e0e;
   --error-border-color: var(--error-color);
 
-  --hint-background-color: #f5f3f7;
-  --hint-color: #4a4a4a; /* or #5c5c5c (warm dark gray) */
-
-  --warning-background-color: #FFFAA0;
-  --warning-color: #FFEA61;
+  --hint-color: #f5f3f7;
+  --hint-background-color: var(--colar-blue-10);
+  --hint-border-color: var(--frame-border-color);
 
   /* Nice green but doesn't necessarily play nicely with our background. */
   --success-background-color: #f4fbf8; /* #f0f8f2 #e6f4ea; */
-  --success-color: #4caf50;
-  --success-border-color: var(--success-color);
-  /* Maybe this is even nicer??
-  --succeess-background-color: #F0F9E6;
-  --success-color: #C4E4A8;
-  */
+  --success-border-color: #95c896;
+  --success-color: #3e7840;
 
-  /* Inputs, frames, hrs around qr codes, video preview etc. */
-  --frame-border-color: #d1d5db;
+  --warning-background-color: #c3630a;
+  --warning-border-color: #fac798;
+  --warning-color: #fef3e9;
+
+  --missing-data-color: #fff8fa;
 }
 
 @media (prefers-color-scheme: light) {
   :root {
     --primary-background-color: #fff1f2;
     --primary-color: #162456;
+    --frame-border-color: #d1d5db;
 
     --secondary-background-color: #888;
     --secondary-color: #2c3a70;
+
+    --hint-background-color: var(--colar-gray-1);
+    --hint-border-color: var(--frame-border-color);
+    --hint-color: var(--colar-gray-8);
+
+    --error-background-color: #ffe2e2;
+    --error-color: #e57373;
+    --error-border-color: var(--error-color);
+
+    --warning-background-color: #fdeee0;
+    --warning-color: #c3630a;
+    --warning-border-color: #fac798;
 
     --missing-data-color: #344480;
   }
@@ -117,7 +140,7 @@ body {
 
 .Vue-Toastification__container.top-center {
   padding: 0;
-  max-width: 80vh !important;
+  max-width: var(--max-app-width) !important;
   min-width: 320px !important;
   width: 100vw !important;
 
@@ -132,7 +155,7 @@ body {
 .Vue-Toastification__container.top-center .Vue-Toastification__toast.cl-toast.Vue-Toastification__toast--success,
 .Vue-Toastification__container.top-center .Vue-Toastification__toast.cl-toast.Vue-Toastification__toast--warning,
 .Vue-Toastification__container.top-center .Vue-Toastification__toast.cl-toast.Vue-Toastification__toast--info {
-  background: #fff1f2;
+  background: var(--primary-background-color) !important;
   box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.1), 0 2px 15px 0 rgba(0, 0, 0, 0.05) !important;
   border-radius: 0;
   border: 1px solid var(--frame-border-color);
@@ -148,7 +171,7 @@ body {
 }
   .Vue-Toastification__container .Vue-Toastification__toast.cl-toast.cl-toast .Vue-Toastification__progress-bar {
     /* background: var(--secondary-color) !important; */
-    background: #ddd;
+    background: var(--frame-border-color) !important;
   }
 </style>
 

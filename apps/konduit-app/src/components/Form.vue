@@ -79,11 +79,6 @@ const groupedFields = computed((): { fields: {name: string, field: FieldProps}[]
   return result;
 });
 
-// const extractRowErrors = (row: { fields: {name: string, field: FieldProps}[], errors: Errors }): string[] => {
-//   // const fieldErrors = row.fields.flatMap(f => extractErrorMessages(f.field.state.value, f.field.errors || []));
-//   // const rowErrors = extractErrorMessages(row.errors);
-//   return [...fieldErrors, ...rowErrors];
-// };
 
 </script>
 
@@ -105,6 +100,7 @@ const groupedFields = computed((): { fields: {name: string, field: FieldProps}[]
               :disabled="field.disabled"
               :errors="field.errors"
               :fieldWidth="field.fieldWidth"
+              :info="field.info"
               :isValid="field.isValid"
               :label="field.label"
               :name="name"
@@ -119,6 +115,7 @@ const groupedFields = computed((): { fields: {name: string, field: FieldProps}[]
               :disabled="field.disabled"
               :errors="field.errors"
               :fieldWidth="field.fieldWidth"
+              :info="field.info"
               :isValid="field.isValid"
               :label="field.label"
               :name="name"
@@ -133,6 +130,7 @@ const groupedFields = computed((): { fields: {name: string, field: FieldProps}[]
               :disabled="field.disabled"
               :errors="field.errors"
               :fieldWidth="field.fieldWidth"
+              :info="field.info"
               :isValid="field.isValid"
               :label="field.label"
               :layout="field.layout"

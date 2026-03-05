@@ -4,7 +4,7 @@ import { CurrencyFormat, type CurrencyFormatOptions, type Notation } from '@kond
 import Decimal from 'decimal.js-i18n';
 import type { Lovelace } from '@konduit/konduit-consumer/cardano';
 import type { Satoshi } from '@konduit/konduit-consumer/bitcoin';
-import type { AnyPreciseDuration, NormalisedDuration } from '@konduit/konduit-consumer/time/duration';
+import { Milliseconds, NormalisedDuration, type AnyPreciseDuration } from '@konduit/konduit-consumer/time/duration';
 import type { POSIXMilliseconds, ValidDate } from '@konduit/konduit-consumer/time/absolute';
 
 export type FormatterOptions = Intl.NumberFormatOptions & Intl.DateTimeFormatOptions;
@@ -130,7 +130,28 @@ export function useDefaultFormatters() {
     formatAda: mkSafeFn1Formatter((value: Lovelace) => adaFormatter.value.format(value)),
     formatBtc: mkSafeFn1Formatter((value: Satoshi) => btcFormatter.value.format(value)),
     formatDurationShort: mkSafeFn1Formatter((value: NormalisedDuration) => durationShortFormatter.value.format(value)),
-    formatDurationLong: mkSafeFn1Formatter((value: NormalisedDuration) => durationLongFormatter.value.format(value)),
+    formatDurationLong: mkSafeFn1Formatter((value: Milliseconds | NormalisedDuration, cutPrecision: boolean = true) => {
+      const finalMilliseconds = (() => {
+        const milliseconds = (() => {
+          if(typeof value === "object")
+            return Milliseconds.fromNormalisedDuration(value);
+          return value;
+        })();
+        if(cutPrecision) {
+          const secondsMs = 1000;
+          const minuteMs = 60 * 1000;
+          const hourMs = 60 * minuteMs;
+          const dayMs = 24 * hourMs;
+          if(milliseconds >= dayMs) return Math.round(milliseconds / dayMs) * dayMs;
+          if(milliseconds >= hourMs) return Math.round(milliseconds / hourMs) * hourMs;
+          if(milliseconds >= minuteMs) return Math.round(milliseconds / minuteMs) * minuteMs;
+          if(milliseconds >= secondsMs) return Math.round(milliseconds / secondsMs) * secondsMs;
+        }
+        return milliseconds;
+      })();
+      const finalDuration = NormalisedDuration.fromComponentsNormalization({ milliseconds: finalMilliseconds as Milliseconds });
+      return durationLongFormatter.value.format(finalDuration);
+    }),
     formatRelativeTime: mkSafeFn2Formatter((value: AnyPreciseDuration, timeDirection: TimeDirection) => relativeTimeFormatter.value.format(value, timeDirection)),
     formatShortDate: mkSafeFn1Formatter((value: ValidDate | POSIXMilliseconds) => shortDateFormatter.value.format(value)),
   };

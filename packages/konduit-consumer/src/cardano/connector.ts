@@ -150,12 +150,13 @@ export class Connector {
   async buildCloseTx(
     tag: ChannelTag,
     consumer: ConsumerEd25519VerificationKey,
-  ): Promise<Result<wasm.TransactionReadyForSigning, string>> {
-    return stringifyAsyncThrowable(async () => await wasm.close(
+  ): Promise<Result<Transaction, string>> {
+    const transactionReadyForSigning = await stringifyAsyncThrowable(async () => await wasm.close(
       this.connector,
       tag,
       consumer.key
     ));
+    return transactionReadyForSigning.map((tx) => mkTransaction(tx));
   }
 
   // Wallet API:
@@ -177,6 +178,7 @@ export class Connector {
     });
   }
 }
+
 export const json2ConnectorAsyncCodec: JsonAsyncCodec<Connector> = asyncCodec.pipe(
   asyncCodec.fromSync(json2StringCodec), {
     deserialise: async (backendUrl: string) => await Connector.new(backendUrl),

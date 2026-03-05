@@ -1,7 +1,7 @@
 import _JSONBig from 'json-bigint';
-// import type { Tagged } from 'type-fest';
+import type { Tagged } from 'type-fest';
 import { err, ok, type Result } from 'neverthrow';
-import { stringifyThrowable } from './neverthrow';
+import { stringifyThrowable, unsafeUnwrap } from './neverthrow';
 
 const JSONBig = _JSONBig({ useNativeBigInt: true, alwaysParseAsBig: true });
 
@@ -18,12 +18,18 @@ export const parse = (text: string): Result<Json, string> => {
   return stringifyThrowable(() => JSONBig.parse(text), "Invalid JSON format");
 }
 
+// A valid Json string which can be safely parsed.
+// Useful for back and forth conversions, debugging etc.
+export type JsonString = Tagged<string, "JsonString">;
+
+export const unstringify = (jsonStr: JsonString) => unsafeUnwrap(parse(jsonStr));
+
 export const stringify = (
   json: Json,
   replacer?: (this: any, key: string, value: any) => any,
   space?: string | number
-): string => {
-  return JSONBig.stringify(json, replacer, space);
+): JsonString => {
+  return JSONBig.stringify(json, replacer, space) as JsonString;
 }
 
 export type JsonMacher<T> = {

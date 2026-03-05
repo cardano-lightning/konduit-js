@@ -9,6 +9,7 @@ export type Props = {
   disabled?: boolean;
   label?: string;
   primary?: boolean;
+  styleFlipped?: boolean;
 };
 
 const props = defineProps<Props>();
@@ -26,7 +27,7 @@ function handleClick() {
 
 <template>
   <button
-    :class="props.primary ? 'primary' : 'secondary'"
+    :class="(props.primary ? 'primary' : 'secondary') + (props.styleFlipped ? ' flipped' : '')"
     :disabled="props.disabled"
     @click="handleClick"
   >
@@ -50,18 +51,14 @@ button {
   font-family: inherit;
 }
 
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
+/* TODO: Fix this coloring here */
 button:hover {
   border-color: #646cff;
 }
 
-button:focus,
-button:focus-visible {
-  outline: 0 auto -webkit-focus-ring-color;
+button.flipped {
+  color: var(--primary-color);
+  background-color: var(--primary-background-color);
 }
 
 button.secondary {
@@ -70,5 +67,21 @@ button.secondary {
   color: var(--primary-color);
   background-color: var(--primary-background-color);
 }
+
+button.secondary.flipped {
+  color: var(--primary-background-color);
+  background-color: var(--primary-color);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+button:focus,
+button:focus-visible {
+  outline: 0 auto -webkit-focus-ring-color;
+}
+
 </style>
 

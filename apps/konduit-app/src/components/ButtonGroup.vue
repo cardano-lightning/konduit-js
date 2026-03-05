@@ -4,7 +4,8 @@ import { type Props as ButtonProps } from "./Button.vue";
 import Button from "./Button.vue";
 
 export type Props = {
-  buttons: ButtonProps[]
+  buttons: ButtonProps[],
+  styleFlipped?: boolean,
   style?: Record<string, string> | null | undefined
 };
 
@@ -29,6 +30,7 @@ watch(() => props.buttons, (newVal: any) => {
       :label="button.label"
       :action="button.action"
       :primary="button.primary"
+      :style-flipped="props.styleFlipped"
     />
   </div>
 </template>

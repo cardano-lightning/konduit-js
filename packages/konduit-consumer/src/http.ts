@@ -2,10 +2,12 @@
 import type { Result } from "neverthrow";
 import { err, ok } from "neverthrow";
 import { json2NumberCodec, json2StringCodec, type JsonCodec, type JsonDeserialiser, type JsonError, type JsonSerialiser } from "@konduit/codec/json/codecs";
-import { type Json, parse, stringify } from "@konduit/codec/json";
+import * as codec from "@konduit/codec";
+import { type Json, type JsonString, parse, stringify, unstringify } from "@konduit/codec/json";
 import { type CborDeserialiser, type CborSerialiser, deserialiseCbor, json2CborCodec, serialiseCbor } from "@konduit/codec/cbor/codecs/sync";
 import type { Cbor } from "@konduit/codec/cbor/core";
 import { HexString, fromUint8Array as hex } from "@konduit/codec/hexString";
+import * as uint8Array from "@konduit/codec/uint8Array";
 import * as hexString from "@konduit/codec/hexString";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 
@@ -17,12 +19,12 @@ export type Url = string;
 export type DecodedErrorBody =
   | { type: "bytes", value: HexString }
   | { type: "text", decoded: string, raw: HexString }
-  | { type: "json", decoded: Json, raw: HexString }
+  | { type: "json", decoded: JsonString, raw: HexString }
   | { type: "cbor", decoded: Cbor, raw: HexString }
 export namespace DecodedErrorBody {
   export const fromBytes = (value: Uint8Array): DecodedErrorBody => ({ type: "bytes", value: hex(value) })
   export const fromText = (decoded: string, raw: Uint8Array): DecodedErrorBody => ({ type: "text", decoded, raw: hex(raw) });
-  export const fromJson = (decoded: Json, raw: Uint8Array): DecodedErrorBody => ({ type: "json", decoded, raw: hex(raw) });
+  export const fromJson = (decoded: Json, raw: Uint8Array): DecodedErrorBody => ({ type: "json", decoded: stringify(decoded), raw: hex(raw) });
   export const fromCbor = (decoded: Cbor, raw: Uint8Array): DecodedErrorBody => ({ type: "cbor", decoded, raw: hex(raw) });
   // TODO: We should probably use or at least include the `Content-Type` header here.
   export const decode = (bodyBytes: Uint8Array): DecodedErrorBody => {
@@ -58,7 +60,7 @@ export const json2DecodedErrorBodyCodec: JsonCodec<DecodedErrorBody> = jsonCodec
     }),
     jsonCodecs.objectOf({
       type: jsonCodecs.constant("json"),
-      decoded: jsonCodecs.identityCodec,
+      decoded: codec.rmap(jsonCodecs.identityCodec, stringify, unstringify),
       raw: hexString.jsonCodec,
     }),
     jsonCodecs.objectOf({
@@ -133,7 +135,7 @@ export const json2NetworkErrorCodec = jsonCodecs.objectOf({
 
 export type DeserialisationError = {
   body: DecodedErrorBody;
-  decodingError: JsonError;
+  decodingError: JsonString;
   message: JsonError;
   requestInfo: RequestInfo;
   type: "DeserialisationError";
@@ -141,7 +143,7 @@ export type DeserialisationError = {
 
 export const json2DeserialisationErrorCodec: JsonCodec<DeserialisationError> = jsonCodecs.objectOf({
   body: json2DecodedErrorBodyCodec,
-  decodingError: jsonCodecs.identityCodec,
+  decodingError: codec.rmap(jsonCodecs.identityCodec, stringify, unstringify),
   message: jsonCodecs.identityCodec,
   requestInfo: json2RequestInfoCodec,
   type: jsonCodecs.constant("DeserialisationError"),
@@ -215,11 +217,8 @@ export const mkPostEndpoint = <Req, Res>(url: Url, requestSerialiser: RequestSer
           return stringify(json);
         case "cbor": {
           const cbor = requestSerialiser.serialiser(requestBody);
-          let uint8Array = serialiseCbor(cbor);
-          return uint8Array.buffer.slice(
-            uint8Array.byteOffset,
-            uint8Array.byteOffset + uint8Array.byteLength,
-          ) as ArrayBuffer;
+          let arr = serialiseCbor(cbor);
+          return uint8Array.toArrayBuffer(arr);
         }
         case "other": {
           return requestSerialiser.serialiser(requestBody);
@@ -267,7 +266,7 @@ export const mkPostEndpoint = <Req, Res>(url: Url, requestSerialiser: RequestSer
         } catch (error: any) {
           return err({
             body: DecodedErrorBody.fromBytes(bodyBytes),
-            decodingError: String(error),
+            decodingError: stringify(String(error)),
             message: `Failed to decode response body as text (required for Json): ${error.message || String(error)}`,
             requestInfo: mkRequestInfo(url, "POST", requestHeaders, payload),
             type: "DeserialisationError",
@@ -322,14 +321,14 @@ export const mkPostEndpoint = <Req, Res>(url: Url, requestSerialiser: RequestSer
         return possibleCbor.match(
           (cbor) => responseDeserialiser.deserialiser(cbor).mapErr((error) => ({
             body: DecodedErrorBody.fromCbor(cbor, bodyBytes),
-            decodingError: error,
+            decodingError: stringify(error),
             message: `Failed to deserialise CBOR response`,
             requestInfo: mkRequestInfo(url, "POST", requestHeaders, payload),
             type: "DeserialisationError",
           })),
           (error) => err({
             body: DecodedErrorBody.fromBytes(bodyBytes),
-            decodingError: error,
+            decodingError: stringify(error),
             message: `Failed to parse response body as CBOR`,
             requestInfo: mkRequestInfo(url, "POST", requestHeaders, payload),
             type: "DeserialisationError",
@@ -394,7 +393,7 @@ export const mkGetEndpoint = <Req, Res>(baseUrl: Url, pathSerialiser: TextSerial
         } catch (error: any) {
           return err({
             body: DecodedErrorBody.fromBytes(bodyBytes),
-            decodingError: String(error),
+            decodingError: stringify(String(error)),
             message: `Failed to decode response body as text (required for Json): ${error.message || String(error)}`,
             requestInfo: mkRequestInfo(fullUrl, "GET", requestHeaders),
             type: "DeserialisationError",
@@ -406,7 +405,7 @@ export const mkGetEndpoint = <Req, Res>(baseUrl: Url, pathSerialiser: TextSerial
           (json) =>
             responseDeserialiser.deserialiser(json).mapErr((error) => ({
               body: DecodedErrorBody.fromJson(json, bodyBytes),
-              decodingError: error,
+              decodingError: stringify(error),
               message: `Failed to deserialise JSON response`,
               requestInfo: mkRequestInfo(fullUrl, "GET", requestHeaders),
               type: "DeserialisationError",
@@ -414,7 +413,7 @@ export const mkGetEndpoint = <Req, Res>(baseUrl: Url, pathSerialiser: TextSerial
           (error) =>
             err({
               body: DecodedErrorBody.fromText(bodyText, bodyBytes),
-              decodingError: error,
+              decodingError: stringify(error),
               message: `Failed to parse response body as JSON`,
               requestInfo: mkRequestInfo(fullUrl, "GET", requestHeaders),
               type: "DeserialisationError",
@@ -428,7 +427,7 @@ export const mkGetEndpoint = <Req, Res>(baseUrl: Url, pathSerialiser: TextSerial
           (cbor) =>
             responseDeserialiser.deserialiser(cbor).mapErr((error) => ({
               body: DecodedErrorBody.fromCbor(cbor, bodyBytes),
-              decodingError: error,
+              decodingError: stringify(error),
               message: `Failed to deserialise CBOR response`,
               requestInfo: mkRequestInfo(fullUrl, "GET", requestHeaders),
               type: "DeserialisationError",
@@ -436,7 +435,7 @@ export const mkGetEndpoint = <Req, Res>(baseUrl: Url, pathSerialiser: TextSerial
           (error) =>
             err({
               body: DecodedErrorBody.fromBytes(bodyBytes),
-              decodingError: error,
+              decodingError: stringify(error),
               message: `Failed to parse response body as CBOR`,
               requestInfo: mkRequestInfo(fullUrl, "GET", requestHeaders),
               type: "DeserialisationError",

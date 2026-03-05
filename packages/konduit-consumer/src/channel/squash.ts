@@ -1,7 +1,7 @@
 import type { Tagged } from "type-fest";
 import type { Result } from "neverthrow";
 import { ok, err } from "neverthrow";
-import { bigInt2LovelaceCodec, cbor2Ed25519SignatureCodec, json2Ed25519SignatureCodec, Lovelace } from "../cardano";
+import { cbor2Ed25519SignatureCodec, json2Ed25519SignatureCodec, Lovelace } from "../cardano";
 import { bigInt2NonNegativeBigIntCodec, NonNegativeBigInt } from "@konduit/codec/integers/big";
 import * as cbor from "@konduit/codec/cbor/codecs/sync";
 import * as codec from "@konduit/codec";
@@ -92,7 +92,7 @@ export const cbor2LockedChequeBodyCodec = codec.rmap(
   cbor.tupleOf(
     cbor.indefiniteLength,
     cbor2IndexCodec,
-    codec.pipe(cbor.cbor2IntCodec, bigInt2LovelaceCodec),
+    codec.pipe(cbor.cbor2IntCodec, Lovelace.bigIntCodec),
     codec.pipe(cbor.cbor2IntCodec, bigInt2POSIXMillisecondsCodec),
     cbor2HtlcLockCodec,
   ),
@@ -249,7 +249,7 @@ export namespace SquashBody {
 export const cbor2SquashBodyCodec = codec.pipe(
   cbor.tupleOf(
     cbor.indefiniteLength,
-    codec.pipe(cbor.cbor2IntCodec, bigInt2LovelaceCodec),
+    codec.pipe(cbor.cbor2IntCodec, Lovelace.bigIntCodec),
     cbor2IndexCodec,
     // Empty array is encoded as definite length that is why we use this alt.
     altCborCodecs(

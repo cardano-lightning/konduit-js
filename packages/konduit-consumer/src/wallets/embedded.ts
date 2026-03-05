@@ -4,7 +4,7 @@ import { err, ok, type Result } from "neverthrow";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import * as jsonAsyncCodecs from "@konduit/codec/json/async";
 import * as asyncCodec from "@konduit/codec/async";
-import { Address, AddressBech32, json2LovelaceCodec, Lovelace, Network, NetworkMagicNumber, PubKeyHash, TxHash } from "../cardano";
+import { Address, AddressBech32, Lovelace, Network, NetworkMagicNumber, PubKeyHash, TxHash } from "../cardano";
 import type { Mnemonic, Ed25519VerificationKey } from "@konduit/cardano-keys";
 import { generateMnemonic, Ed25519PrivateKey } from "@konduit/cardano-keys";
 import { NonNegativeInt } from "@konduit/codec/integers/smallish";
@@ -57,7 +57,7 @@ export type BalanceFetch =
 
 export const json2BalanceFetchCodec: JsonCodec<BalanceFetch> = (() => {
   let json2SuccessfulFetchCodec: JsonCodec<SuccessfulFetch> = jsonCodecs.objectOf({
-    lovelace: json2LovelaceCodec,
+    lovelace: Lovelace.jsonCodec,
     fetchedAt: json2ValidDateCodec,
   });
   let json2FailedFetchCodec: JsonCodec<FailedFetch> = jsonCodecs.objectOf({
@@ -80,7 +80,7 @@ export const json2BalanceFetchCodec: JsonCodec<BalanceFetch> = (() => {
 export type BalanceInfo = PollingInfo<Lovelace>;
 export const BalanceInfo = PollingInfo;
 
-export const json2BalanceInfoCodec: JsonCodec<BalanceInfo> = mkJson2PollingInfoCodec(json2LovelaceCodec);
+export const json2BalanceInfoCodec: JsonCodec<BalanceInfo> = mkJson2PollingInfoCodec(Lovelace.jsonCodec);
 
 /* A simple, single-address, no staking wallet implementation */
 export class Wallet<WalletBackend extends WalletBackendBase> {

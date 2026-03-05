@@ -6,24 +6,40 @@ import { type Wallet as WalletBase, type AnyWallet, BlockfrostWallet, CardanoCon
 import { err, ok, Result } from "neverthrow";
 import { Ed25519PrivateKey, Mnemonic } from "@konduit/cardano-keys";
 import { AdaptorFullInfo, Quote } from "./adaptorClient";
-import { Channel, ChannelTag, type ChequeIssuingError, type ConfirmedPayment, type ConsumerEd25519VerificationKey, json2ChannelCodec, type OpenTx, type PendingPayment } from "./channel";
+import { type AnyChannelTx, Channel, ChannelTag, type ChequeIssuingError, type CloseTx, type ConfirmedPayment, type ConsumerEd25519VerificationKey, json2ChannelCodec, type OpenTx, type PendingPayment } from "./channel";
 import { Milliseconds, Seconds } from "./time/duration";
 import { json2Ed25519PrivateKeyCodec, Lovelace } from "./cardano";
 import { Connector, json2ConnectorAsyncCodec } from "./cardano/connector";
 import { promiseToResultAsync, resultAsyncToPromise } from "./neverthrow";
 import { ValidDate } from "./time/absolute";
-import type { HttpEndpointError } from "./http";
+import type { DeserialisationError, HttpEndpointError, HttpError } from "./http";
 import { NonNegativeInt } from "@konduit/codec/integers/smallish";
 import { Squash, SquashBody } from "./channel/squash";
 import type { InvoiceString } from "@konduit/bln/invoice/bolt11";
 import type { Invoice } from "./bitcoin/bolt11";
+import { TxIx } from "./cardano/ledger";
 
 type ConsumerEvent<T> = CustomEvent<T>;
 
 export type ConsumerEvents = {
-  "channel-opened": { channel: Channel; };
+  // Emitted when channel tx was submitted to the chain
+  "channel-tx-submitted": { channel: Channel; };
+  // Emitted when channel tx was confirmed on the chain.
+  // This doesn't mean the channel is operational.
+  "channel-tx-on-chain": { channel: Channel; tx: AnyChannelTx }
+  // Emitted when channel tx has been rolled back from the chain.
+  "channel-tx-rolled-back": { channel: Channel; tx: AnyChannelTx }
+  // Emitted when channel was squashed and synced with adaptor.
+  // Channel is operational.
+  // TODO: Probably we should be prepared that this "decision"
+  // can also be rolled back.
   "channel-squashed": { channel: Channel; result: Squash };
-  "channel-squashing-failed": { channel: Channel; error: HttpEndpointError };
+  // Emitted when the server response is errorneous.
+  // Not emitted on networking issue.
+  "channel-squashing-failed": {
+    channel: Channel;
+    error: HttpError | DeserialisationError
+  }
 };
 
 export type ChannelQuoteResult = {
@@ -51,9 +67,11 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
   // wallet (CIP-30) for L1 interactions.
   private _prvKey: Ed25519PrivateKey;
   private _wallet: Wallet;
+
   // The only role of the connector here is to build transactions.
   // We use wallet API for signing and submitting.
   public readonly txBuilder: Connector;
+
   // FIX: debugging
   public _channels: Map<ChannelTag, Channel>;
 
@@ -188,7 +206,7 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
       if(newSquashInfo == null) continue;
       if (origSquashInfo == null) {
         this.emit("channel-squashed", { channel, result: newSquashInfo.squash });
-      } else if(SquashBody.areEqual(origSquashInfo.squash.body, newSquashInfo.squash.body)) {
+      } else if(!SquashBody.areEqual(origSquashInfo.squash.body, newSquashInfo.squash.body)) {
         this.emit("channel-squashed", { channel, result: newSquashInfo.squash });
       }
       //   result.match(
@@ -197,6 +215,8 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
       //         this.emit("channel-squashed", { channel, result });
       //     },
       //     (error) => {
+      //       // TODO: emit only when the error is actually not networking issue but a rather more
+      //       // problematic case.
       //       this.emit("channel-squashing-failed", { channel, error });
       //     }
       //   );
@@ -264,6 +284,7 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
     );
   }
 
+  // TODO: REFACTOR - move most of this logic down to the channel
   public async openChannel(
     adaptorFullInfo: AdaptorFullInfo,
     amount: Lovelace,
@@ -295,6 +316,8 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
               tag: channelTag,
               txCbor: signedTx.toCbor(),
               txHash: txHash,
+              // FIXME: This should be derived from the body of the tx
+              txIx: TxIx.fromDigits(0),
               type: "OpenTx" as const,
             } as OpenTx;
             const channel = Channel.open(openTx, adaptorUrl);
@@ -303,12 +326,50 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
             } catch(e) {
               return err(`Panic: Failed to add channel to the map: ${e}`);
             }
-            this.emit("channel-opened", { channel });
+            this.emit("channel-tx-submitted", { channel });
             return ok(channel);
           });
       })
     );
   };
+
+  // FIXME: this and the above logic should be pushed to the channel
+  // Resubmission on demand should be part of that lower layer as well
+  // so the consumer does not manipuate the state of those pieces directly.
+  public async closeChannel(channelTag: ChannelTag): Promise<Result<boolean, JsonError>> {
+    const channel = this._channels.get(channelTag);
+    if (!channel) {
+      return err(`Channel with tag ${channelTag} not found`);
+    }
+    if(!channel.l1.canClose()) {
+      return ok(false);
+    }
+    return await resultAsyncToPromise(
+      promiseToResultAsync(this.txBuilder.buildCloseTx(
+        channelTag,
+        this.vKey,
+      )).andThen((closeTx) =>
+        promiseToResultAsync(this.wallet.sign(closeTx))
+      ).andThen((signedTx) => {
+        const now = ValidDate.now();
+        return promiseToResultAsync(this.wallet.submit(signedTx))
+          .andThen((txHash) => {
+            const closeTx = {
+              created: now,
+              lastSubmitted: now,
+              txCbor: signedTx.toCbor(),
+              txHash: txHash,
+              // FIXME: This should be derived from the body of the tx
+              txIx: TxIx.fromDigits(0),
+              type: "CloseTx" as const,
+            } as CloseTx;
+            channel.l1.closeSubmitted(closeTx);
+            this.emit("channel-tx-submitted", { channel });
+            return ok(true);
+          });
+      })
+    );
+  }
 }
 
 export const json2KonduitConsumerAsyncCodec: jsonAsyncCodecs.JsonAsyncCodec<KonduitConsumer<AnyWallet>> = (() => {

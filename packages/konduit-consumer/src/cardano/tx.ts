@@ -19,6 +19,7 @@ import { altCborCodecs, cbor2EmbededCborCodec, json2CborCodec, mkTaggedBytesCbor
 import { Address } from "./addressses";
 import type { Cbor } from "@konduit/codec/cbor/core";
 import { Value } from "./assets";
+import { mkOrdForUint8Array } from "@konduit/codec/tagged";
 
 // We do not provide validation for TxCborBytes and TxBodyCborBytes here. Please use it when you can trust the source of the CBOR.
 export type TxCborBytes = typeFest.Tagged<Uint8Array, "TxCborBytes">;
@@ -319,8 +320,10 @@ export namespace TxHash {
     "TxHash",
     (arr) => arr.length === LENGTH,
   );
+  export const ord = mkOrdForUint8Array<TxHash>();
 }
 
+// TODO: Redundant - we have TxOutRef in the ledger module.
 export type TxInput = Tagged<[TxId, NonNegativeInt], "TxInput">;
 export namespace TxInput {
   export const fromJson = (json: Json): Result<TxInput, JsonError> => jsonCodec.deserialise(json);

@@ -24,7 +24,7 @@ export const LOVELACE_TOTAL_SUPPLY = 45_000_000_000_000_000n; // 17 digits
 // This represents positive Lovelace value. We can introduce `LovelaceAmount` if we want to enforce non-negativity.
 export type Lovelace = Tagged<NonNegativeBigInt, "Lovelace">;
 export namespace Lovelace {
-  export const fromBigInt = (v: bigint): Result<Lovelace, JsonError> => bigInt2LovelaceCodec.deserialise(v);
+  export const fromBigInt = (v: bigint): Result<Lovelace, JsonError> => bigIntCodec.deserialise(v);
   export const fromDigits = (n1: OneToNine, n2?: ZeroToNine, n3?: ZeroToNine, n4?: ZeroToNine, n5?: ZeroToNine, n6?: ZeroToNine, n7?: ZeroToNine, n8?: ZeroToNine, n9?: ZeroToNine, n10?: ZeroToNine, n11?: ZeroToNine, n12?: ZeroToNine, n13?: ZeroToNine, n14?: ZeroToNine, n15?: ZeroToNine, n16?: ZeroToNine): Lovelace => {
     let digits = [n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15, n16].filter((d): d is ZeroToNine => d !== undefined);
     let value = BigInt(n1);
@@ -34,28 +34,29 @@ export namespace Lovelace {
     return value as Lovelace;
   }
   export const fromSmallNumber = (v: Small): Lovelace => BigInt(v) as Lovelace;
-  export const fromJson = (v: Json) => json2LovelaceCodec.deserialise(v);
+  export const fromJson = (v: Json) => jsonCodec.deserialise(v);
   export const zero = 0n as Lovelace;
   export const add = (a: Lovelace, b: Lovelace): Result<Lovelace, JsonError> => fromBigInt(a + b);
   export const subtract = (a: Lovelace, b: Lovelace): Result<Lovelace, JsonError> => fromBigInt(a - b);
   export const subtractAbs = (a: Lovelace, b: Lovelace): Lovelace => (a >= b ? (a - b) : (b - a)) as Lovelace;
   export const scale = (a: Lovelace, multiplier: bigint): Result<Lovelace, JsonError> => fromBigInt(a * multiplier);
   export const ord = mkOrdForScalar<Lovelace>();
+
+  export const bigIntCodec: codec.Codec<bigint, Lovelace, JsonError> = {
+    deserialise: (value: bigint): Result<Lovelace, JsonError> => {
+      if (value > LOVELACE_TOTAL_SUPPLY) {
+        return err(`Lovelace must be less than or equal to total supply (${LOVELACE_TOTAL_SUPPLY}), got ${value}`);
+      }
+      if (value < 0) {
+        return err(`Lovelace must be non-negative, got ${value}`);
+      }
+      return ok(value as Lovelace);
+    },
+    serialise: (value: Lovelace): bigint => value as bigint
+  }
+  export const jsonCodec: JsonCodec<Lovelace> = codec.pipe(json2BigIntCodec, bigIntCodec);
+  export const cborCodec: CborCodec<Lovelace> = codec.pipe(cbor2IntCodec, bigIntCodec);
 }
-export const bigInt2LovelaceCodec: codec.Codec<bigint, Lovelace, JsonError> = {
-  deserialise: (value: bigint): Result<Lovelace, JsonError> => {
-    if (value > LOVELACE_TOTAL_SUPPLY) {
-      return err(`Lovelace must be less than or equal to total supply (${LOVELACE_TOTAL_SUPPLY}), got ${value}`);
-    }
-    if (value < 0) {
-      return err(`Lovelace must be non-negative, got ${value}`);
-    }
-    return ok(value as Lovelace);
-  },
-  serialise: (value: Lovelace): bigint => value as bigint
-}
-export const json2LovelaceCodec: JsonCodec<Lovelace> = codec.pipe(json2BigIntCodec, bigInt2LovelaceCodec);
-export const cbor2LovelaceCodec: CborCodec<Lovelace> = codec.pipe(cbor2IntCodec, bigInt2LovelaceCodec);
 
 export type Ada = Tagged<NonNegativeInt, "Ada">;
 export namespace Ada {
@@ -196,7 +197,7 @@ export class Value {
 
   public static jsonCodec: JsonCodec<Value> = codec.pipe(
     jsonCodecs.objectOf({
-      lovelace: json2LovelaceCodec,
+      lovelace: Lovelace.jsonCodec,
       assets: jsonCodecs.arrayOf(
         jsonCodecs.tupleOf(
           AssetId.jsonCodec,
@@ -238,7 +239,7 @@ export class Value {
     );
     return codec.pipe(
       altCborCodecs(
-        [ cbor2LovelaceCodec, cborCodecs.tupleOf(cborCodecs.definiteLength, cbor2LovelaceCodec, cbor2MultiAssetCodec) ],
+        [ Lovelace.cborCodec, cborCodecs.tupleOf(cborCodecs.definiteLength, Lovelace.cborCodec, cbor2MultiAssetCodec) ],
         (serLovelace, serMultiAsset) => (val: Lovelace | [Lovelace, Map<PolicyId, Map<AssetName, PositiveCoin>>]) => {
           if (typeof val === "bigint") {
             return serLovelace(val);

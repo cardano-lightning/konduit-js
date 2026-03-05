@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import WalletMinimal from "../components/icons/WalletMinimal.vue";
 import Zap from "../components/icons/Zap.vue";
-import NavBar from "../components/NavBar.vue";
 import { type Props as ButtonProps } from "../components/Button.vue";
 import ButtonGroup from "../components/ButtonGroup.vue";
 import MainContainer from "../components/MainContainer.vue";
@@ -11,7 +10,7 @@ import { channels, walletBalance } from "../store";
 import Link from "../components/Link.vue";
 
 let channelButtons: ButtonProps[] = [
-  { action: "add-channel", label: "+", primary: false, disabled: false },
+  { action: "open-channel", label: "+", primary: false, disabled: false },
 ];
 </script>
 
@@ -26,7 +25,7 @@ let channelButtons: ButtonProps[] = [
             <WalletMinimal /> <Link href="/wallet" :click="'wallet'">Fund your wallet</Link>.
           </li>
           <li>
-            <Zap /> Then <Link href="/add-channel" :click="'add-channel'">open a channel</Link>.
+            <Zap /> Then <Link href="/open-channel" :click="'open-channel'">open a channel</Link>.
           </li>
         </ul>
       </div>

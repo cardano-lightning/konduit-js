@@ -20,9 +20,9 @@ import { Millisatoshi } from "../src/bitcoin/asset";
 import { Lovelace } from "../src/cardano";
 import { ValidDate } from "../src/time/absolute";
 import { AnyPayment } from "../src/channel";
+import * as connectorClient from "../src/cardano/connectorClient";
 
-
-const integrationTestEnv = (() => {
+export const integrationTestEnv = (() => {
   const adaptorUrlOpt = import.meta.env.VITE_TEST_ADAPTOR_URL;
   const backendUrlOpt = import.meta.env.VITE_TEST_CONNECTOR_URL;
   const signingKeySecretOpt = import.meta.env.VITE_TEST_SIGNING_KEY_SECRET;
@@ -82,7 +82,7 @@ const integrationTestEnv = (() => {
       },
     } as Address;
     const addressBech32 = AddressBech32.fromAddress(address);
-    return { addressBech32, privateKey, sKey, vKey };
+    return { address, addressBech32, privateKey, sKey, vKey };
   }
 
   const mkBlockfrostWallet = async (t: any) => {
@@ -102,6 +102,14 @@ const integrationTestEnv = (() => {
     const backendUrlStr = expectNotNull(backendUrlOpt);
     const connector = expectOk(await Connector.new(backendUrlStr));
     return connector;
+  }
+
+  const mkConnectorClient = async (t: any) => {
+    if(!backendUrlOpt) {
+      t.skip();
+    }
+    const backendUrlStr = expectNotNull(backendUrlOpt);
+    return connectorClient.mkConnectorClient(backendUrlStr);
   }
 
   const mkAdaptorFullInfo = async (t: any) => {
@@ -128,6 +136,7 @@ const integrationTestEnv = (() => {
     mkKonduitConsumer,
     mkBlockfrostWallet,
     mkConnector,
+    mkConnectorClient,
     saveKonduitConsumerState,
     mkLnd,
   };
@@ -137,7 +146,7 @@ describe("End-to-end integration: open channel and poll adaptor squash", () => {
   it(
     "opens a channel and polls adaptor squash endpoint until it is indexed",
     async (test) => {
-      // test.skip();
+      test.skip();
 
       // Enable WASM logging for debugging, same as connector test
       if (wasm && typeof wasm.enableLogs === "function") {
@@ -303,5 +312,85 @@ describe("End-to-end integration: open channel and poll adaptor squash", () => {
     },
     600000
   );
+
+  // it("opens a channels and confirms its presence on the chain", async (test) => {
+  //   // "channel-tx-confirmed": { channel: Channel; txId: TxId };
+
+  //   let txId = null;
+  //   let channelTag: ChannelTag | null = null;
+  //   // Subscribe to the confirmation event and then open the channel.
+  //   const consumer = await integrationTestEnv.mkKonduitConsumer(test);
+  //   // We have to subscribe first before the channel is actually opened to not miss the event.
+  //   const unsubscribeFromChannelTxConfirmed = consumer.subscribe("channel-tx-confirmed", ({ channel: confirmedChannel, txId: confirmedTxId }) => {
+  //     if(confirmedChannel.channelTag === channelTag) {
+  //       console.debug(`Channel with tag ${channelTag} has a confirmed transaction with txId ${confirmedTxId}!`);
+  //       txId = confirmedTxId;
+  //     } else {
+  //       console.debug(`Received transaction confirmation event for channel with tag ${confirmedChannel.channelTag}, but we are waiting for channel with tag ${channel.channelTag}`);
+  //     }
+  //   });
+
+  //   const adaptorFullInfo = await integrationTestEnv.mkAdaptorFullInfo(test);
+  //   const amount = Lovelace.fromAda(Ada.fromSmallNumber(3));
+  //   const closePeriod = Milliseconds.fromAnyPreciseDuration({ type: "days", value: Days.fromSmallNumber(3) });
+  //   const channel = expectOk(await consumer.openChannel(adaptorFullInfo, amount, closePeriod), "Failed to open channel in integration test");
+  //   channelTag = channel.channelTag;
+
+  //   const maxAttempts = 40;
+  //   const delayMs = 3000;
+  //   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+  //     if(txId) {
+  //       console.debug(`Channel with tag ${channel.channelTag} has a confirmed transaction with txId ${txId} after ${attempt} attempts!`);
+  //       console.debug(`Leaving the loop that polls for transaction confirmation, and proceeding with the rest of the integration test...`);
+  //       break;
+  //     }
+  //     if (attempt < maxAttempts) {
+  //       await new Promise((resolve) => setTimeout(resolve, delayMs));
+  //     } else {
+  //       console.log(`Reached maximum attempts (${maxAttempts}) without channel transaction being confirmed.`);
+  //       throw new Error("Channel transaction was not confirmed within the expected time frame in integration test");
+  //     }
+  //   }
+  //   expect(txId).not.toBeNull();
+  //   console.log(`Channel transaction with txId ${txId} is confirmed on chain!`);
+  //   unsubscribeFromChannelTxConfirmed();
+  // }, 300000);
+});
+
+describe("Native TS connector client", () => {
+  it("queries a balance of the testing wallet", async (test) => {
+    const connectorClient = await integrationTestEnv.mkConnectorClient(test);
+    const keys = integrationTestEnv.mkKeys(test);
+    const balanceResult = await connectorClient.balance(keys.address);
+    expectOk(balanceResult, "Failed to query balance via connector client in integration test");
+  });
+  it("queries the network magic number", async (test) => {
+    const connectorClient = await integrationTestEnv.mkConnectorClient(test);
+    const networkResult = await connectorClient.network();
+    expectOk(networkResult, "Failed to query network magic number via connector client in integration test");
+  });
+  it("queries the health endpoint", async (test) => {
+    const connectorClient = await integrationTestEnv.mkConnectorClient(test);
+    const healthResult = await connectorClient.health();
+    expectOk(healthResult, "Failed to query health endpoint via connector client in integration test");
+  });
+  it("queries the utxos at the testing wallet address", async (test) => {
+    const connectorClient = await integrationTestEnv.mkConnectorClient(test);
+    const keys = integrationTestEnv.mkKeys(test);
+    const utxosResult = await connectorClient.utxosAt(keys.address);
+    expectOk(utxosResult, "Failed to query utxos at address via connector client in integration test");
+  });
+  it("queries the transaction details for a transaction involving the testing wallet", async (test) => {
+    const connectorClient = await integrationTestEnv.mkConnectorClient(test);
+    const keys = integrationTestEnv.mkKeys(test);
+    const utxosResult = await connectorClient.utxosAt(keys.address);
+    const utxos = expectOk(utxosResult, "Failed to query utxos at address via connector client in integration test");
+    expect(utxos.length).toBeGreaterThan(0);
+    const firstUtxo = utxos[0]!;
+    const transactionId = firstUtxo.transaction_id;
+    const transactionResult = await connectorClient.transaction(transactionId);
+    expectOk(transactionResult, "Failed to query transaction details via connector client in integration test");
+  });
+
 });
 

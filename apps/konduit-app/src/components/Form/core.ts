@@ -11,6 +11,7 @@ export type Errors =
 export type BaseFieldProps = {
   disabled?: boolean;
   errors?: Errors;
+  info?: () => void;
   fieldWidth: FieldWidth;
   isValid: boolean | null;
   label: string;

@@ -3,7 +3,6 @@ import { writeJson } from "../utils/dom";
 import DataListing from "../components/DataListing.vue";
 import { useNotifications } from "../composables/notifications";
 import TheHeader from "../components/TheHeader.vue";
-import NavBar from "../components/NavBar.vue";
 import MainContainer from "../components/MainContainer.vue";
 import { cardanoConnector, wallet, type AppKonduitConsumer } from "../store";
 import { json2KonduitConsumerAsyncCodec } from "@konduit/konduit-consumer";

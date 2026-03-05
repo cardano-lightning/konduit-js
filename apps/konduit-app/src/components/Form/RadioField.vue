@@ -1,5 +1,4 @@
 <script lang="ts">
-import { stringify, type Json } from "@konduit/codec/json";
 import { extractFieldErrorsMessages, type BaseFieldProps } from "./core";
 import type { Ref } from "vue";
 
@@ -44,13 +43,14 @@ function optLabel(opt: Option): string {
   return typeof opt === "string" ? opt : opt.label;
 }
 
-// function optDisabled(opt: Option): boolean {
-//   return typeof opt === "string" ? false : !!opt.disabled;
-// }
-
 function optIcon(opt: Option): string | undefined {
   return typeof opt === "string" ? undefined : opt.icon;
 }
+
+const hasErrors = (opt: Option): boolean => {
+  const value = optValue(opt);
+  return extractFieldErrorsMessages(value, props.errors || []).length > 0;
+};
 
 </script>
 
@@ -93,7 +93,7 @@ function optIcon(opt: Option): string | undefined {
         -->
         <label
           :key="optValue(opt)"
-          :class="{ 'has-icon': !!optIcon(opt), 'radio-option': true, error: extractFieldErrorsMessages(optValue(opt), props.errors || []).length > 0 }"
+          :class="{ 'has-icon': !!optIcon(opt), 'radio-option': true, error: hasErrors(opt) }"
         >
           <input
             type="radio"

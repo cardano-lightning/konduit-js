@@ -38,7 +38,7 @@ defineProps<{
 
 
 .clock.animated {
-  animation: clock-sequence var(--cycle-duration, 1200ms) steps(4) infinite;
+  animation: clock-sequence var(--cycle-duration, 1200ms) steps(1) infinite;
   height: 100%;
   inset: 0;
   left: 0;
@@ -64,7 +64,7 @@ defineProps<{
 /* .clock.animated.clock-11  { animation-delay: calc(var(--cycle-duration) * 11/12); } */
 
 @keyframes clock-sequence {
-  0%       { opacity: 0.6; }
-  24%      { opacity: 0; }
+  0%       { opacity: 1; }
+  25%      { opacity: 0; }
 }
 </style>

@@ -35,9 +35,7 @@ const goBack = () => {
 </script>
 
 <template>
-  <header v-if="isIndex" class="index-header">
-      <KonduitLogo />
-  </header>
+  <header v-if="isIndex" class="index-header"><h1><KonduitLogo /></h1></header>
   <header v-else class="back" aria-label="Go back" @click="goBack">
     <h1><ChevronLeft /><span>{{ currentPageName }}</span><template v-if="subsection"><ChevronLeft /><span>{{ subsection }}</span></template></h1>
   </header>
@@ -51,11 +49,6 @@ header {
 header.index-header {
   /* font-size: 0.7rem; */
 }
-  header.index-header svg {
-    height: 1.8em;
-    width: auto;
-  }
-
   header h1 {
     display: flex;
     font-weight: normal;
@@ -77,6 +70,7 @@ header.index-header {
       vertical-align: middle;
     }
 
+    header.index-header svg,
     header h1 span {
       flex: 1 1 auto;
       margin-left: -0.5rem;

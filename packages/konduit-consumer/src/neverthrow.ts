@@ -41,3 +41,9 @@ export const unwrapOrPanicWith = <T, E>(result: Result<T, E>, mkMessageFn: (erro
     }
   );
 }
+
+export const assert = (condition: boolean, errorMessage: string): void => {
+  if (!condition) {
+    throw new Error(errorMessage);
+  }
+}

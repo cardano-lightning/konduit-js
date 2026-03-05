@@ -236,6 +236,47 @@ export const objectOf = <T extends Record<string, JsonCodec<any>>>(
   };
 };
 
+export const dictOf = <O>(codec: JsonCodec<O>): JsonCodec<{ [key: string]: O }> => {
+  return {
+    deserialise: (data: Json): Result<{ [key: string]: O }, JsonError> => {
+      return onObject(
+        (value: Json) => err(`Expected object but got ${stringify(value)}`) as Result<{ [key: string]: O }, JsonError>
+      )(obj => {
+        const result: { [key: string]: O } = {};
+        const errors: { [key: string]: Json } = {};
+        let hasErrors = false;
+
+        for (const key in obj) {
+          const value = obj[key]!;
+          const decoded = codec.deserialise(value);
+
+          if (decoded.isOk()) {
+            result[key] = decoded.value;
+          } else {
+            errors[key] = decoded.error;
+            hasErrors = true;
+          }
+        }
+
+        if (hasErrors) {
+          // Collect per-field errors as a JSON object
+          return err(errors);
+        }
+
+        return ok(result);
+      })(data);
+    },
+    serialise: (value: { [key: string]: O }): Json => {
+      const result: { [key: string]: Json } = {};
+      for (const key in value) {
+        const v = value[key]!;
+        result[key] = codec.serialise(v);
+      }
+      return result;
+    },
+  };
+}
+
 export const arrayOf = <O>(codec: JsonCodec<O>): JsonCodec<O[]> => {
   return {
     deserialise: (data: Json): Result<O[], JsonError> => {

@@ -21,13 +21,7 @@ export const appPhase: Ref<AppPhase> = ref<AppPhase>("loading");
 // the TX builder depends on it.
 export type AppKonduitConsumer = KonduitConsumer<CardanoConnectorWallet>;
 
-const _wallet: Ref<CardanoConnectorWallet | null> = ref(null);
-// We are replacing the signingKey with a wallet abstraction
-export const wallet = {
-  get value(): CardanoConnectorWallet | null {
-    return _wallet.value;
-  }
-};
+export const wallet: Ref<CardanoConnectorWallet | null> = ref(null);
 
 export const hasWallet = computed(() => {
   return wallet.value !== null;
@@ -122,8 +116,10 @@ const _setupKonduitConsumer = (consumer: AppKonduitConsumer): void => {
   _subscriptions.push(consumer.wallet.subscribe('balance-fetched', () => {
     _saveKonduitConsumer();
     _walletBalanceInfo.value = consumer.wallet.balanceInfo;
+    wallet.value = consumer.wallet;
   }));
   _walletBalanceInfo.value = consumer.wallet.balanceInfo;
+  wallet.value = consumer.wallet;
 
   _subscriptions.push(consumer.wallet.subscribe('backend-changed', async ({ newBackend }) => {
     _saveKonduitConsumer();
@@ -132,7 +128,7 @@ const _setupKonduitConsumer = (consumer: AppKonduitConsumer): void => {
   cardanoConnector.value = consumer.wallet.walletBackend.connector;
   consumer.wallet.startPolling(Seconds.fromDigits(1, 2, 0));
   consumer.startPolling(Seconds.fromDigits(0, 1, 5));
-  _wallet.value = consumer.wallet;
+  wallet.value = consumer.wallet;
 }
 
 export const createKonduitConsumer = async (): Promise<Result<AppKonduitConsumer, JsonError>> => {

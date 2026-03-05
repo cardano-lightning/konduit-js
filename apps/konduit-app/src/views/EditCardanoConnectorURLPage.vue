@@ -132,9 +132,9 @@ const buttons: ComputedRef<ButtonProps[]> = computed(() => {
 </script>
 
 <template>
-  <MainContainer>
+  <MainContainer :buttons="buttons">
     <TheHeader :back-page-name="'settings'" />
-    <Form :buttons="buttons" :fields="fields" :formState="formState" :handleSubmit="handleSubmit" :touch="touch" />
+    <Form :buttons="[]" :fields="fields" :formState="formState" :handleSubmit="handleSubmit" :touch="touch" />
   </MainContainer>
 </template>
 
