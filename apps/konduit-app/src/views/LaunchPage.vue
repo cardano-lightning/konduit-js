@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import KonduitLogoText from "../components/KonduitLogo/Text.vue";
+import KonduitLogo from "../components/KonduitLogo.vue";
 import { type Props as ButtonProps } from "../components/Button.vue";
 import ButtonGroup from "../components/ButtonGroup.vue";
 import { loadJson } from "../utils/dom";
@@ -60,7 +60,7 @@ const buttons: ButtonProps[] = [
 
 <template>
   <div id="container">
-    <div id="logo"><KonduitLogoText /></div>
+    <div id="logo"><KonduitLogo /></div>
     <p>A Cardano to Bitcoin Lightning Pipe</p>
     <ButtonGroup :buttons="buttons" />
     <div class="link">

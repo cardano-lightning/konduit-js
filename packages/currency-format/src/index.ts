@@ -21,9 +21,10 @@ const currencySymbols: Partial<Record<CurrencyCode, string>> = {
 
 export type BitcoinSpec = {
   code: 'BTC';
-  unit: 'sat' | 'btc';
+  unit: 'msat' | 'sat' | 'btc';
   // Threshold from which to display in satoshis instead of bitcoins
   satDisplayThreshold?: Decimal;
+  msatDisplayThreshold?: Decimal;
 };
 
 export type AdaSpec = {
@@ -39,15 +40,17 @@ export type CurrencySpec =
   | AdaSpec;
 
 
-export type SubunitCode = "SAT" | "LOV";
+export type SubunitCode = "SAT" | "LOV" | "MST";
 
 const subunitNames: Record<SubunitCode, string> = {
   LOV: "lovelace",
+  MST: "msat",
   SAT: "sat",
 };
 
 const unitExponents: Record<SubunitCode, bigint> = {
   LOV: BigInt(6), // 1 ADA = 1,000,000 Lovelace
+  MST: BigInt(11), // 1 BTC = 1,000,000,000,000 msat
   SAT: BigInt(8), // 1 BTC = 100,000,000 Satoshi
 };
 
@@ -114,10 +117,13 @@ export class CurrencyFormat<N extends Notation> {
       return currencySpec.code;
     })();
 
+    console.log("Initializing CurrencyFormat with code:", code);
+
     this.code = code;
     if (this.code in currencySymbols) {
       this.symbol = currencySymbols[this.code];
     }
+    console.log("Code:", this.code, "Symbol:", this.symbol);
     // Our main strategy is:
     // * If we have a custom symbol:
     //    * If will use EUR for the reference formatting
@@ -133,15 +139,21 @@ export class CurrencyFormat<N extends Notation> {
     this.formatter = new Decimal.DecimalFormat<N, "currency">(locales, internalOptions);
 
     // Our subunit strategy is:
-    //
     this.subunitCode = (() => {
       if (typeof currencySpec === 'object' && currencySpec.code === 'BTC') {
-        return 'SAT';
+        if(currencySpec.satDisplayThreshold) {
+          return 'SAT';
+        } else if (currencySpec.msatDisplayThreshold) {
+          return 'MST';
+        }
       } else if (typeof currencySpec === 'object' && currencySpec.code === 'ADA') {
         return 'LOV';
       }
     })();
     this.subunitFormatter = (() => {
+      console.log("Initializing subunit formatter with subunit code:", this.subunitCode);
+      console.log("Locales for subunit formatter:", locales);
+      console.log("Internal options for subunit formatter:", internalOptions);
       if (this.subunitCode) {
         // subunits are formatted differently the `sat` or `lovelace` is name not symbol really
         return new Decimal.DecimalFormat<N, "currency">(locales, {
@@ -162,6 +174,9 @@ export class CurrencyFormat<N extends Notation> {
       if (typeof currencySpec === 'object' && currencySpec.code === 'BTC' && currencySpec.satDisplayThreshold) {
         const multiplier = pow10(this.subunitExponent!.toString());
         return currencySpec.satDisplayThreshold.mul(multiplier).truncated();
+      } else if (typeof currencySpec === 'object' && currencySpec.code === 'BTC' && currencySpec.msatDisplayThreshold) {
+        const multiplier = pow10(this.subunitExponent!.toString());
+        return currencySpec.msatDisplayThreshold.mul(multiplier).truncated();
       } else if (typeof currencySpec === 'object' && currencySpec.code === 'ADA' && currencySpec.lovelaceDisplayThreshold) {
         const multiplier = pow10(this.subunitExponent!.toString());
         return currencySpec.lovelaceDisplayThreshold.mul(multiplier).truncated();
@@ -171,6 +186,7 @@ export class CurrencyFormat<N extends Notation> {
     this.valueInUnit = (() => {
       if (typeof currencySpec === 'object'
           && ((currencySpec.code === 'BTC' && currencySpec.unit === 'sat')
+              || (currencySpec.code === 'BTC' && currencySpec.unit === 'msat')
               || (currencySpec.code === 'ADA' && currencySpec.unit === 'lovelace'))) {
         return 'subunit';
       }

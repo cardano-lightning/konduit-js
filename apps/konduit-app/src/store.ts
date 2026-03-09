@@ -103,7 +103,7 @@ const _setupKonduitConsumer = (consumer: AppKonduitConsumer): void => {
   konduitConsumer.value = consumer;
   _channels.value = consumer.channels;
 
-  _subscriptions.push(consumer.subscribe('channel-opened', ({ channel: _channel }) => {
+  _subscriptions.push(consumer.subscribe('channel-tx-submitted', ({ channel: _channel }) => {
     _saveKonduitConsumer();
     _channels.value = consumer.channels;
   }));

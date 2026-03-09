@@ -12,7 +12,7 @@ import { json2StringCodec, type JsonError } from "@konduit/codec/json/codecs";
 import { PositiveBigInt } from "@konduit/codec/integers/big";
 import type { Milliseconds } from "../time/duration";
 import { ChannelTag } from "../channel/core";
-import type { ConsumerEd25519VerificationKey } from "../channel/l1Channel";
+import type { ConsumerEd25519VerificationKey } from "../channel/core";
 import type { AdaptorEd25519VerificationKey } from "../adaptorClient/adaptorInfo";
 import type { JsonAsyncCodec } from "@konduit/codec/json/async";
 import { networkAsMagic } from "../../wasm/konduit_wasm.js";

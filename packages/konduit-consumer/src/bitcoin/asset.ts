@@ -6,6 +6,7 @@ import type { JsonError, JsonCodec } from "@konduit/codec/json/codecs";
 import type { Json } from "@konduit/codec/json";
 import { json2IntCodec, type Int, type NonNegativeInt, type OneToNine, type Small, type ZeroToNine } from "@konduit/codec/integers/smallish";
 import type { NonNegativeBigInt, PositiveBigInt } from "@konduit/codec/integers/big";
+import { mkOrdForScalar } from "@konduit/codec/tagged";
 
 // Bitcoin total supply is 21 million BTC = 2_100_000_000_000_000 satoshis (fits in 53-bit integer)
 export const BITCOIN_TOTAL_SUPPLY = 21_000_000 as Bitcoin;
@@ -32,6 +33,7 @@ export namespace Millisatoshi {
   export const subtractAbs = (a: Millisatoshi, b: Millisatoshi): Result<Millisatoshi, JsonError> => a >= b ? fromBigInt(a - b) : fromBigInt(b - a);
   export const scale = (a: Millisatoshi, multiplier: bigint): Result<Millisatoshi, JsonError> => fromBigInt(a * multiplier);
   export const scaleDown = (a: Millisatoshi, divisor: PositiveBigInt): Millisatoshi => (a / divisor as Millisatoshi);
+  export const ord = mkOrdForScalar<Millisatoshi>();
 }
 export const bigInt2MillisatoshiCodec: codec.Codec<bigint, Millisatoshi, JsonError> = {
   deserialise: (value: bigint): Result<Millisatoshi, JsonError> => {

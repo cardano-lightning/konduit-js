@@ -5,7 +5,8 @@ import { json2AdaptorUrlCodec, mkAdaptorChannelClient } from "./adaptorClient";
 import type { AdaptorUrl, SquashResponse } from "./adaptorClient";
 import * as codec from "@konduit/codec";
 import { json2L1ChannelCodec, L1Channel } from "./channel/l1Channel";
-import type { ConsumerEd25519VerificationKey, OpenTx } from "./channel/l1Channel";
+import type { OpenTx } from "./channel/l1Channel";
+import type { ConsumerEd25519VerificationKey } from "./channel/core";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import { LockedCheque, json2LockedChequeCodec, json2SquashCodec, Squash, VerifiedLockedCheque, VerifiedSquash, UnlockedCheque, VerifiedUnlockedCheque, json2UnlockedChequeCodec, Index, LockedChequeBody, UnlockedChequeBody, SquashBody, AnyCheque, json2SquashBodyCodec } from "./channel/squash";
 import { json2DeserialisationErrorCodec, json2HttpErrorCodec, json2NetworkErrorCodec, type HttpEndpointError, type HttpError, type NetworkError } from "./http";
@@ -393,7 +394,7 @@ export class Channel {
     return ok(null);
   }
 
-  public doAdaptorSync = async (sKey: Ed25519SigningKey, _recCounter: number = 10): Promise<Result<null, HttpEndpointError | string>> => {
+  public doL2Sync = async (sKey: Ed25519SigningKey, _recCounter: number = 10): Promise<Result<null, HttpEndpointError | string>> => {
     // `this.squash` is not null because after this signing:
     if(!this.isFullySquashed)
       this.doSignSquash(sKey);
@@ -413,7 +414,7 @@ export class Channel {
         if(_recCounter <= 0) {
           return err(`Failed to sync the channel after 10 attempts. Last error: Received a squash proposal without the corresponding unlocked cheque in the unlockeds list`);
         }
-        return this.doAdaptorSync(sKey, _recCounter - 1);
+        return this.doL2Sync(sKey, _recCounter - 1);
       },
       (httpEndpointError) => err(httpEndpointError)
     );

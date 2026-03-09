@@ -312,23 +312,23 @@ describe("End-to-end integration: open channel and poll adaptor squash", () => {
     },
     600000
   );
+  /*
+  it("opens a channels and confirms its presence on the chain", async (test) => {
+    // "channel-tx-confirmed": { channel: Channel; txId: TxId };
 
-  // it("opens a channels and confirms its presence on the chain", async (test) => {
-  //   // "channel-tx-confirmed": { channel: Channel; txId: TxId };
-
-  //   let txId = null;
-  //   let channelTag: ChannelTag | null = null;
-  //   // Subscribe to the confirmation event and then open the channel.
-  //   const consumer = await integrationTestEnv.mkKonduitConsumer(test);
-  //   // We have to subscribe first before the channel is actually opened to not miss the event.
-  //   const unsubscribeFromChannelTxConfirmed = consumer.subscribe("channel-tx-confirmed", ({ channel: confirmedChannel, txId: confirmedTxId }) => {
-  //     if(confirmedChannel.channelTag === channelTag) {
-  //       console.debug(`Channel with tag ${channelTag} has a confirmed transaction with txId ${confirmedTxId}!`);
-  //       txId = confirmedTxId;
-  //     } else {
-  //       console.debug(`Received transaction confirmation event for channel with tag ${confirmedChannel.channelTag}, but we are waiting for channel with tag ${channel.channelTag}`);
-  //     }
-  //   });
+    let txId = null;
+    let channelTag: ChannelTag | null = null;
+    // Subscribe to the confirmation event and then open the channel.
+    const consumer = await integrationTestEnv.mkKonduitConsumer(test);
+    // We have to subscribe first before the channel is actually opened to not miss the event.
+    const unsubscribeFromChannelTxConfirmed = consumer.subscribe("channel-tx-confirmed", ({ channel: confirmedChannel, txId: confirmedTxId }) => {
+      if(confirmedChannel.channelTag === channelTag) {
+        console.debug(`Channel with tag ${channelTag} has a confirmed transaction with txId ${confirmedTxId}!`);
+        txId = confirmedTxId;
+      } else {
+        console.debug(`Received transaction confirmation event for channel with tag ${confirmedChannel.channelTag}, but we are waiting for channel with tag ${channel.channelTag}`);
+      }
+    });
 
   //   const adaptorFullInfo = await integrationTestEnv.mkAdaptorFullInfo(test);
   //   const amount = Lovelace.fromAda(Ada.fromSmallNumber(3));
@@ -354,10 +354,11 @@ describe("End-to-end integration: open channel and poll adaptor squash", () => {
   //   expect(txId).not.toBeNull();
   //   console.log(`Channel transaction with txId ${txId} is confirmed on chain!`);
   //   unsubscribeFromChannelTxConfirmed();
-  // }, 300000);
+  }, 300000);
+  */
 });
 
-describe("Native TS connector client", () => {
+describe("Native TS connector client", (_test) => {
   it("queries a balance of the testing wallet", async (test) => {
     const connectorClient = await integrationTestEnv.mkConnectorClient(test);
     const keys = integrationTestEnv.mkKeys(test);
@@ -391,6 +392,5 @@ describe("Native TS connector client", () => {
     const transactionResult = await connectorClient.transaction(transactionId);
     expectOk(transactionResult, "Failed to query transaction details via connector client in integration test");
   });
-
 });
 

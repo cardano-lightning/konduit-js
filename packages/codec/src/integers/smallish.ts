@@ -110,6 +110,8 @@ export namespace NonNegativeInt {
   export const ord = mkOrdForScalar<NonNegativeInt>();
   export const distance = (a: NonNegativeInt, b: NonNegativeInt): NonNegativeInt => Math.abs(a - b) as NonNegativeInt;
   export const add = (a: NonNegativeInt, b: NonNegativeInt): Result<NonNegativeInt, string> => NonNegativeInt.fromNumber(a + b);
+  export const scale = (n: NonNegativeInt, factor: NonNegativeInt): Result<NonNegativeInt, string> =>
+    NonNegativeInt.fromNumber(n * factor);
 
   export const intCodec: Codec<Int, NonNegativeInt, string> = {
     deserialise: (value: Int) => {

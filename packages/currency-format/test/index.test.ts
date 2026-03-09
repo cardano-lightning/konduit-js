@@ -49,7 +49,7 @@ describe("CurrencyFormat", () => {
     expect(formatter.format(new Decimal("0.5"))).toBe("₿0.50");
   });
 
-  it("formats BTC in sats when below threshold", () => {
+  it("formats BTC in sats accordingly to the threshold", () => {
     const formatter = new CurrencyFormat("en-US", {
       currency: {
         code: "BTC",
@@ -63,7 +63,7 @@ describe("CurrencyFormat", () => {
     expect(formatter.format(new Decimal("0.00000001"))).toBe("1 sat");
   });
 
-  it("formats BTC in sat when above threshold", () => {
+  it("formats BTC in sat accordingly to the threshold", () => {
     const formatter = new CurrencyFormat("en-US", {
       currency: {
         code: "BTC",
@@ -75,6 +75,21 @@ describe("CurrencyFormat", () => {
     // Above threshold: should display in BTC
     expect(formatter.format(new Decimal("100000"))).toBe("₿0.001");
     expect(formatter.format(new Decimal("1.5"))).toBe("1.5 sat");
+  });
+
+  it("formats BTC in msats accordingly to the threshold", () => {
+    const formatter = new CurrencyFormat("en-US", {
+      currency: {
+        code: "BTC",
+        unit: "btc",
+        msatDisplayThreshold: new Decimal("0.00000001000"), // 1000 msat
+      },
+    });
+
+    // Below threshold: should display in msats
+    expect(formatter.format(new Decimal("0.001"))).toBe("₿0.001");
+    expect(formatter.format(new Decimal("0.000000005"))).toBe("500 msat");
+    expect(formatter.format(new Decimal("0.00000000001"))).toBe("1 msat");
   });
 
   it("formats ADA correctly when amount expressed in ADA", () => {

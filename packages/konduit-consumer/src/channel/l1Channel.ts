@@ -1,9 +1,9 @@
 import type { Tagged } from "type-fest";
-import { type Result } from "neverthrow";
+import { ok, type Result } from "neverthrow";
 import { Ed25519VerificationKey } from "@konduit/cardano-keys";
-import { TxCborBytes, TxHash, TxOut, unsafeTxCborBytes } from "../cardano/tx";
+import { json2TxOutRefCodec, TxCborBytes, TxHash, unsafeTxCborBytes, type TxInfo } from "../cardano";
 import { POSIXMilliseconds, ValidDate } from "../time/absolute";
-import { ChannelTag, json2ChannelTagCodec } from "./core";
+import { ChannelTag, json2ChannelTagCodec, type ConsumerEd25519VerificationKey } from "./core";
 import type { AdaptorEd25519VerificationKey } from "../adaptorClient/adaptorInfo";
 import { json2AdaptorEd25519VerificationKeyCodec } from "../adaptorClient/adaptorInfo";
 import { Days, Hours, Milliseconds, Minutes, Seconds } from "../time/duration";
@@ -15,8 +15,8 @@ import * as jsonCodecs from "@konduit/codec/json/codecs";
 import { json2Ed25519VerificationKeyCodec } from "../cardano/keys";
 import { json2MillisecondsCodec } from "../time/duration";
 import { json2ValidDateCodec } from "../time/absolute";
-import type { BlockNo, TxIx, TxOutRef } from "../cardano/ledger";
-import { json2BlockNoCodec, json2TxOutRefCodec } from "../cardano/ledger";
+import { TxIx, type BlockNo, type TxOutRef } from "../cardano";
+import { json2BlockNoCodec } from "../cardano/ledger";
 import { NonNegativeBigInt } from "@konduit/codec/integers/big";
 import type { ZeroToNine } from "@konduit/codec/integers/smallish";
 import { unwrapOrPanic } from "../neverthrow";
@@ -272,6 +272,13 @@ export type ConsumerTx = OpenTx | AddTx | CloseTx;
 
 export type AnyChannelTx = ConsumerTx | SubTx;
 
+export namespace AnyChannelTx {
+  export const fromTxInfo = (_txInfo: TxInfo): Result<AnyChannelTx | null, string> => {
+    // FIXME: not implemented yet
+    return ok(null);
+  }
+}
+
 export const json2ConsumerTxCodec: JsonCodec<ConsumerTx> = jsonCodecs.altJsonCodecs(
   [json2OpenTxCodec, json2AddTxCodec, json2CloseTxCodec],
   (serOpen, serAdd, serClose) => (tx: ConsumerTx) => {
@@ -293,8 +300,6 @@ export namespace TxVoalatilityLimit {
     return NonNegativeBigInt.fromDigits(n0, n1, n2, n3) as TxVoalatilityLimit;
   }
 }
-
-export type ConsumerEd25519VerificationKey = Tagged<Ed25519VerificationKey, "ConsumerEd25519VerificationKey">;
 
 // This structure together with the current tip/timestamp
 // could give as an outlook on the tx confirmation progress.
@@ -350,8 +355,8 @@ export namespace ConsumerTxHistory {
 
 export type UtxoState =
   | "NotFound"
-  | "Unspent"
-  | { spendingTransaction: TxHash; outputs: TxOut }
+  | { unspent: TxInfo }
+  | { consumedBy: TxInfo }
 
 export type GetUtxoState = (txOutRef: TxOutRef) => Promise<Result<UtxoState, string>>;
 
@@ -457,6 +462,63 @@ export class L1Channel {
     return utxo;
   }
 
+
+  // FIXME: Not finished, not tested and not integrated.
+  // public doSync = async (getUtxoState: GetUtxoState): Promise<Result<boolean, string>> => {
+  //   const utxoToQuery = this.getChannelUtxoToQuery(POSIXMilliseconds.now());
+  //   if(utxoToQuery == null) return ok(false);
+  //   const utxoStateResult = await getUtxoState(utxoToQuery);
+  //   const result = utxoStateResult.andThen((utxoState) => {
+  //     if(utxoState === "NotFound") {
+  //       // We should drop the utxo from the on-chain thread and all the subsequent ones as well.
+  //       // export type ChannelTxOut = {
+  //       //   txOutRef: TxOutRef;
+  //       //   blockNo: BlockNo;
+  //       //   blockTimestamp: ValidDate;
+  //       // };
+  //       const newOnChainThread = (this._onChainThread.lastValue || []).filter(onChainTx =>
+  //         !(TxHash.ord.areEqual(onChainTx.txOutRef.txId, utxoToQuery.txId)
+  //           && TxIx.ord.areEqual(onChainTx.txOutRef.txIx, utxoToQuery.txIx))
+  //       );
+  //       return ok(newOnChainThread);
+  //     }
+  //     if(utxoState === "Unspent") {
+  //       // // We should add the utxo to the on-chain thread if it is not already there.
+  //       // const alreadyPresent = (this._onChainThread.lastValue || []).some(onChainTx =>
+  //       //   TxHash.ord.areEqual(onChainTx.txOutRef.txId, utxoToQuery.txId)
+  //       //     && TxIx.ord.areEqual(onChainTx.txOutRef.txIx, utxoToQuery.txIx)
+  //       // );
+  //       // if(alreadyPresent) return ok(this._onChainThread.lastValue || []);
+  //       // const newOnChainTx: ChannelTxOut = {
+  //       //   txOutRef: utxoToQuery,
+  //       //   blockNo: { slotNo: 0n } as BlockNo, // FIXME: we do not have this info here
+  //       //   blockTimestamp: ValidDate.now(), // FIXME: we do not have this info here
+  //       // }
+  //       // const newOnChainThread = [...(this._onChainThread.lastValue || []), newOnChainTx];
+  //       // return ok(newOnChainThread);
+  //     }
+  //     if(utxoState && "consumedBy" in utxoState) {
+  //       // We should add the consuming tx to the on-chain thread if it is not already there.
+  //       const consumingTxInfo = utxoState.consumedBy;
+  //       const alreadyPresent = (this._onChainThread.lastValue || []).some(onChainTx =>
+  //         TxHash.ord.areEqual(onChainTx.txOutRef.txId, consumingTxInfo.txHash)
+  //       );
+  //       if(alreadyPresent) return ok(this._onChainThread.lastValue || []);
+  //       const newOnChainTx: ChannelTxOut = {
+  //         txOutRef: { txId: consumingTxInfo.txHash, txIx: 0n } as TxOutRef, // FIXME: we do not have this info here
+  //         blockNo: { slotNo: 0n } as BlockNo, // FIXME: we do not have this info here
+  //         blockTimestamp: ValidDate.now(), // FIXME: we do not have this info here
+  //       }
+  //       const newOnChainThread = [...(this._onChainThread.lastValue || []), newOnChainTx];
+  //       return ok(newOnChainThread);
+  //     }
+  //     return err(`Unknown UTxO state: ${utxoState}`);
+  //    }
+  //   );
+  //   this._onChainThread = this._onChainThread.mkSuccessor(result);
+  //   return true;
+  // }
+
   constructor(
     txHistory: ConsumerTxHistory,
     onChainThread?: PollingInfo<ChannelTxOut[]>,
@@ -489,7 +551,6 @@ export class L1Channel {
   //     return !foundOnChain;
   //   });
   // }
-
 
   get openTx(): OpenTx {
     return this._txHistory.slice().reverse().find((tx): tx is OpenTx => tx.type === "OpenTx")!;

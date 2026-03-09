@@ -12,7 +12,7 @@ import {
 import { hexString2KeyTagCodec, KeyTag, type ChannelTag } from "./channel/core";
 import type { LockedCheque, Squash } from "./channel/squash";
 import { cbor2SquashCodec } from "./channel/squash";
-import type { ConsumerEd25519VerificationKey } from "./channel/l1Channel";
+import type { ConsumerEd25519VerificationKey } from "./channel/core";
 import * as codec from "@konduit/codec";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import { json2StringCodec, type JsonCodec } from "@konduit/codec/json/codecs";
@@ -63,6 +63,35 @@ const mkQuoteEndpoint = (baseUrl: AdaptorUrl) => mkPostEndpoint(
   RequestSerialiser.fromJsonSerialiser(json2QuoteBodySerialiser),
   ResponseDeserialiser.fromJsonDeserialiser(json2QuoteCodec.deserialise)
 );
+
+// #[derive(Debug, Clone, Serialize)]
+// pub struct State {
+//     pub created_at: i64,
+//     pub base: BaseCurrency,
+//     pub ada: f64,
+//     pub bitcoin: f64,
+// }
+// 
+// impl State {
+//     pub fn new(base: BaseCurrency, ada: f64, bitcoin: f64) -> Self {
+//         State {
+//             created_at: Utc::now().timestamp(),
+//             base,
+//             ada,
+//             bitcoin,
+//         }
+//     }
+// 
+//     pub fn msat_to_lovelace(&self, amount: u64) -> u64 {
+//         (amount as f64 * self.bitcoin / (self.ada * 100_000.0)) as u64
+//     }
+// 
+//     pub fn lovelace_to_msat(&self, amount: u64) -> u64 {
+//         ((amount as f64 * self.ada * 100_000.0) / self.bitcoin) as u64
+//     }
+// }
+
+
 
 export type AdaptorClient = {
   adaptorUrl: AdaptorUrl;

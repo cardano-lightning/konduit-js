@@ -6,7 +6,7 @@ import {
   RequestSerialiser,
   ResponseDeserialiser,
 } from "./http";
-import { Address, address2AddressBech32Iso, AddressBech32, Network, NetworkMagicNumber } from "./cardano/addressses";
+import { Address, address2AddressBech32Iso, AddressBech32, Network, NetworkMagicNumber } from "./cardano";
 import * as codec from "@konduit/codec";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import { TxHash, Lovelace, TxCborBytes } from "./cardano";

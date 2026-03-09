@@ -17,7 +17,7 @@ import { NonNegativeInt } from "@konduit/codec/integers/smallish";
 import { Squash, SquashBody } from "./channel/squash";
 import type { InvoiceString } from "@konduit/bln/invoice/bolt11";
 import type { Invoice } from "./bitcoin/bolt11";
-import { TxIx } from "./cardano/ledger";
+import { NetworkMagicNumber, TxIx } from "./cardano";
 
 type ConsumerEvent<T> = CustomEvent<T>;
 
@@ -62,6 +62,14 @@ export type PayError =
   | ChequeIssuingError
 
 export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
+  // FIXME: a particular instance of the consumer
+  // should be attached to a particular network.
+  // On the app level we can introduce a switch
+  // which should replace the whole consumer instances
+  // App should also preserve different states of the
+  // consumer for different networks separately.
+  public readonly networkMagicNumber = NetworkMagicNumber.PREPROD;
+
   // We keep the signing key separate from wallet
   // because we want to allow users to use different
   // wallet (CIP-30) for L1 interactions.
@@ -194,10 +202,17 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
   private async poll() {
     // Go over the channels, identify those which needs approval from the adaptor
     for(const channel of this._channels.values()) {
+      // L1 syncing
+      // const origL1Thread = channel.l1.onChainThread.lastValue;
+      // console.log("Polling channel - orig L1 thread:", origL1Thread);
+      // const l1Result = await channel.doL1Sync(this.sKey);
+      // console.log("Polling channel - L1 sync result:", l1Result);
+
+      // L2 syncing
       const origSquashInfo = channel.squashingInfo.lastValue;
       console.log("Polling channel - orig squash:", origSquashInfo);
 
-      const result = await channel.doAdaptorSync(this.sKey);
+      const result = await channel.doL2Sync(this.sKey);
       console.log("Polling channel - sync result:", result);
 
       const newSquashInfo = channel.squashingInfo.lastValue;
@@ -209,6 +224,7 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
       } else if(!SquashBody.areEqual(origSquashInfo.squash.body, newSquashInfo.squash.body)) {
         this.emit("channel-squashed", { channel, result: newSquashInfo.squash });
       }
+
       //   result.match(
       //     (result) => {
       //       if(result != null)

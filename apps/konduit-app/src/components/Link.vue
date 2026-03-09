@@ -37,7 +37,7 @@ const handleClick = (action: OnClick, event: MouseEvent) => {
   <a
     :href="props.href"
     :class="{ 'no-underline': props.underscore || true, 'bold': props.useBold }"
-    @click="props.click ? handleClick(props.click, $event) : null"
+    @click="props.click ? handleClick(props.click, $event) : handleClick(props.href, $event)"
   >
     <slot></slot>
     <SquareArrowOutUpRight v-if="props.showIcon" class="external-icon" />

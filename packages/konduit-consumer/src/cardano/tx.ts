@@ -14,12 +14,12 @@ import * as uint8Array from "@konduit/codec/uint8Array";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import * as cborCodecs from "@konduit/codec/cbor/codecs/sync";
 import type { JsonError, JsonCodec } from "@konduit/codec/json/codecs";
-import { NonNegativeInt } from "@konduit/codec/integers/smallish";
+import { NonNegativeInt, type ZeroToNine } from "@konduit/codec/integers/smallish";
 import { altCborCodecs, cbor2EmbededCborCodec, json2CborCodec, mkTaggedBytesCborCodec, type CborCodec } from "@konduit/codec/cbor/codecs/sync";
 import { Address } from "./addressses";
 import type { Cbor } from "@konduit/codec/cbor/core";
 import { Value } from "./assets";
-import { mkOrdForUint8Array } from "@konduit/codec/tagged";
+import { mkOrdForScalar, mkOrdForUint8Array } from "@konduit/codec/tagged";
 
 // We do not provide validation for TxCborBytes and TxBodyCborBytes here. Please use it when you can trust the source of the CBOR.
 export type TxCborBytes = typeFest.Tagged<Uint8Array, "TxCborBytes">;
@@ -352,6 +352,19 @@ export namespace TxInput {
   );
 }
 
+// At some point we will transform this in
+// a fully fledged transaction representation(s).
+// Ideallly it will be unitifed with the one which we have
+// from Rust tx builder as well.
+// Currently it is used mostly between l1
+// app layer and connector(s).
+export type TxInfo = {
+  txHash: TxHash;
+  inputs: TxInput[];
+  outputs: TxOut[];
+}
+
+// TODO: create a separate cip30.ts module
 // CIP-30, unspent output encoding:
 // ```cddl
 // transaction_unspent_output = [
@@ -385,4 +398,23 @@ export namespace TransactionUnspentOutput {
   );
 }
 
+export type TxIx = Tagged<NonNegativeInt, "TxIx">;
+export namespace TxIx {
+  export const fromNonNegativeInt = (nonNegative: NonNegativeInt): TxIx => nonNegative as TxIx;
+  export const fromDigits = (n0: ZeroToNine, n1?: ZeroToNine, n2?: ZeroToNine, n3?: ZeroToNine): TxIx => {
+    return NonNegativeInt.fromDigits(n0, n1, n2, n3) as TxIx;
+  }
+  export const jsonCodec = codec.rmap(
+    NonNegativeInt.jsonCodec,
+    (nonNegative) => nonNegative as TxIx,
+    (txIx: TxIx): NonNegativeInt => txIx as NonNegativeInt,
+  );
+  export const ord = mkOrdForScalar<TxIx>();
+}
+
+export type TxOutRef = { txId: TxHash, txIx: TxIx };
+export const json2TxOutRefCodec: JsonCodec<TxOutRef> = jsonCodecs.objectOf({
+  txId: TxHash.jsonCodec,
+  txIx: TxIx.jsonCodec,
+});
 

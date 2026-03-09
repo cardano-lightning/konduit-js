@@ -19,15 +19,19 @@ import TheHeader from "../components/TheHeader.vue";
 import * as l10n from "../composables/l10n";
 import { hex, MISSING_PLACEHOLDER, orPlaceholder } from "../utils/formatters";
 import { POSIXMilliseconds, ValidDate } from "@konduit/konduit-consumer/time/absolute";
+import type { Channel } from "@konduit/konduit-consumer/channel";
 import { konduitConsumer, type AppKonduitConsumer } from "../store";
 import { useRouter } from "vue-router";
 import type { ChannelQuoteInfo, ChannelQuoteResult } from "@konduit/konduit-consumer";
 import { Invoice } from "@konduit/konduit-consumer/bitcoin/bolt11";
-import { Lovelace } from "@konduit/konduit-consumer/cardano";
+import { Lovelace, PublicNetwork } from "@konduit/konduit-consumer/cardano";
 import { invoice as previousStoreInvoice } from "../store";
 import { Millisatoshi, Satoshi } from "@konduit/konduit-consumer/bitcoin";
 import { PositiveBigInt } from "@konduit/codec/integers/big";
-import { Milliseconds, NormalisedDuration } from "@konduit/konduit-consumer/time/duration";
+import { Milliseconds } from "@konduit/konduit-consumer/time/duration";
+import { CardanoScan } from "../utils/cardano";
+import { useNotifications } from "../composables/notifications";
+import { stringify } from "@konduit/codec/json";
 
 
 onMounted(() => {
@@ -60,15 +64,15 @@ const currentStep = computed(() => {
 
 
 const DEBUGGING_NO_CHANNELS_AT_ALL = false;
-const DEBUGGING_CHANNELS_NOT_READY = true;
+const DEBUGGING_CHANNELS_NOT_READY = false;
 
 type BlockedReason =
-  | 'invoice-expired' // TODO: 1 +
-  | 'invoice-invalid' // TODO: 1 +
-  | 'no-channels-at-all' // TODO: 2 +
-  | 'channels-not-ready' // TODO: 3 -
-  | 'not-enough-capacity' // TODO: 4 ~ (Message is displayed. Flow not implemented)
-  | 'all-channels-closed' // TODO: 5 + (Not tested yet).
+  | { type: 'invoice-expired' } // TODO: 1 +
+  | { type: 'invoice-invalid' } // TODO: 1 +
+  | { type: 'no-channels-at-all' } // TODO: 2 +
+  | { type: 'channels-not-ready', channel: Channel }
+  | { type: 'not-enough-capacity' } // TODO: 4 ~ (Message is displayed. Flow not implemented)
+  | { type: 'all-channels-closed' } // TODO: 5 + (Not tested yet).
 
 type QuotingProgress =
   | {
@@ -115,22 +119,26 @@ const getInvoiceExpirationInfo = (invoice: Invoice): InvoiceExpirationInfo => {
 
 const checkInvoicePayable = (invoice: Invoice, expirationInfo: InvoiceExpirationInfo, consumer: AppKonduitConsumer): BlockedReason | null => {
   if(expirationInfo.type === 'invalid') {
-    return 'invoice-invalid';
+    return { type: 'invoice-invalid' };
   }
   if(expirationInfo.type === 'expired' && !(DEBUGGING_NO_CHANNELS_AT_ALL || DEBUGGING_CHANNELS_NOT_READY)) {
-    return 'invoice-expired';
+    return { type: 'invoice-expired' };
   }
 
   if(consumer.maximumCapacity === null || DEBUGGING_NO_CHANNELS_AT_ALL || DEBUGGING_CHANNELS_NOT_READY) {
     if(consumer.channels.length == 0 || DEBUGGING_NO_CHANNELS_AT_ALL)
-      return 'no-channels-at-all';
-    else if(consumer.channels.some(ch => !ch.wasApproved) || DEBUGGING_CHANNELS_NOT_READY)
-      return 'channels-not-ready';
-    else
-      return 'all-channels-closed';
+      return { type: 'no-channels-at-all' };
+    else {
+      const notReady = (consumer.channels.filter(ch => !ch.wasApproved || DEBUGGING_CHANNELS_NOT_READY));
+      if(notReady.length > 0 || DEBUGGING_CHANNELS_NOT_READY)
+        return { type: 'channels-not-ready', channel: notReady[0]! };
+      return { type: 'all-channels-closed' };
+    }
   }
-  if(consumer.maximumCapacity < invoice.amount) {
-    return 'not-enough-capacity';
+  // const invoiceAmount =
+  console.log("Consumer maximum capacity", consumer.maximumCapacity);
+  if(Lovelace.ord.isLessThan(consumer.maximumCapacity, invoice.amount)) {
+    return { type: 'not-enough-capacity' };
   }
   return null;
 }
@@ -148,18 +156,17 @@ const mkInvoiceDetailsBlockedState = (invoice: Invoice, expirationInfo: InvoiceE
 });
 
 const onInvoice = async (invoice: Invoice): Promise<void> => {
+  console.log("INVOICE RECEIVED");
+  //previousStoreInvoice.value = invoice;
   const consumer = konduitConsumer.value as AppKonduitConsumer | null;
   if(consumer == null) return;
   const expirationInfo = getInvoiceExpirationInfo(invoice);
   const possibleBlockedReason = checkInvoicePayable(invoice, expirationInfo, consumer);
-  console.log('Possible blocked reason', possibleBlockedReason);
   if(possibleBlockedReason) {
     invoiceDetailsStep.value = mkInvoiceDetailsBlockedState(invoice, expirationInfo, possibleBlockedReason);
-    if(possibleBlockedReason === 'invoice-expired' || possibleBlockedReason === 'invoice-invalid') {
+    if(possibleBlockedReason.type === 'invoice-expired' || possibleBlockedReason.type === 'invoice-invalid') {
       // If the invoice is already expired, we can clear the invoice cache to avoid confusion.
       previousStoreInvoice.value = null;
-    } else {
-      previousStoreInvoice.value = invoice;
     }
     return;
   }
@@ -171,7 +178,7 @@ const onInvoice = async (invoice: Invoice): Promise<void> => {
       bestSoFar: null,
       allQuoteResults: [],
     },
-    title: 'Loading quotes…',
+    title: invoiceDetailsStep.value?.title || 'Payment',
   };
 
   const [results, theBest] = await consumer.queryQuotes(invoice.raw, (results, bestSoFar) => {
@@ -183,7 +190,7 @@ const onInvoice = async (invoice: Invoice): Promise<void> => {
         bestSoFar,
         allQuoteResults: results,
       },
-      title: 'Quotes loaded',
+      title: invoiceDetailsStep.value?.title || 'Payment',
     };
   });
   invoiceDetailsStep.value = {
@@ -194,7 +201,7 @@ const onInvoice = async (invoice: Invoice): Promise<void> => {
       bestSoFar: theBest,
       allQuoteResults: results,
     },
-    title: 'Quotes loaded',
+    title: invoiceDetailsStep.value?.title || 'Payment',
   };
 }
 
@@ -263,6 +270,7 @@ const routingFee = computed((): PossiblyEstimated<Millisatoshi> | null => {
     const quotingProgress = currentStep.value.step.quotingProgress;
     if((quotingProgress.type === 'loaded' || quotingProgress.type === 'loading')
         && quotingProgress.bestSoFar) {
+      console.log('Best quote so far', quotingProgress.bestSoFar);
       return { actual: quotingProgress.bestSoFar.quote.routingFee, type: 'real' };
     }
     const milliSats = currentStep.value.step.invoice.amount;
@@ -308,7 +316,7 @@ const buttons = computed((): ButtonProps[] => {
   if(currentStep.value.index !== 'invoice-details') return [];
   const quotingProgress = currentStep.value.step.quotingProgress;
   if(quotingProgress.type === 'blocked') {
-    switch(quotingProgress.reason) {
+    switch(quotingProgress.reason.type) {
       case 'no-channels-at-all':
         return [
         {
@@ -382,39 +390,49 @@ const buttons = computed((): ButtonProps[] => {
   }
 });
 
-const pay = () => {
-  // OLD:
-  // if(currentStep.value.index !== 'invoice-details' || !currentStep.value.quote) return;
-  //  const [channel, quote] = currentStep.value.quote;
-  //  const invoice = currentStep.value.invoice;
+const notifications = useNotifications();
 
-  //  // We want to test different scenarios
-  //  const invalidQuote = {
-  //    ...quote,
-  //    amount: quote.amount + BigInt(10000000) as Lovelace
-  //  }
-  //  konduitConsumer.value?.pay(channel, invalidQuote, invoice).then(result => {
-  //    result.match(
-  //      (payment) => {
-  //        console.log('Payment successful', payment);
-  //      },
-  //      (error) => {
-  //        console.error('Payment failed', error);
-  //      }
-  //    );
-  //  });
-
-
-  // OLDER:
-  // public pay = async (channel: Channel, quote: Quote, invoice: Invoice): Promise<Result<ConfirmedPayment | FailedPayment, PayError>> => {
-  // result.match(
-  //   (payment) => {
-  //     console.log('Payment successful', payment);
-
-  // console.log('Paying invoice with quote', currentStep.value.quote);
+const pay = async () => {
+  if(currentStep.value.index !== 'invoice-details'
+    || currentStep.value.step.quotingProgress.type !== 'loaded'
+    || !currentStep.value.step.quotingProgress.bestSoFar) return;
+  const quote = currentStep.value.step.quotingProgress.bestSoFar;
+  const invoice = currentStep.value.step.invoice;
+  const consumerInstance = konduitConsumer.value;
+  if(!consumerInstance) return;
+  const result = await consumerInstance.pay(quote.channel, quote.quote, invoice);
+  result.match(
+    (_payment) => notifications.redirectSuccess(
+      "Payment successful.",
+      { name: "home" }
+    ),
+    (error) => notifications.redirectError(
+      `Payment failed: ${stringify(error)}`,
+      { name: "home" }
+    )
+  );
 }
 
-const txURL = "test"
+const chargedChannelTxHash = computed(() => {
+  if(currentStep.value.index !== 'invoice-details') return null;
+  const quotingProgress = currentStep.value.step.quotingProgress;
+  if((quotingProgress.type === 'blocked' && quotingProgress.reason.type === 'channels-not-ready')) {
+    const openTx = quotingProgress.reason.channel.l1.openTx;
+    if(openTx) {
+      return openTx.txHash;
+    }
+  }
+  return null;
+});
+
+const txUrl = computed(() => {
+  const txHash = chargedChannelTxHash.value;
+  const networkMagic = konduitConsumer.value?.networkMagicNumber;
+  const publicNetwork = networkMagic? PublicNetwork.fromNetworkMagicNumber(networkMagic) : null;
+
+  if(!txHash || !publicNetwork) return null;
+  return CardanoScan.mkTransactionPageUrl(publicNetwork, txHash);
+});
 
 </script>
 
@@ -435,7 +453,7 @@ const txURL = "test"
       </div>
       <template v-if="currentStep.step.quotingProgress.type === 'blocked'">
         <Callout
-          v-if="currentStep.step.quotingProgress.reason === 'invoice-expired'"
+          v-if="currentStep.step.quotingProgress.reason.type === 'invoice-expired'"
           :title="'Invoice expired'"
           :variant="'error'"
         >
@@ -445,7 +463,7 @@ const txURL = "test"
           It has expired {{ formattedExpiredAgo ? `${formattedExpiredAgo} ago` : '' }}. <br />
         </Callout>
         <Callout
-          v-else-if="currentStep.step.quotingProgress.reason === 'invoice-invalid'"
+          v-else-if="currentStep.step.quotingProgress.reason.type === 'invoice-invalid'"
           :title="'Invalid invoice'"
           :variant="'error'"
         >
@@ -455,7 +473,7 @@ const txURL = "test"
           The app had problems parsing the invoice, so it cannot be paid. This can be caused by an invalid invoice format or by unsupported features in the invoice.
         </Callout>
         <Callout
-          v-else-if="currentStep.step.quotingProgress.reason === 'channels-not-ready'"
+          v-else-if="currentStep.step.quotingProgress.reason.type === 'channels-not-ready'"
           :title="'Lightning charging in progress'"
           :variant="'info'"
         >
@@ -469,9 +487,9 @@ const txURL = "test"
               The opening transaction was submitted.
             </li>
             <li>
-              <template v-if="txURL">
+              <template v-if="txUrl">
                 <SquareCheckBig />
-                The transaction <Link :href="txURL" :use-bold="true" :show-icon="true">was&nbsp;confirmed</Link>.
+                The transaction <Link :href="txUrl" :use-bold="true" :show-icon="true">was&nbsp;confirmed</Link>.
               </template>
               <span v-else>
                 <Square />
@@ -482,7 +500,7 @@ const txURL = "test"
           </ul>
         </Callout>
         <Callout
-          v-else-if="currentStep.step.quotingProgress.reason === 'not-enough-capacity'"
+          v-else-if="currentStep.step.quotingProgress.reason.type === 'not-enough-capacity'"
           :title="'Low on capacity!'"
           :variant="'warning'"
         >
@@ -493,7 +511,7 @@ const txURL = "test"
           Please top up your channel to proceed.
         </Callout>
         <Callout
-          v-else-if="currentStep.step.quotingProgress.reason === 'no-channels-at-all'"
+          v-else-if="currentStep.step.quotingProgress.reason.type === 'no-channels-at-all'"
           :title="'First payment – almost there!'"
           :variant="'info'"
         >
@@ -507,7 +525,7 @@ const txURL = "test"
           </div>
         </Callout>
 
-        <p v-else-if="currentStep.step.quotingProgress.reason === 'all-channels-closed'">
+        <p v-else-if="currentStep.step.quotingProgress.reason.type === 'all-channels-closed'">
           All your channels are closed, so you cannot pay this invoice.
         </p>
 
@@ -523,7 +541,7 @@ const txURL = "test"
         },
         routingFee ? {
           label: routingFee.type == 'real'? 'Routing fee' : 'Estimated routing fee',
-          formattedValue: formatters.formatBtc(Satoshi.fromMillisatoshiFloor(routingFee.actual)),
+          formattedValue: formatters.formatBtcMsat(routingFee.actual),
           actions: [
             [() => console.log('INFO'), 'info'],
           ]

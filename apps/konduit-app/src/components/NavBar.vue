@@ -2,7 +2,7 @@
 import ButtonGroup from "../components/ButtonGroup.vue";
 import { type Props as ButtonProps } from "../components/Button.vue";
 import Sliders from "./icons/Sliders.vue";
-import WalletMinimal from "./icons/WalletMinimal.vue";
+/* import WalletMinimal from "./icons/WalletMinimal.vue"; */
 import Konduit from "./icons/Konduit.vue";
 import Zap from "./icons/Zap.vue";
 import { computed } from "vue";

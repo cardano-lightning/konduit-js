@@ -10,10 +10,10 @@ import type { HexString } from "@konduit/codec/hexString";
 import { json2StringCodec, type JsonError, type JsonCodec } from "@konduit/codec/json/codecs";
 import { blake2b } from "@noble/hashes/blake2.js";
 import { stringify, type Json } from "@konduit/codec/json";
-import { PositiveBigInt } from "@konduit/codec/integers/big";
 import type { Iso } from "@konduit/codec";
 import { mkOrdForUint8Array } from "@konduit/codec/tagged";
 import { cbor2ByteStringCodec, mkTaggedBytesCborCodec, type CborCodec } from "@konduit/codec/cbor/codecs/sync";
+import { NetworkMagicNumber } from "./ledger";
 
 export type ScriptHash = Tagged<Uint8Array, "ScriptHash">;
 export namespace ScriptHash {
@@ -52,14 +52,6 @@ export const json2PubKeyHashCodec = codec.pipe(
 export type Credential =
   | { type: "ScriptHash"; hash: ScriptHash }
   | { type: "PubKeyHash"; hash: PubKeyHash };
-
-export type NetworkMagicNumber = Tagged<PositiveBigInt, "NetworkMagicNumber">;
-export namespace NetworkMagicNumber {
-  export const fromPositiveBigInt = (v: PositiveBigInt): NetworkMagicNumber => v as NetworkMagicNumber;
-  export const MAINNET = 764824073n as NetworkMagicNumber;
-  export const PREPROD = 1n as NetworkMagicNumber;
-  export const PREVIEW = 2n as NetworkMagicNumber;
-}
 
 export type Network = Tagged<"mainnet" | "testnet", "Network">;
 export namespace Network {

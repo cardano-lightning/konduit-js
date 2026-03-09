@@ -159,8 +159,12 @@ export namespace PositiveCoin {
 export type AssetId = [ScriptHash, AssetName];
 export namespace AssetId {
   export const fromJson = (json: Json): Result<AssetId, JsonError> => jsonCodec.deserialise(json);
-  export const ord: Ord<AssetId> = mkOrdForTuple(ScriptHash.ord, AssetName.ord) as Ord<AssetId>;
-
+  export const ord: Ord<AssetId> = (() => {
+    console.log("Creating AssetId ord");
+    console.log(ScriptHash);
+    console.log(AssetName);
+    return mkOrdForTuple(ScriptHash.ord, AssetName.ord) as Ord<AssetId>;
+  })();
   export const jsonCodec: JsonCodec<AssetId> = jsonCodecs.tupleOf(json2ScriptHashCodec, AssetName.jsonCodec);
 }
 

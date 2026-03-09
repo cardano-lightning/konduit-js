@@ -38,6 +38,7 @@ const decodedInvoice: Ref<Invoice | null> = ref(null);
 watch(decodedInvoice, (newVal) => {
   if (newVal !== null) {
     console.log(newVal.raw);
+    console.log("Emitting decoded invoice:", newVal);
     emit("invoice", newVal);
   }
 });
@@ -81,6 +82,12 @@ const testingInvoices = [
   }, {
     // ~1 BTC
     invoice: "LNTB11P56RYSPPP5JYQU0EUUG7745QREFW2GG4SS875WF744WLMF3SCEVZEKX6ENXKMQDQQCQZZSXQRRSSSP5XTM2LYY46PCUCTYCDJ92PFP2D4G3F78RP285JZVYVH2PFP3GLVYQ9QXPQYSGQ6H8URLRJ2C3RQD39Y3SPJQ6K3JCN0RAH77G09N8U3VVGEV0U77KNW855EDYMM48UKHC3JKF37LYZ55TY26H0H4DHRWXGU3ZFPM60XTSQFLRSN0",
+    autoTrigger: false,
+  }, {
+    invoice: "LNTB50U1P566LFGPP528SCGWF4L8LNPLP6Q3DQ44VZVRC8F0AY2DCFCXUA966ZPN2YV4LQDQQCQZZSXQRRSSSP5FKF8NNS9XSCGEUURUQYP7G0EK8UZHZ56ERPCT99DVXX2FLGPWGZS9QXPQYSGQ0K7PLQQEM4EHANVA0VHEQUWCS5WSEV53YSKG322RA5TLTVS6WNUYL2ALTSGF7LMV3NNDPSG8W8MJXTHWDQX82MDJ9EASULSAQPCX38GPMYCRCC",
+    autoTrigger: false,
+  }, {
+    invoice: "LNTB50U1P56ARVEPP5ZM40QW7EH9S69DWY5Q8F7TALXGK82M2V5QRN4GREY9HSM4LGQ5GQDQQCQZZSXQRRSSSP5W7A4XNAM2PXKT94M9K70AH2Y7LXTSKHLL8S3FYQ66PN4MJVT28YS9QXPQYSGQAEJ37CDPYUEKHS75QTDKWT0VJ5CAJ8P0KFJLQZLAH5MCQSC2V7EQY3QQA4XHEJZKARCHGW20UXTH57M6SSEHNZGNHGUJ7SX6L6A6JXGPC06RWM",
     autoTrigger: true,
   }
 ];
@@ -101,6 +108,7 @@ onMounted(() => {
   for(const testing of testingInvoices) {
     if(testing.autoTrigger) {
       setTimeout(() => {
+        console.log("Auto-triggering invoice input for testing purposes.");
         invoiceInputContent.value = testing.invoice;
       }, 500);
       break; // Only trigger the first one that has autoTrigger enabled
@@ -114,6 +122,9 @@ onMounted(() => {
 
 });
 
+// This ref is wired to the textarea input and triggers validation on change.
+// Another path for setting the invoice is through QR code scanning which
+// directly updates the validation result ref.
 const invoiceInputContent: Ref<string | null> = ref(null);
 const invoiceInputValidationResult: Ref<Result<Invoice, JsonError> | null> = ref(null);
 watch(invoiceInputValidationResult, (newVal) => {
@@ -153,12 +164,12 @@ watch(invoiceInputContent, (val) => {
     invoiceInputValidationResult.value = null;
     return;
   }
+  console.log("Validating invoice input content:", val);
   validateInvoiceInputContent(val);
 });
 
 
 const qrPayloadValidationResult: Ref<Result<Invoice, JsonError> | null> = ref(null);
-
 const qrPayloadValidationError: ComputedRef<JsonError | null> = computed(() => {
   if(qrPayloadValidationResult.value === null) return null;
   return qrPayloadValidationResult.value.match(

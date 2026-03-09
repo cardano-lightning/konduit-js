@@ -59,6 +59,11 @@ export namespace POSIXMilliseconds {
   export const fromPOSIXSeconds = (seconds: POSIXSeconds): POSIXMilliseconds => (seconds * 1000) as POSIXMilliseconds;
   export const fromValidDate = (date: ValidDate): POSIXMilliseconds => date.getTime() as POSIXMilliseconds;
   export const ord = mkOrdForScalar<POSIXMilliseconds>();
+  export const addMilliseconds = (milliseconds: POSIXMilliseconds, millisecondsToAdd: Milliseconds): Result<POSIXMilliseconds, string> => {
+    return NonNegativeInt.add(milliseconds, millisecondsToAdd).andThen(newMilliseconds =>
+      fromNonNegativeInt(newMilliseconds)
+    );
+  }
 }
 
 export const bigInt2POSIXMillisecondsCodec: Codec<bigint, POSIXMilliseconds, JsonError> = codec.pipe(NonNegativeInt.bigIntCodec, {

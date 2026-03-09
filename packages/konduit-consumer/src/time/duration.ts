@@ -38,6 +38,10 @@ export namespace Milliseconds {
         return Milliseconds.fromSeconds(Seconds.fromMinutes(Minutes.fromHours(Hours.fromDays(Days.fromWeeks(duration.value)))));
     }
   }
+  export const add = (duration1: Milliseconds, duration2: Milliseconds): Result<Milliseconds, string> =>
+    NonNegativeInt.add(duration1, duration2).map(fromNonNegativeInt);
+  export const scale = (duration: Milliseconds, factor: NonNegativeInt): Result<Milliseconds, string> =>
+    NonNegativeInt.scale(duration, factor).map(fromNonNegativeInt);
   export const ord = mkOrdForScalar<Milliseconds>();
 }
 export const json2MillisecondsCodec = codec.rmap(NonNegativeInt.jsonCodec, (n) => Milliseconds.fromNonNegativeInt(n), (ms) => ms);

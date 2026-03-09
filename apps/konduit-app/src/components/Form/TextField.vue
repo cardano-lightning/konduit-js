@@ -1,6 +1,6 @@
 <script lang="ts">
 import type { Ref } from "vue";
-import type { BaseFieldProps } from "./core"
+import { extractFieldErrorsMessages, type BaseFieldProps } from "./core"
 
 export type TextFieldType = "text" | "email" | "password" | "tel" | "number" | "date" | "url";
 export const text: TextFieldType = "text";
@@ -25,6 +25,9 @@ export type Props = UnboundProps & {
 }
 
 const props = defineProps<Props>();
+const hasErrors = (): boolean => {
+  return extractFieldErrorsMessages(null, props.errors || []).length > 0;
+};
 </script>
 
 <template>
@@ -33,7 +36,7 @@ const props = defineProps<Props>();
     v-model="props.state.value"
     :type="props.type || 'text'"
     :placeholder="props.placeholder || ''"
-    :class="{ error: props.isValid === false || (props.errors?.length || 0) > 0, success: props.isValid === true }"
+    :class="{ error: props.isValid === false || hasErrors(), success: props.isValid === true }"
     @blur="props.touch()"
   />
 </template>

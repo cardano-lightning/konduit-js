@@ -8,8 +8,8 @@ import '@formatjs/intl-durationformat/polyfill-force.js';
  * restricted ourselves there to: normalize.css, toastification and
  * colar extension over open-colors.
  */
+import "./colar.css";
 import "normalize.css";
-import "../public/colar.css"
 import "vue-toastification/dist/index.css";
 </script>
 

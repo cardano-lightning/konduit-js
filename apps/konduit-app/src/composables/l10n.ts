@@ -3,11 +3,15 @@ import { useLocale } from './locale';
 import { CurrencyFormat, type CurrencyFormatOptions, type Notation } from '@konduit/currency-format';
 import Decimal from 'decimal.js-i18n';
 import type { Lovelace } from '@konduit/konduit-consumer/cardano';
-import type { Satoshi } from '@konduit/konduit-consumer/bitcoin';
+import { Millisatoshi, Satoshi } from '@konduit/konduit-consumer/bitcoin';
 import { Milliseconds, NormalisedDuration, type AnyPreciseDuration } from '@konduit/konduit-consumer/time/duration';
 import type { POSIXMilliseconds, ValidDate } from '@konduit/konduit-consumer/time/absolute';
+import type { PositiveInt } from '@konduit/codec/integers/smallish';
 
 export type FormatterOptions = Intl.NumberFormatOptions & Intl.DateTimeFormatOptions;
+
+// How close to the upper bound we consider "near enough" to round up
+const DURATION_ROUND_UP_THRESHOLD = 0.51;
 
 export function useNumberFormatter(options: Intl.NumberFormatOptions = {}) {
   const locale = useLocale();
@@ -115,6 +119,10 @@ export function useDefaultFormatters() {
     currency: { code: 'BTC', unit: 'sat', satDisplayThreshold: new Decimal('0.01') }
   });
 
+  const btcMsatFormatter = useCurrencyFormatter({
+    currency: { code: 'BTC', unit: 'msat', msatDisplayThreshold: new Decimal('0.01') }
+  });
+
   const shortDateFormatter = useDateFormatter({ dateStyle: 'short' });
 
   const durationShortFormatter = useDurationFormatter({ style: 'short' });
@@ -129,24 +137,44 @@ export function useDefaultFormatters() {
     relativeTimeFormatter: relativeTimeFormatter.value,
     formatAda: mkSafeFn1Formatter((value: Lovelace) => adaFormatter.value.format(value)),
     formatBtc: mkSafeFn1Formatter((value: Satoshi) => btcFormatter.value.format(value)),
+    formatBtcMsat: mkSafeFn1Formatter((orig: Millisatoshi) => {
+      const sats = Satoshi.fromMillisatoshiFloor(orig);
+      if(Millisatoshi.ord.areEqual(Millisatoshi.fromSatoshi(sats), orig))
+        return btcFormatter.value.format(sats);
+      return btcMsatFormatter.value.format(orig)
+    }),
     formatDurationShort: mkSafeFn1Formatter((value: NormalisedDuration) => durationShortFormatter.value.format(value)),
     formatDurationLong: mkSafeFn1Formatter((value: Milliseconds | NormalisedDuration, cutPrecision: boolean = true) => {
       const finalMilliseconds = (() => {
         const milliseconds = (() => {
-          if(typeof value === "object")
+          if (typeof value === 'object') {
             return Milliseconds.fromNormalisedDuration(value);
+          }
           return value;
         })();
-        if(cutPrecision) {
-          const secondsMs = 1000;
-          const minuteMs = 60 * 1000;
-          const hourMs = 60 * minuteMs;
-          const dayMs = 24 * hourMs;
-          if(milliseconds >= dayMs) return Math.round(milliseconds / dayMs) * dayMs;
-          if(milliseconds >= hourMs) return Math.round(milliseconds / hourMs) * hourMs;
-          if(milliseconds >= minuteMs) return Math.round(milliseconds / minuteMs) * minuteMs;
-          if(milliseconds >= secondsMs) return Math.round(milliseconds / secondsMs) * secondsMs;
+
+        if (cutPrecision) {
+          const secondsMs = 1000 as PositiveInt;
+          const minuteMs = 60 * secondsMs as PositiveInt;
+          const hourMs = 60 * minuteMs as PositiveInt;
+          const dayMs = 24 * hourMs as PositiveInt;
+          const weeksMs = 7 * dayMs as PositiveInt;
+
+          const roundWithThreshold = (unitMs: PositiveInt) => {
+            const reminderMs = milliseconds % unitMs;
+            const quotientMs = milliseconds - reminderMs;
+            const thresholdInMs = DURATION_ROUND_UP_THRESHOLD * unitMs;
+            const chosen = reminderMs >= thresholdInMs ? quotientMs + unitMs : quotientMs;
+            return chosen;
+          };
+
+          if (milliseconds >= weeksMs) return roundWithThreshold(weeksMs);
+          if (milliseconds >= dayMs) return roundWithThreshold(dayMs);
+          if (milliseconds >= hourMs) return roundWithThreshold(hourMs);
+          if (milliseconds >= minuteMs) return roundWithThreshold(minuteMs);
+          if (milliseconds >= secondsMs) return roundWithThreshold(secondsMs);
         }
+
         return milliseconds;
       })();
       const finalDuration = NormalisedDuration.fromComponentsNormalization({ milliseconds: finalMilliseconds as Milliseconds });
