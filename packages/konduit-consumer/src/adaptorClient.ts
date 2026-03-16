@@ -25,6 +25,7 @@ import {
   type PayResponse,
 } from "./adaptorClient/pay";
 import type { Invoice } from "./bitcoin/bolt11";
+import { AdaptorFx } from "./adaptorClient/fx";
 
 export { Quote } from "./adaptorClient/quote";
 export type { QuoteBody } from "./adaptorClient/quote";
@@ -48,6 +49,19 @@ const mkInfoEndpoint = (baseUrl: AdaptorUrl) => mkGetStaticEndpoint(
   ResponseDeserialiser.fromJsonDeserialiser(json2AdaptorInfoCodec.deserialise)
 );
 
+const mkFxEndpoint = (baseUrl: AdaptorUrl) =>
+  mkGetStaticEndpoint(
+    baseUrl,
+    "/opt/fx",
+    ResponseDeserialiser.fromJsonDeserialiser(AdaptorFx.jsonCodec.deserialise)
+  );
+
+const mkQuoteEndpoint = (baseUrl: AdaptorUrl) => mkPostEndpoint(
+  `${baseUrl}/ch/quote`,
+  RequestSerialiser.fromJsonSerialiser(json2QuoteBodySerialiser),
+  ResponseDeserialiser.fromJsonDeserialiser(json2QuoteCodec.deserialise)
+);
+
 export type AdaptorFullInfo = Tagged<[AdaptorUrl, AdaptorInfo], "AdaptorFullInfo">;
 export namespace AdaptorFullInfo {
   export const fromString = async (url: string): Promise<Result<AdaptorFullInfo, HttpEndpointError>> => {
@@ -58,47 +72,14 @@ export namespace AdaptorFullInfo {
   };
 }
 
-const mkQuoteEndpoint = (baseUrl: AdaptorUrl) => mkPostEndpoint(
-  `${baseUrl}/ch/quote`,
-  RequestSerialiser.fromJsonSerialiser(json2QuoteBodySerialiser),
-  ResponseDeserialiser.fromJsonDeserialiser(json2QuoteCodec.deserialise)
-);
-
-// #[derive(Debug, Clone, Serialize)]
-// pub struct State {
-//     pub created_at: i64,
-//     pub base: BaseCurrency,
-//     pub ada: f64,
-//     pub bitcoin: f64,
-// }
-// 
-// impl State {
-//     pub fn new(base: BaseCurrency, ada: f64, bitcoin: f64) -> Self {
-//         State {
-//             created_at: Utc::now().timestamp(),
-//             base,
-//             ada,
-//             bitcoin,
-//         }
-//     }
-// 
-//     pub fn msat_to_lovelace(&self, amount: u64) -> u64 {
-//         (amount as f64 * self.bitcoin / (self.ada * 100_000.0)) as u64
-//     }
-// 
-//     pub fn lovelace_to_msat(&self, amount: u64) -> u64 {
-//         ((amount as f64 * self.ada * 100_000.0) / self.bitcoin) as u64
-//     }
-// }
-
-
-
 export type AdaptorClient = {
   adaptorUrl: AdaptorUrl;
   info: () => Promise<Result<AdaptorInfo, HttpEndpointError>>;
+  fx: () => Promise<Result<AdaptorFx, HttpEndpointError>>;
   chSquash: (keyTag: KeyTag, squash: Squash) => Promise<Result<SquashResponse, HttpEndpointError>>;
-  chQuote: (keyTag: KeyTag, quoteBody: QuoteBody) => Promise<Result<Quote, HttpEndpointError>>;
-  chPay: (keyTag: KeyTag, cheque: LockedCheque, invoice: Invoice) => Promise<Result<PayResponse, HttpEndpointError>>;
+  chQuote: (keyTag: KeyTag, quoteBody: QuoteBody, signal?: AbortSignal) => Promise<Result<Quote, HttpEndpointError>>;
+  chPay: (keyTag: KeyTag, cheque: LockedCheque, invoice: Invoice, signal?: AbortSignal) =>
+    Promise<Result<PayResponse, HttpEndpointError>>;
 };
 
 export const json2AdaptorClientCodec: JsonCodec<AdaptorClient> = codec.rmap(
@@ -124,6 +105,7 @@ export const mkAdaptorClient = (baseUrl: AdaptorUrl): AdaptorClient => {
   return {
     adaptorUrl: baseUrl,
     info: mkInfoEndpoint(baseUrl),
+    fx: mkFxEndpoint(baseUrl),
     chSquash: async (keyTag: KeyTag, squash: Squash) => {
       const { key, tag } = KeyTag.split(keyTag);
       const json2SquashResponseCodec = mkJson2SquashResponseCodec(tag, key);
@@ -135,11 +117,11 @@ export const mkAdaptorClient = (baseUrl: AdaptorUrl): AdaptorClient => {
 
       return chSquashEndpoint(squash, [mkKonduitHeader(keyTag)]);
     },
-    chQuote: async (keyTag: KeyTag, quoteBody: QuoteBody) => {
+    chQuote: async (keyTag: KeyTag, quoteBody: QuoteBody, signal?: AbortSignal) => {
       const quoteEndpoint = mkQuoteEndpoint(baseUrl);
-      return quoteEndpoint(quoteBody, [mkKonduitHeader(keyTag)]);
+      return quoteEndpoint(quoteBody, [mkKonduitHeader(keyTag)], signal);
     },
-    chPay: async (keyTag: KeyTag, cheque: LockedCheque, invoice: Invoice) => {
+    chPay: async (keyTag: KeyTag, cheque: LockedCheque, invoice: Invoice, signal?: AbortSignal) => {
       const { key, tag } = KeyTag.split(keyTag);
       const json2PayResponseCodec = mkJson2PayResponseCodec(tag, key);
       const chPayEndpoint = mkPostEndpoint(
@@ -152,10 +134,10 @@ export const mkAdaptorClient = (baseUrl: AdaptorUrl): AdaptorClient => {
         signature: cheque.signature,
         invoice,
       };
-      return chPayEndpoint(body, [mkKonduitHeader(keyTag)]);
+      return chPayEndpoint(body, [mkKonduitHeader(keyTag)], signal);
     },
   };
-}
+};
 
 // Make client version scoped to a specific channel.
 export const mkAdaptorChannelClient = (adaptorUrl: AdaptorUrl, consumerEd25519VerificationKey: ConsumerEd25519VerificationKey, channelTag: ChannelTag) => {
@@ -165,9 +147,10 @@ export const mkAdaptorChannelClient = (adaptorUrl: AdaptorUrl, consumerEd25519Ve
     adaptorUrl: adaptorUrl,
     keyTag: keyTag,
     chSquash: (squash: Squash) => adaptorClient.chSquash(keyTag, squash),
-    chQuote: (quoteBody: QuoteBody) => adaptorClient.chQuote(keyTag, quoteBody),
-    chPay: (cheque: LockedCheque, invoice: Invoice) => adaptorClient.chPay(keyTag, cheque, invoice),
+    chQuote: (quoteBody: QuoteBody, signal?: AbortSignal) => adaptorClient.chQuote(keyTag, quoteBody, signal),
+    chPay: (cheque: LockedCheque, invoice: Invoice, signal?: AbortSignal) =>
+      adaptorClient.chPay(keyTag, cheque, invoice, signal),
     info: () => adaptorClient.info(),
+    fx: () => adaptorClient.fx(),
   }
 }
-

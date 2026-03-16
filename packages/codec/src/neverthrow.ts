@@ -58,3 +58,12 @@ export const unsafeUnwrap = <T, E>(result: Result<T, E>): T => {
   );
 }
 
+export const unwrapOrPanic = <T, E>(result: Result<T, E>, message: string = "PANIC - unwrapped an Err result"): T => {
+  return result.match(
+    (value) => value,
+    (error) => {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`${message}: ${errorMessage}`);
+    }
+  );
+}

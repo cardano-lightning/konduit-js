@@ -8,9 +8,23 @@ import type { Small, SmallPositive, ZeroToNine, OneToNine } from './smallish';
 import type { Json } from '../json';
 import { mkOrdForScalar } from '../tagged';
 import { cbor2IntCodec, type CborCodec } from '../cbor/codecs/sync';
+import type { NonNegativeDecimal, PositiveDecimal } from '../decimals';
+import { unwrapOrPanic } from '../neverthrow';
 
 // Positive BigInt (> 0n)
 export type PositiveBigInt = Tagged<bigint, "PositiveBigInt">;
+export const bigInt2PositiveBigIntCodec: Codec<bigint, PositiveBigInt, JsonError> = {
+  deserialise: (value: bigint): Result<PositiveBigInt, JsonError> => {
+    if (value <= 0n) {
+      return err(`Expected positive bigint, got ${value}`);
+    }
+    return ok(value as PositiveBigInt);
+  },
+  serialise: (tagged: PositiveBigInt): bigint => tagged as bigint
+}
+export const json2PositiveBigIntCodec: JsonCodec<PositiveBigInt> = codec.pipe(json2BigIntCodec, bigInt2PositiveBigIntCodec);
+export const json2PositiveBigIntThroughStringCodec: JsonCodec<PositiveBigInt> = codec.pipe(json2BigIntThroughStringCodec, bigInt2PositiveBigIntCodec);
+export const cbor2PositiveBigIntCodec: CborCodec<PositiveBigInt> = codec.pipe(cbor2IntCodec, bigInt2PositiveBigIntCodec);
 export namespace PositiveBigInt {
   export const fromSmallNumber = (n: SmallPositive) => BigInt(n) as PositiveBigInt;
   export const fromDigits = (n1: OneToNine, n2?: ZeroToNine, n3?: ZeroToNine, n4?: ZeroToNine, n5?: ZeroToNine, n6?: ZeroToNine, n7?: ZeroToNine, n8?: ZeroToNine, n9?: ZeroToNine, n10?: ZeroToNine, n11?: ZeroToNine, n12?: ZeroToNine, n13?: ZeroToNine, n14?: ZeroToNine, n15?: ZeroToNine, n16?: ZeroToNine, n17?: ZeroToNine, n18?: ZeroToNine, n19?: ZeroToNine): PositiveBigInt => {
@@ -22,30 +36,34 @@ export namespace PositiveBigInt {
     return value as PositiveBigInt;
   }
   export const fromBigInt = (n: bigint) => bigInt2PositiveBigIntCodec.deserialise(n);
+  // This can fail as the floor of a fraction can be zero.
+  export const fromPositiveDecimalFloor = (d: PositiveDecimal) => fromBigInt(BigInt(d.floor().toString()));
   export const fromJson = (n: Json) => json2PositiveBigIntCodec.deserialise(n);
   export const successor = (n: PositiveBigInt): PositiveBigInt => (n + 1n) as PositiveBigInt;
   export const add = (a: PositiveBigInt, b: PositiveBigInt): PositiveBigInt => (a + b) as PositiveBigInt;
   export const one = 1n as PositiveBigInt;
   export const multiply = (a: PositiveBigInt, b: PositiveBigInt): PositiveBigInt => (a * b) as PositiveBigInt;
   export const ord = mkOrdForScalar<PositiveBigInt>();
+  export const jsonCodec = json2PositiveBigIntCodec;
+  export const jsonThroughStringCodec = json2PositiveBigIntThroughStringCodec;
+  export const cborCodec = cbor2PositiveBigIntCodec;
 }
-
-export const bigInt2PositiveBigIntCodec: Codec<bigint, PositiveBigInt, JsonError> = {
-  deserialise: (value: bigint): Result<PositiveBigInt, JsonError> => {
-    if (value <= 0n) {
-      return err(`Expected positive bigint, got ${value}`);
-    }
-    return ok(value as PositiveBigInt);
-  },
-  serialise: (tagged: PositiveBigInt): bigint => tagged as bigint
-}
-
-export const json2PositiveBigIntCodec: JsonCodec<PositiveBigInt> = codec.pipe(json2BigIntCodec, bigInt2PositiveBigIntCodec);
-export const json2PositiveBigIntThroughStringCodec: JsonCodec<PositiveBigInt> = codec.pipe(json2BigIntThroughStringCodec, bigInt2PositiveBigIntCodec);
-export const cbor2PositiveBigIntCodec: CborCodec<PositiveBigInt> = codec.pipe(cbor2IntCodec, bigInt2PositiveBigIntCodec);
 
 // Non-negative BigInt (>= 0n)
 export type NonNegativeBigInt = Tagged<bigint, "NonNegativeBigInt">;
+// TODO: In between migration - move those codecs directly into the namespace body.
+export const bigInt2NonNegativeBigIntCodec: Codec<bigint, NonNegativeBigInt, JsonError> = {
+  deserialise: (value: bigint): Result<NonNegativeBigInt, JsonError> => {
+    if (value < 0n) {
+      return err(`Expected non-negative bigint, got ${value}`);
+    }
+    return ok(value as NonNegativeBigInt);
+  },
+  serialise: (tagged: NonNegativeBigInt): bigint => tagged as bigint
+}
+export const json2NonNegativeBigIntCodec: JsonCodec<NonNegativeBigInt> = codec.pipe(json2BigIntCodec, bigInt2NonNegativeBigIntCodec);
+export const json2NonNegativeBigIntThroughStringCodec: JsonCodec<NonNegativeBigInt> = codec.pipe(json2BigIntThroughStringCodec, bigInt2NonNegativeBigIntCodec);
+export const cbor2NonNegativeBigIntCodec: CborCodec<NonNegativeBigInt> = codec.pipe(cbor2IntCodec, bigInt2NonNegativeBigIntCodec);
 export namespace NonNegativeBigInt {
   export const fromSmallNumber = (n: Small) => BigInt(n) as NonNegativeBigInt;
   export const fromDigits = (n0: ZeroToNine, n1?: ZeroToNine, n2?: ZeroToNine, n3?: ZeroToNine, n4?: ZeroToNine, n5?: ZeroToNine, n6?: ZeroToNine, n7?: ZeroToNine, n8?: ZeroToNine, n9?: ZeroToNine, n10?: ZeroToNine, n11?: ZeroToNine, n12?: ZeroToNine, n13?: ZeroToNine, n14?: ZeroToNine, n15?: ZeroToNine, n16?: ZeroToNine, n17?: ZeroToNine, n18?: ZeroToNine, n19?: ZeroToNine): NonNegativeBigInt => {
@@ -57,6 +75,12 @@ export namespace NonNegativeBigInt {
     return value as NonNegativeBigInt;
   }
   export const fromBigInt = (n: bigint) => bigInt2NonNegativeBigIntCodec.deserialise(n);
+  export const fromNonNegativeDecimalFloor = (d: NonNegativeDecimal) => {
+    return unwrapOrPanic(
+      fromBigInt(BigInt(d.floor().toString())),
+      `Conversion between NonNegativeDecimal and NonNegativeBigInt failed: ${d.toString()}!`
+    );
+  }
   export const fromAbs = (n: bigint) => (n < 0n ? -n : n) as PositiveBigInt;
   export const fromJson = (n: Json) => json2NonNegativeBigIntCodec.deserialise(n);
   export const successor = (n: NonNegativeBigInt): NonNegativeBigInt => (n + 1n) as NonNegativeBigInt;
@@ -67,19 +91,8 @@ export namespace NonNegativeBigInt {
   export const multiply = (a: NonNegativeBigInt, b: NonNegativeBigInt): NonNegativeBigInt => (a * b) as NonNegativeBigInt;
   export const distance = (a: NonNegativeBigInt, b: NonNegativeBigInt): NonNegativeBigInt => (a >= b ? a - b : b - a) as NonNegativeBigInt;
   export const ord = mkOrdForScalar<NonNegativeBigInt>();
+  export const jsonCodec = json2NonNegativeBigIntCodec;
+  export const jsonThroughStringCodec = json2NonNegativeBigIntThroughStringCodec;
+  export const cborCodec = cbor2NonNegativeBigIntCodec;
 }
-
-export const bigInt2NonNegativeBigIntCodec: Codec<bigint, NonNegativeBigInt, JsonError> = {
-  deserialise: (value: bigint): Result<NonNegativeBigInt, JsonError> => {
-    if (value < 0n) {
-      return err(`Expected non-negative bigint, got ${value}`);
-    }
-    return ok(value as NonNegativeBigInt);
-  },
-  serialise: (tagged: NonNegativeBigInt): bigint => tagged as bigint
-}
-
-export const json2NonNegativeBigIntCodec: JsonCodec<NonNegativeBigInt> = codec.pipe(json2BigIntCodec, bigInt2NonNegativeBigIntCodec);
-export const json2NonNegativeBigIntThroughStringCodec: JsonCodec<NonNegativeBigInt> = codec.pipe(json2BigIntThroughStringCodec, bigInt2NonNegativeBigIntCodec);
-export const cbor2NonNegativeBigIntCodec: CborCodec<NonNegativeBigInt> = codec.pipe(cbor2IntCodec, bigInt2NonNegativeBigIntCodec);
 

@@ -7,7 +7,7 @@ import type { Ed25519Signature } from "@konduit/cardano-keys";
 import { decodedInvoice2InvoiceDeserialiser, type Invoice } from "../bitcoin/bolt11";
 import { bolt11 } from "@konduit/bln";
 import { mkJson2SquashResponseCodec, type SquashResponse } from "./squash";
-import type { ChannelTag, ConsumerEd25519VerificationKey } from "../channel";
+import type { ChannelTag, ConsumerEd25519VerificationKey } from "../channel/core";
 
 export type PayBody = {
   chequeBody: LockedChequeBody;

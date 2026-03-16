@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { parse, stringify, type Json } from '../src/json';
-import { json2StringCodec, json2NumberCodec, json2BooleanCodec, json2NullCodec, objectOf, altJsonCodecs, optional, type JsonCodec, arrayOf, tupleOf } from '../src/json/codecs';
+import { json2StringCodec, json2BooleanCodec, json2NullCodec, objectOf, altJsonCodecs, optional, type JsonCodec, arrayOf, tupleOf, json2NumberCodec, json2BigIntCodec } from '../src/json/codecs';
 import * as json from '../src/json';
 import { unwrapOk, unwrapErr } from './assertions';
+import { NonNegativeInt } from '../src/integers/smallish';
 
 describe('JSON Codecs', () => {
   describe('basic codecs', () => {
@@ -20,9 +21,32 @@ describe('JSON Codecs', () => {
       expect(decoded).toBe(original);
     });
 
+    it('should parse a small number as number', () => {
+      const jsonStr = "42";
+      const parsed = unwrapOk(parse(jsonStr));
+      expect(typeof parsed).toBe("number");
+      expect(parsed).toBe(42);
+    });
+
+    it('should parse a big number as number', () => {
+      const jsonStr = "4200000000000000000000000000000000000000";
+      const parsed = unwrapOk(parse(jsonStr));
+      expect(typeof parsed).toBe("bigint");
+      expect(parsed).toBe(4200000000000000000000000000000000000000n);
+    });
+
+    it('should encode and decode fractional numbers', () => {
+      const original = 42.5;
+      const encoded = json2NumberCodec.serialise(original);
+      expect(encoded).toBe(42.5);
+      const decoded = unwrapOk(json2NumberCodec.deserialise(encoded));
+      expect(decoded).toBe(original);
+    });
+
     it('should encode and decode numbers', () => {
       const original = 42;
       const encoded = json2NumberCodec.serialise(original);
+      expect(encoded).toBe(42);
       const decoded = unwrapOk(json2NumberCodec.deserialise(encoded));
       expect(decoded).toBe(original);
     });
@@ -50,25 +74,35 @@ describe('JSON Codecs', () => {
   describe('objectOf codec', () => {
     type Person = {
       name: string;
-      age: number;
+      // TODO: switch here to NonNegativeInt
+      age: NonNegativeInt;
       active: boolean;
     };
 
     const json2personCodec: JsonCodec<Person> = objectOf({
       name: json2StringCodec,
-      age: json2NumberCodec,
+      age: NonNegativeInt.jsonCodec,
       active: json2BooleanCodec
     });
 
     it('should encode and decode simple objects', () => {
-      const original = { name: "Alice", age: 30, active: true };
+      const original = { name: "Alice", age: NonNegativeInt.fromSmallNumber(30), active: true };
       const encoded = json2personCodec.serialise(original);
       const decoded = unwrapOk(json2personCodec.deserialise(encoded));
       expect(decoded).toEqual(original);
     });
 
+    it('should roundtrip bigint through JSON string', () => {
+      const original = 30n;
+      const encoded = json2BigIntCodec.serialise(original);
+      const jsonStr = stringify(encoded);
+      const parsed = unwrapOk(parse(jsonStr));
+      const decoded = unwrapOk(json2BigIntCodec.deserialise(parsed));
+      expect(decoded).toBe(30n);
+    });
+
     it('should roundtrip through JSON string', () => {
-      const original = { name: "Bob", age: 25, active: false };
+      const original = { name: "Bob", age: NonNegativeInt.fromSmallNumber(25), active: false };
       const encoded = json2personCodec.serialise(original);
       const jsonStr = stringify(encoded);
       const parsed = unwrapOk(parse(jsonStr));
@@ -109,7 +143,7 @@ describe('JSON Codecs', () => {
 
       const encoded = tupleCodec.serialise(original);
       expect(Array.isArray(encoded)).toBe(true);
-      expect(encoded).toEqual(["Alice", BigInt(42)]);
+      expect(encoded).toEqual(["Alice", 42]);
 
       const decoded = unwrapOk(tupleCodec.deserialise(encoded));
       expect(decoded).toEqual(original);
@@ -133,7 +167,7 @@ describe('JSON Codecs', () => {
       const original: [string, null | string, null | number] = ["Bob", null, 10];
 
       const encoded = tripleCodec.serialise(original);
-      expect(encoded).toEqual(["Bob", null, BigInt(10)]);
+      expect(encoded).toEqual(["Bob", null, 10]);
 
       const decoded = unwrapOk(tripleCodec.deserialise(encoded));
       expect(decoded).toEqual(original);
@@ -216,7 +250,7 @@ describe('JSON Codecs', () => {
     });
 
     it('should decode second alternative when first fails', () => {
-      const numValue = 42n;
+      const numValue = 42;
       const decoded = unwrapOk(json2StringOrNumberCodec.deserialise(numValue));
       expect(decoded).toBe(42);
     });
@@ -233,7 +267,7 @@ describe('JSON Codecs', () => {
       expect(strEncoded).toBe("hello");
 
       const numEncoded = json2StringOrNumberCodec.serialise(123);
-      expect(numEncoded).toBe(123n);
+      expect(numEncoded).toBe(123);
     });
   });
 
@@ -250,14 +284,14 @@ describe('JSON Codecs', () => {
 
     it('should decode all four alternatives', () => {
       expect(unwrapOk(fourWayCodec.deserialise("text"))).toBe("text");
-      expect(unwrapOk(fourWayCodec.deserialise(100n))).toBe(100);
+      expect(unwrapOk(fourWayCodec.deserialise(100))).toBe(100);
       expect(unwrapOk(fourWayCodec.deserialise(false))).toBe(false);
       expect(unwrapOk(fourWayCodec.deserialise(null))).toBe(null);
     });
 
     it('should serialize all types correctly', () => {
       expect(fourWayCodec.serialise("abc")).toBe("abc");
-      expect(fourWayCodec.serialise(50)).toBe(50n);
+      expect(fourWayCodec.serialise(50)).toBe(50);
       expect(fourWayCodec.serialise(true)).toBe(true);
       expect(fourWayCodec.serialise(null)).toBe(null);
     });

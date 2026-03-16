@@ -1,6 +1,6 @@
 import { err, ok, type Result } from "neverthrow";
 import type { Json } from "../json";
-import { onBigInt, onBoolean, onArray, onObject, onNull, nullJson, onString, stringify } from "../json";
+import { onBigInt, onBoolean, onArray, onObject, onNull, nullJson, onString, stringify, onNumber } from "../json";
 import * as json from "../json";
 import { altCodecs, mkIdentityCodec, pipe, type Codec, type Deserialiser, type ExtractCodecInput, type Serialiser, type UnionOfCodecsOutputs } from "../codec";
 
@@ -41,7 +41,16 @@ export const json2StringCodec: JsonCodec<string> = {
 
 // Default codec for bigint
 export const json2BigIntCodec: JsonCodec<bigint> = {
-  deserialise: onBigInt(val => err(`Expected bigint but got: ${String(val)}`) as Result<bigint, string>)(ok),
+  deserialise: (val) => {
+    const handleNumber = onNumber(val => err(`Expected either number or bigint but got: ${String(val)}`) as Result<bigint, JsonError>)(num => {
+      if (Number.isSafeInteger(num)) {
+        return ok(BigInt(num));
+      } else {
+        return err(`Number value ${num} is outside safe integer range [${Number.MIN_SAFE_INTEGER}, ${Number.MAX_SAFE_INTEGER}]`);
+      }
+    });
+    return onBigInt(handleNumber)(ok)(val);
+  },
   serialise: (value: bigint) => value as Json
 };
 
@@ -59,16 +68,9 @@ export const json2BigIntThroughStringCodec = pipe(
   }
 );
 
-// Codec for number (checks safe integer range during deserialisation)
 export const json2NumberCodec: JsonCodec<number> = {
-  deserialise: onBigInt(val => err(`Expected bigint (for number) but got: ${String(val)}`) as Result<number, string>)((value: bigint) => {
-    const num = Number(value);
-    if (num > Number.MAX_SAFE_INTEGER || num < Number.MIN_SAFE_INTEGER) {
-      return err(`BigInt value ${value} is outside safe integer range [${Number.MIN_SAFE_INTEGER}, ${Number.MAX_SAFE_INTEGER}]`);
-    }
-    return ok(num);
-  }),
-  serialise: (value: number) => BigInt(Math.round(value))
+  deserialise: onNumber(val => err(`Expected number but got: ${String(val)}`) as Result<number, JsonError>)(ok),
+  serialise: (value: number) => value
 };
 
 export const json2NumberThroughStringCodec = pipe(

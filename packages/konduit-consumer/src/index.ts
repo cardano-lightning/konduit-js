@@ -61,6 +61,7 @@ export type PayError =
   | { type: "TimeoutCalculation"; error: string }
   | ChequeIssuingError
 
+type ChannelWithCapacity = { channel: Channel, lovelace: Lovelace };
 export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
   // FIXME: a particular instance of the consumer
   // should be attached to a particular network.
@@ -106,22 +107,27 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
     return Array.from(this._channels.values());
   }
 
-  public get maximumCapacity(): Lovelace | null {
+  public get maximumCapacity(): ChannelWithCapacity | null {
     const anyOperational = this.channels.reduce((acc, channel) => channel.isOperational || acc, false);
     if(!anyOperational)
       return null;
     return this.channels.reduce(
-      (acc, channel) =>
-        channel.availableApprovedCapacity != null?
-          Lovelace.ord.max(acc, channel.availableApprovedCapacity)
-          : acc,
-      Lovelace.zero
+      (acc: ChannelWithCapacity | null, channel: Channel) => {
+        if(channel.availableApprovedCapacity == null) return acc;
+        const accAmount = (acc != null && acc.lovelace) || Lovelace.zero;
+        if(channel.availableApprovedCapacity > accAmount) {
+          return { channel, lovelace: channel.availableApprovedCapacity } as ChannelWithCapacity;
+        }
+        return acc;
+      },
+      null
     );
   }
 
   public async queryQuotes(
     invoice: InvoiceString,
     onQuoteInfo: OnQuoteInfo,
+    signal?: AbortSignal
   ): Promise<[ChannelQuoteResult[], ChannelQuoteInfo | null]> {
     const results: ChannelQuoteResult[] = [];
     const findBestQuote = (results: ChannelQuoteResult[]) => {
@@ -147,7 +153,7 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
       return bestSoFar;
     };
     const probes = this.channels.map(async (channel) => {
-      const quoteResult = await channel.adaptorClient.chQuote(invoice);
+      const quoteResult = await channel.adaptorClient.chQuote(invoice, signal);
       results.push({ channel, quoteResult } as ChannelQuoteResult);
       const bestSoFar = findBestQuote(results);
       onQuoteInfo([...results], bestSoFar);

@@ -41,6 +41,10 @@
       "types": "./dist/integers/smallish.d.ts",
       "default": "./dist/integers/smallish.js"
     },
+    "./decimals": {
+      "types": "./dist/decimals.d.ts",
+      "default": "./dist/decimals.js"
+    },
     "./json": {
       "types": "./dist/json.d.ts",
       "default": "./dist/json.js"

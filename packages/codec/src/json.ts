@@ -3,13 +3,13 @@ import type { Tagged } from 'type-fest';
 import { err, ok, type Result } from 'neverthrow';
 import { stringifyThrowable, unsafeUnwrap } from './neverthrow';
 
-const JSONBig = _JSONBig({ useNativeBigInt: true, alwaysParseAsBig: true });
+const JSONBig = _JSONBig({ useNativeBigInt: true, alwaysParseAsBig: false });
 
 /* `Json` type is not pleasant to work with directly because
  * the compiler can be puzzled by the recurssion AFAIK.
  * Please rather rely on the matchJson function and the onType helpers
  */
-export type JsonPrimitive = string | bigint | boolean | null;
+export type JsonPrimitive = number | string | bigint | boolean | null;
 export type JsonObject = { [key: string]: Json };
 export type JsonArray = Json[];
 export type Json = JsonPrimitive | JsonObject | JsonArray;
@@ -33,16 +33,19 @@ export const stringify = (
 }
 
 export type JsonMacher<T> = {
+  onArray: (value: Json[]) => T;
   onBigInt: (value: bigint) => T;
   onBoolean: (value: boolean) => T;
   onNull: () => T;
-  onString: (value: string) => T;
-  onArray: (value: Json[]) => T;
+  onNumber: (value: number) => T;
   onObject: (value: { [key: string]: Json }) => T;
+  onString: (value: string) => T;
 };
 
 export const matchJson = <T>(json: Json, matcher: JsonMacher<T>): T => {
   switch (typeof json) {
+    case "number":
+      return matcher.onNumber(json as number);
     case "bigint":
       return matcher.onBigInt(json as bigint);
     case "boolean":
@@ -72,7 +75,10 @@ const onType = <T>(typeCheck: (json: Json) => boolean, def: T | ((json: Json) =>
   }
   return def;
 }
-// Helpers usage: onBigInt(defaultValueOrFallbackFunction)(handlerFunction)
+
+export const onNumber = <T>(def: T | ((json: Json) => T)) => (handle: ((value: number) => T)) =>
+  onType((j) => typeof j === "number", def, handle);
+
 export const onBigInt = <T>(def: T | ((json: Json) => T)) => (handle: ((value: bigint) => T)) =>
   onType((j) => typeof j === "bigint", def, handle);
 

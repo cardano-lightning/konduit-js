@@ -60,6 +60,22 @@
     "./http": {
       "types": "./dist/http.d.ts",
       "default": "./dist/http.js"
+    },
+    "./polling": {
+      "types": "./dist/polling.d.ts",
+      "default": "./dist/polling.js"
+    },
+    "./kraken": {
+      "types": "./dist/fx/kraken.d.ts",
+      "default": "./dist/fx/kraken.js"
+    },
+    "./fx": {
+      "types": "./dist/fx.d.ts",
+      "default": "./dist/fx.js"
+    },
+    "./amounts": {
+      "types": "./dist/amounts.d.ts",
+      "default": "./dist/amounts.js"
     }
   },
   "files": [

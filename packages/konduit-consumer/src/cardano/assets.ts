@@ -16,6 +16,8 @@ import { json2ScriptHashCodec, ScriptHash } from "./addressses";
 import type { HexString } from "@konduit/codec/hexString";
 import type { Codec } from "@konduit/codec";
 import type { Cbor } from "@konduit/codec/cbor/core";
+import { Decimal } from "decimal.js";
+import type { NonNegativeDecimal } from "@konduit/codec/decimals";
 
 // Lovelace upper limit is above the safe integer range
 export const ADA_TOTAL_SUPPLY = 45_000_000_000n; // 11 digits
@@ -24,7 +26,7 @@ export const LOVELACE_TOTAL_SUPPLY = 45_000_000_000_000_000n; // 17 digits
 // This represents positive Lovelace value. We can introduce `LovelaceAmount` if we want to enforce non-negativity.
 export type Lovelace = Tagged<NonNegativeBigInt, "Lovelace">;
 export namespace Lovelace {
-  export const fromBigInt = (v: bigint): Result<Lovelace, JsonError> => bigIntCodec.deserialise(v);
+  export const fromBigInt = (v: bigint): Result<Lovelace, string> => bigIntCodec.deserialise(v);
   export const fromDigits = (n1: OneToNine, n2?: ZeroToNine, n3?: ZeroToNine, n4?: ZeroToNine, n5?: ZeroToNine, n6?: ZeroToNine, n7?: ZeroToNine, n8?: ZeroToNine, n9?: ZeroToNine, n10?: ZeroToNine, n11?: ZeroToNine, n12?: ZeroToNine, n13?: ZeroToNine, n14?: ZeroToNine, n15?: ZeroToNine, n16?: ZeroToNine): Lovelace => {
     let digits = [n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15, n16].filter((d): d is ZeroToNine => d !== undefined);
     let value = BigInt(n1);
@@ -42,8 +44,8 @@ export namespace Lovelace {
   export const scale = (a: Lovelace, multiplier: bigint): Result<Lovelace, JsonError> => fromBigInt(a * multiplier);
   export const ord = mkOrdForScalar<Lovelace>();
 
-  export const bigIntCodec: codec.Codec<bigint, Lovelace, JsonError> = {
-    deserialise: (value: bigint): Result<Lovelace, JsonError> => {
+  export const bigIntCodec: codec.Codec<bigint, Lovelace, string> = {
+    deserialise: (value: bigint): Result<Lovelace, string> => {
       if (value > LOVELACE_TOTAL_SUPPLY) {
         return err(`Lovelace must be less than or equal to total supply (${LOVELACE_TOTAL_SUPPLY}), got ${value}`);
       }
@@ -85,6 +87,7 @@ export namespace Ada {
     serialise: (value: Ada): Int => value as Int
   }
   export const jsonCodec: JsonCodec<Ada> = codec.pipe(json2IntCodec, intCodec);
+  export const ord = mkOrdForScalar<Ada>();
 }
 
 export namespace Lovelace {
@@ -284,5 +287,35 @@ export class Value {
   })();
 
   public static cborThroughHexCodec = codec.pipe(cborCodecs.string2CborCodec, Value.cborCodec);
+
+}
+// Should not be used for bookkeeping but for intermediary calculation.
+export type AdaDecimal = Tagged<NonNegativeDecimal, "AdaDecimal">;
+export namespace AdaDecimal {
+  export const fromNonNegativeDecimal = (v: NonNegativeDecimal): AdaDecimal => v as AdaDecimal;
+  export const fromAda = (ada: Ada): AdaDecimal => new Decimal(ada) as AdaDecimal;
+  export const fromLovelace = (lovelace: Lovelace): AdaDecimal => new Decimal(lovelace).div(1_000_000) as AdaDecimal;
+
+  // Scale a decimal Ada value, enforcing total supply (45B ADA) as an upper bound.
+  export const scale = (adaDecimal: AdaDecimal, multiplier: NonNegativeDecimal): Result<AdaDecimal, string> => {
+    const scaled = (adaDecimal as Decimal).mul(multiplier);
+    if (scaled.gt(ADA_TOTAL_SUPPLY)) {
+      return err(`Ada amount must be less than or equal to total supply (${ADA_TOTAL_SUPPLY}), got ${scaled.toString()}`);
+    }
+    return ok(scaled as AdaDecimal);
+  };
 }
 
+export namespace Lovelace {
+  export const fromAdaDecimalFloor = (adaDecimal: AdaDecimal): Lovelace => {
+    const lovelaceValueStr = (adaDecimal as Decimal).mul(1_000_000).floor().toString();
+    return BigInt(lovelaceValueStr) as Lovelace;
+  };
+}
+
+export namespace Ada {
+  export const fromAdaDecimalFloor = (adaDecimal: AdaDecimal): Ada => {
+    const adaValue = (adaDecimal as Decimal).floor().toNumber();
+    return adaValue as Ada;
+  };
+}

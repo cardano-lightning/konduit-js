@@ -5,7 +5,7 @@ import { cbor2Ed25519SignatureCodec, json2Ed25519SignatureCodec, Lovelace } from
 import { bigInt2NonNegativeBigIntCodec, NonNegativeBigInt } from "@konduit/codec/integers/big";
 import * as cbor from "@konduit/codec/cbor/codecs/sync";
 import * as codec from "@konduit/codec";
-import { bigInt2POSIXMillisecondsCodec, POSIXMilliseconds, ValidDate } from "../time/absolute";
+import { POSIXMilliseconds, ValidDate } from "../time/absolute";
 import { json2BigIntCodec } from "@konduit/codec/json/codecs";
 import type { JsonCodec, JsonError } from "@konduit/codec/json/codecs";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
@@ -92,7 +92,7 @@ export const cbor2LockedChequeBodyCodec = codec.rmap(
     cbor.indefiniteLength,
     cbor2IndexCodec,
     codec.pipe(cbor.cbor2IntCodec, Lovelace.bigIntCodec),
-    codec.pipe(cbor.cbor2IntCodec, bigInt2POSIXMillisecondsCodec),
+    codec.pipe(cbor.cbor2IntCodec, POSIXMilliseconds.bigIntCodec),
     cbor2HtlcLockCodec,
   ),
   ([ index, amount, timeoutMs, lock, ]: [Index, Lovelace, POSIXMilliseconds, HtlcLock ]): LockedChequeBody => {

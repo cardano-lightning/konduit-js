@@ -1,4 +1,5 @@
 import type { Tagged } from "type-fest";
+import { Decimal } from "decimal.js";
 import { Result, err, ok } from "neverthrow";
 import * as codec from "@konduit/codec";
 import { json2BigIntCodec } from "@konduit/codec/json/codecs";
@@ -7,6 +8,7 @@ import type { Json } from "@konduit/codec/json";
 import { json2IntCodec, type Int, type NonNegativeInt, type OneToNine, type Small, type ZeroToNine } from "@konduit/codec/integers/smallish";
 import type { NonNegativeBigInt, PositiveBigInt } from "@konduit/codec/integers/big";
 import { mkOrdForScalar } from "@konduit/codec/tagged";
+import type { NonNegativeDecimal } from "@konduit/codec/decimals";
 
 // Bitcoin total supply is 21 million BTC = 2_100_000_000_000_000 satoshis (fits in 53-bit integer)
 export const BITCOIN_TOTAL_SUPPLY = 21_000_000 as Bitcoin;
@@ -16,7 +18,7 @@ export const SATOSHI_TOTAL_SUPPLY = 2_100_000_000_000_000n;
 
 export type Millisatoshi = Tagged<NonNegativeBigInt, "Millisatoshi">;
 export namespace Millisatoshi {
-  export const fromBigInt = (v: bigint): Result<Millisatoshi, JsonError> => bigInt2MillisatoshiCodec.deserialise(v);
+  export const fromBigInt = (v: bigint): Result<Millisatoshi, string> => bigInt2MillisatoshiCodec.deserialise(v);
   export const fromDigits = (n1: OneToNine, n2?: ZeroToNine, n3?: ZeroToNine, n4?: ZeroToNine, n5?: ZeroToNine, n6?: ZeroToNine, n7?: ZeroToNine, n8?: ZeroToNine, n9?: ZeroToNine, n10?: ZeroToNine, n11?: ZeroToNine, n12?: ZeroToNine, n13?: ZeroToNine, n14?: ZeroToNine, n15?: ZeroToNine, n16?: ZeroToNine, n17?: ZeroToNine, n18?: ZeroToNine, n19?: ZeroToNine): Millisatoshi => {
     let digits = [n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15, n16, n17, n18, n19].filter((d): d is ZeroToNine => d !== undefined);
     let value = BigInt(n1);
@@ -28,15 +30,16 @@ export namespace Millisatoshi {
   export const fromSmallNumber = (v: Small): Millisatoshi => BigInt(v) as Millisatoshi;
   export const fromJson = (v: Json) => json2MillisatoshiCodec.deserialise(v);
   export const zero = 0n as Millisatoshi;
-  export const add = (a: Millisatoshi, b: Millisatoshi): Result<Millisatoshi, JsonError> => fromBigInt(a + b);
-  export const subtract = (a: Millisatoshi, b: Millisatoshi): Result<Millisatoshi, JsonError> => fromBigInt(a - b);
-  export const subtractAbs = (a: Millisatoshi, b: Millisatoshi): Result<Millisatoshi, JsonError> => a >= b ? fromBigInt(a - b) : fromBigInt(b - a);
-  export const scale = (a: Millisatoshi, multiplier: bigint): Result<Millisatoshi, JsonError> => fromBigInt(a * multiplier);
+  export const one = 1n as Millisatoshi;
+  export const add = (a: Millisatoshi, b: Millisatoshi): Result<Millisatoshi, string> => fromBigInt(a + b);
+  export const subtract = (a: Millisatoshi, b: Millisatoshi): Result<Millisatoshi, string> => fromBigInt(a - b);
+  export const subtractAbs = (a: Millisatoshi, b: Millisatoshi): Millisatoshi => (a >= b ? (a - b) : (b - a)) as Millisatoshi;
+  export const scale = (a: Millisatoshi, multiplier: bigint): Result<Millisatoshi, string> => fromBigInt(a * multiplier);
   export const scaleDown = (a: Millisatoshi, divisor: PositiveBigInt): Millisatoshi => (a / divisor as Millisatoshi);
   export const ord = mkOrdForScalar<Millisatoshi>();
 }
-export const bigInt2MillisatoshiCodec: codec.Codec<bigint, Millisatoshi, JsonError> = {
-  deserialise: (value: bigint): Result<Millisatoshi, JsonError> => {
+export const bigInt2MillisatoshiCodec: codec.Codec<bigint, Millisatoshi, string> = {
+  deserialise: (value: bigint): Result<Millisatoshi, string> => {
     if (value > MILLISATOSHI_TOTAL_SUPPLY) {
       return err(`Millisatoshi must be less than or equal to total supply (${MILLISATOSHI_TOTAL_SUPPLY}), got ${value}`);
     }
@@ -71,6 +74,7 @@ export namespace Satoshi {
   export const fromSmallNumber = (v: Small): Satoshi => BigInt(v) as Satoshi;
   export const fromJson = (v: Json) => json2SatoshiCodec.deserialise(v);
   export const zero = 0n as Satoshi;
+  export const one = 1n as Satoshi;
   export const add = (a: Satoshi, b: Satoshi): Result<Satoshi, JsonError> => fromBigInt(a + b);
   export const subtract = (a: Satoshi, b: Satoshi): Result<Satoshi, JsonError> => fromBigInt(a - b);
   export const subtractAbs = (a: Satoshi, b: Satoshi): Result<Satoshi, JsonError> => a >= b ? fromBigInt(a - b) : fromBigInt(b - a);
@@ -116,6 +120,8 @@ export namespace Bitcoin {
     const btcValue = Math.floor(Number((satoshi as bigint) / 100_000_000n));
     return btcValue as Bitcoin;
   }
+  export const zero = 0 as Bitcoin;
+  export const one = 1 as Bitcoin;
 }
 
 export const int2BitcoinCodec: codec.Codec<Int, Bitcoin, JsonError> = {
@@ -139,3 +145,42 @@ export namespace Satoshi {
     return satValue as Satoshi;
   }
 }
+
+// Should not be used for bookkeeping but for intermediary calculation.
+export type BitcoinDecimal = Tagged<NonNegativeDecimal, "BitcoinDecimal">;
+export namespace BitcoinDecimal {
+  export const fromNonNegativeDecimal = (v: NonNegativeDecimal): BitcoinDecimal => v as BitcoinDecimal;
+  export const fromBitcoin = (btc: Bitcoin): BitcoinDecimal => new Decimal(btc) as BitcoinDecimal;
+  export const fromSatoshi = (satoshi: Satoshi): BitcoinDecimal => new Decimal(satoshi).div(100_000_000) as BitcoinDecimal;
+  export const fromMillisatoshi = (msat: Millisatoshi): BitcoinDecimal => new Decimal(msat).div(100_000_000_000) as BitcoinDecimal;
+
+  export const scale = (btcDecimal: BitcoinDecimal, multiplier: NonNegativeDecimal): Result<BitcoinDecimal, string> => {
+    const scaled = (btcDecimal as Decimal).mul(multiplier);
+    if (scaled.gt(BITCOIN_TOTAL_SUPPLY)) {
+      return err(`Bitcoin amount must be less than or equal to total supply (${BITCOIN_TOTAL_SUPPLY}), got ${scaled.toString()}`);
+    }
+    return ok(scaled as BitcoinDecimal);
+  }
+};
+
+export namespace Millisatoshi {
+  export const fromBitcoinDecimalFloor = (btcDecimal: BitcoinDecimal): Millisatoshi => {
+    const msatValueStr = (btcDecimal as Decimal).mul(100_000_000_000).floor().toString();
+    return BigInt(msatValueStr) as Millisatoshi;
+  }
+}
+
+export namespace Satoshi {
+  export const fromBitcoinDecimalFloor = (btcDecimal: BitcoinDecimal): Satoshi => {
+    const satValueStr = (btcDecimal as Decimal).mul(100_000_000).floor().toString();
+    return BigInt(satValueStr) as Satoshi;
+  }
+}
+
+export namespace Bitcoin {
+  export const fromBitcoinDecimalFloor = (btcDecimal: BitcoinDecimal): Bitcoin => {
+    const btcValue = (btcDecimal as Decimal).floor().toNumber();
+    return btcValue as Bitcoin;
+  }
+}
+

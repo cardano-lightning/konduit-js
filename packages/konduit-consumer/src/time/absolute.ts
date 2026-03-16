@@ -64,13 +64,12 @@ export namespace POSIXMilliseconds {
       fromNonNegativeInt(newMilliseconds)
     );
   }
+  export const bigIntCodec: Codec<bigint, POSIXMilliseconds, JsonError> = codec.pipe(NonNegativeInt.bigIntCodec, {
+    deserialise: (n: NonNegativeInt): Result<POSIXMilliseconds, JsonError> => POSIXMilliseconds.fromNonNegativeInt(n),
+    serialise: (milliseconds: POSIXMilliseconds) => milliseconds
+  });
+  export const jsonCodec = codec.pipe(json2BigIntCodec, bigIntCodec);
 }
-
-export const bigInt2POSIXMillisecondsCodec: Codec<bigint, POSIXMilliseconds, JsonError> = codec.pipe(NonNegativeInt.bigIntCodec, {
-  deserialise: (n: NonNegativeInt): Result<POSIXMilliseconds, JsonError> => POSIXMilliseconds.fromNonNegativeInt(n),
-  serialise: (milliseconds: POSIXMilliseconds) => milliseconds
-});
-export const json2POSIXMillisecondsCodec = codec.pipe(json2BigIntCodec, bigInt2POSIXMillisecondsCodec);
 
 export type POSIXSeconds = Tagged<NonNegativeInt, "POSIXSeconds">;
 export namespace POSIXSeconds {

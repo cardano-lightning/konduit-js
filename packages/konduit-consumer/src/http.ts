@@ -127,10 +127,22 @@ export type NetworkError = {
   type: "NetworkError";
 };
 
-export const json2NetworkErrorCodec = jsonCodecs.objectOf({
+export const json2NetworkErrorCodec: JsonCodec<NetworkError> = jsonCodecs.objectOf({
   message: json2StringCodec,
   requestInfo: json2RequestInfoCodec,
   type: jsonCodecs.constant("NetworkError"),
+});
+
+export type AbortedError = {
+  message: string,
+  requestInfo: RequestInfo;
+  type: "AbortedError";
+};
+
+export const json2AbortedErrorCodec: JsonCodec<AbortedError> = jsonCodecs.objectOf({
+  message: json2StringCodec,
+  requestInfo: json2RequestInfoCodec,
+  type: jsonCodecs.constant("AbortedError"),
 });
 
 export type DeserialisationError = {
@@ -170,14 +182,16 @@ export type HttpEndpointError =
   | DeserialisationError
   | HttpError
   | NetworkError
+  | AbortedError
 
 export const json2HttpEndpointErrorCodec: JsonCodec<HttpEndpointError> = jsonCodecs.altJsonCodecs(
-  [json2DeserialisationErrorCodec, json2HttpErrorCodec, json2NetworkErrorCodec],
-  (serDeserialisationError, serHttpError, serNetworkError) => (value) => {
+  [json2DeserialisationErrorCodec, json2HttpErrorCodec, json2NetworkErrorCodec, json2AbortedErrorCodec],
+  (serDeserialisationError, serHttpError, serNetworkError, serAbortedError) => (value) => {
     switch (value.type) {
       case "DeserialisationError": return serDeserialisationError(value);
       case "HttpError": return serHttpError(value);
       case "NetworkError": return serNetworkError(value);
+      case "AbortedError": return serAbortedError(value);
     }
   }
 );
@@ -201,8 +215,16 @@ export namespace ResponseDeserialiser {
 }
 
 // TODO: add URL path and query serialiser
-export const mkPostEndpoint = <Req, Res>(url: Url, requestSerialiser: RequestSerialiser<Req>, responseDeserialiser: ResponseDeserialiser<Res>) => {
-  return async (requestBody: Req, headers: [string, string][] = []): Promise<Result<Res, HttpEndpointError>> => {
+export const mkPostEndpoint = <Req, Res>(
+  url: Url,
+  requestSerialiser: RequestSerialiser<Req>,
+  responseDeserialiser: ResponseDeserialiser<Res>
+) => {
+  return async (
+    requestBody: Req,
+    headers: [string, string][] = [],
+    signal?: AbortSignal
+  ): Promise<Result<Res, HttpEndpointError>> => {
     const contentTypeHeader = (() => {
       switch (requestSerialiser.type) {
         case "json": return "application/json";
@@ -238,8 +260,15 @@ export const mkPostEndpoint = <Req, Res>(url: Url, requestSerialiser: RequestSer
         method: "POST",
         headers: requestHeaders,
         body: payload,
+        signal,
       });
     } catch (error: any) {
+      if (error.name === 'AbortError')
+        return err({
+          type: "AbortedError",
+          message: "Request aborted",
+          requestInfo: mkRequestInfo(url, "POST", requestHeaders, payload),
+        });
       return err({ type: "NetworkError", message: error.message || String(error), requestInfo: mkRequestInfo(url, "POST", requestHeaders, payload) });
     }
 
@@ -342,7 +371,12 @@ export const mkPostEndpoint = <Req, Res>(url: Url, requestSerialiser: RequestSer
 export type TextSerialiser<T> = (value: T) => string;
 
 // TODO: add URL path and query serialiser
-export const mkGetEndpoint = <Req, Res>(baseUrl: Url, pathSerialiser: TextSerialiser<Req>, responseDeserialiser: ResponseDeserialiser<Res>) => {
+export const mkGetEndpoint = <Req, Res>(
+  baseUrl: Url,
+  pathSerialiser: TextSerialiser<Req>,
+  responseDeserialiser: ResponseDeserialiser<Res>,
+  signal?: AbortSignal
+) => {
   const normalisedBaseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
   return async (req: Req, headers: [string, string][] = []): Promise<Result<Res, HttpEndpointError>> => {
     const acceptHeader = (() => {
@@ -363,9 +397,21 @@ export const mkGetEndpoint = <Req, Res>(baseUrl: Url, pathSerialiser: TextSerial
       httpResponse = await fetch(fullUrl, {
         method: "GET",
         headers: requestHeaders,
+        signal,
       });
     } catch (error: any) {
-      return err({ type: "NetworkError", message: error.message || String(error), requestInfo: mkRequestInfo(fullUrl, "GET", requestHeaders) });
+      if (error.name === 'AbortError') {
+        return err({
+          type: "AbortedError",
+          message: "Request aborted",
+          requestInfo: mkRequestInfo(fullUrl, "GET", requestHeaders),
+        });
+      }
+      return err({
+        type: "NetworkError",
+        message: error.message || String(error),
+        requestInfo: mkRequestInfo(fullUrl, "GET", requestHeaders)
+      });
     }
 
     let bodyBytes: Uint8Array;

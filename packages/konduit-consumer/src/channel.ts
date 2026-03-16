@@ -9,15 +9,22 @@ import type { OpenTx } from "./channel/l1Channel";
 import type { ConsumerEd25519VerificationKey } from "./channel/core";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import { LockedCheque, json2LockedChequeCodec, json2SquashCodec, Squash, VerifiedLockedCheque, VerifiedSquash, UnlockedCheque, VerifiedUnlockedCheque, json2UnlockedChequeCodec, Index, LockedChequeBody, UnlockedChequeBody, SquashBody, AnyCheque, json2SquashBodyCodec } from "./channel/squash";
-import { json2DeserialisationErrorCodec, json2HttpErrorCodec, json2NetworkErrorCodec, type HttpEndpointError, type HttpError, type NetworkError } from "./http";
+import { json2AbortedErrorCodec, json2DeserialisationErrorCodec, json2HttpErrorCodec, json2NetworkErrorCodec, type AbortedError, type HttpEndpointError, type HttpError, type NetworkError } from "./http";
 import { mkJson2PollingInfoCodec, PollingInfo } from "./polling";
 import { mkJson2SquashResponseCodec } from "./adaptorClient/squash";
 import type { ChannelTag } from "./channel/core";
 import { json2InvoiceCodec, type Invoice } from "./bitcoin/bolt11";
-import { Lovelace } from "./cardano";
+import { Ada, Lovelace } from "./cardano";
 import { json2ValidDateCodec, ValidDate } from "./time/absolute";
 import type { Ed25519SigningKey } from "@konduit/cardano-keys";
 import { unwrapOrPanic, unwrapOrPanicWith } from "./neverthrow";
+import { AdaAmount, AmountFx, BitcoinAmount, type CryptoAmount } from "./amounts";
+import { Fx } from "./fx";
+import { Millisatoshi } from "./bitcoin";
+import type { AnyAmount, AnyAmountSymbol, Sign } from "./amounts/core";
+import { NonNegativeDecimal } from "@konduit/codec/decimals";
+import { BitcoinDecimal } from "./bitcoin/asset";
+import { stringify, type Json } from "@konduit/codec/json";
 
 export * from "./channel/l1Channel";
 export * from "./channel/core";
@@ -69,6 +76,7 @@ export const json2AdaptorRejectionCodec: JsonCodec<AdaptorRejection> = jsonCodec
 
 // The error which happens during the payment processing.
 export type ImmediatePaymentError =
+  | AbortedError
   | NetworkError
   | AdaptorRejection
   | CriticalError
@@ -88,17 +96,20 @@ export namespace ImmediatePaymentError {
         };
       case "DeserialisationError":
         return CriticalError.make("UnexpectedAdaptorResponse", json2DeserialisationErrorCodec.serialise(error));
+      case "AbortedError":
+        return error as ImmediatePaymentError;
     }
   }
 }
 
 export const json2ImmediatePaymentErrorCodec: JsonCodec<ImmediatePaymentError> = jsonCodecs.altJsonCodecs(
-  [ json2NetworkErrorCodec, json2AdaptorRejectionCodec, json2CriticalErrorCodec ],
-  (serNetwork, serAdaptorRejection, serCritical) => (data) => {
+  [ json2NetworkErrorCodec, json2AdaptorRejectionCodec, json2CriticalErrorCodec, json2AbortedErrorCodec ],
+  (serNetwork, serAdaptorRejection, serCritical, serAborted) => (data) => {
     switch(data.type) {
       case "NetworkError": return serNetwork(data);
       case "AdaptorRejection": return serAdaptorRejection(data);
       case "CriticalError": return serCritical(data);
+      case "AbortedError": return serAborted(data);
     }
   }
 );
@@ -162,10 +173,110 @@ export const json2ExpiredPayment: JsonCodec<ExpiredPayment> = jsonCodecs.objectO
 });
 
 export type AnyPayment = PendingPayment | ConfirmedPayment | ExpiredPayment;
+export type PaymentBreakdown<T> = {
+  total: T;
+  invoice: T;
+  fee: T;
+};
+export namespace PaymentBreakdown {
+  export const map = <A, B>(breakdown: PaymentBreakdown<A>, f: (c: A) => B): PaymentBreakdown<B> => ({
+    total: f(breakdown.total),
+    invoice: f(breakdown.invoice),
+    fee: f(breakdown.fee),
+  });
+  export const traverse = <A, B, E>(
+    breakdown: PaymentBreakdown<A>,
+    f: (c: A) => Result<B, E>
+  ): Result<
+      PaymentBreakdown<B>,
+      { total: E | undefined; invoice: E | undefined; fee: E | undefined }
+    > => {
+    const totalResult = f(breakdown.total);
+    const invoiceResult = f(breakdown.invoice);
+    const feeResult = f(breakdown.fee);
+    if(totalResult.isOk() && invoiceResult.isOk() && feeResult.isOk())
+      return ok({ total: totalResult.value, invoice: invoiceResult.value, fee: feeResult.value });
+    return err({
+      total: totalResult.isErr() ? totalResult.error : undefined,
+      invoice: invoiceResult.isErr() ? invoiceResult.error : undefined,
+      fee: feeResult.isErr() ? feeResult.error : undefined,
+    });
+  }
+}
+
 export namespace AnyPayment {
   export const isConfirmed = (payment: AnyPayment): payment is ConfirmedPayment => AnyCheque.isUnlocked(payment.cheque);
   export const isExpired = (payment: AnyPayment): payment is ExpiredPayment => "expiredAt" in payment;
   export const isPending = (payment: AnyPayment): payment is PendingPayment => !isConfirmed(payment) && !isExpired(payment);
+
+  export const breakItDownInAda = (
+    invoiceAmount: Lovelace,
+    total: Lovelace,
+  ): PaymentBreakdown<AdaAmount> => {
+    const feeInLovelace = Lovelace.subtractAbs(total, invoiceAmount);
+    const feeSign: Sign = Lovelace.ord.isGreaterThanOrEqual(total, invoiceAmount) ?
+      "positive"
+      : "negative";
+    return {
+      fee: AdaAmount.fromLovelace(feeInLovelace, feeSign),
+      invoice: AdaAmount.fromLovelace(invoiceAmount),
+      total: AdaAmount.fromLovelace(total),
+    };
+  }
+
+  export const breakItDownInBtc = (
+    invoiceAmount: Millisatoshi,
+    totalInMsat: Millisatoshi,
+  ): PaymentBreakdown<BitcoinAmount> => {
+    const feeInMsat = Millisatoshi.subtractAbs(totalInMsat, invoiceAmount);
+    const feeSign: Sign = Millisatoshi.ord.isGreaterThanOrEqual(feeInMsat, Millisatoshi.zero)?
+      "positive"
+      : "negative";
+    return {
+      fee: BitcoinAmount.fromMillisatoshi(feeInMsat, feeSign),
+      invoice: BitcoinAmount.fromMillisatoshi(invoiceAmount),
+      total: BitcoinAmount.fromMillisatoshi(totalInMsat),
+    };
+  }
+
+  export const DEFAULT_FEE_MULTIPLIER = NonNegativeDecimal.fromDigits(1, '.', 0, 2);
+  export const estimateBreakdownInBtc = (
+    invoiceAmount: Millisatoshi,
+  ): Result<PaymentBreakdown<BitcoinAmount>, string> => {
+    const possibleTotal = BitcoinDecimal.scale(BitcoinDecimal.fromMillisatoshi(invoiceAmount), AnyPayment.DEFAULT_FEE_MULTIPLIER);
+    return possibleTotal.map((total) => breakItDownInBtc(invoiceAmount, Millisatoshi.fromBitcoinDecimalFloor(total)));
+  }
+
+  // Depending on the destination currency we want to use different conversions strategy:
+  // * The original invoice is in BTC
+  // * The real total at some point is provided in Lovelace
+  // * BUT when we are presenting in BTC we want to show the original invoice amount.
+  // * Otherwise we convert invoice amount to ADA.
+  export const breakItDown = (
+    invoiceAmount: Millisatoshi,
+    total: Lovelace,
+    fx: Fx,
+    destCurrency: AnyAmountSymbol
+  ): Result<PaymentBreakdown<AnyAmount>, string> => {
+    const breakdownInCrypto: Result<PaymentBreakdown<CryptoAmount>, string> = (() => {
+      switch(destCurrency) {
+        case "BTC":
+          return Fx.lovelace2Msat(fx, total)
+            .map(totalInMsat => breakItDownInBtc(invoiceAmount, totalInMsat));
+        default:
+          return Fx.msat2Lovelace(fx, invoiceAmount)
+            .map(invoiceInLovelace => breakItDownInAda(invoiceInLovelace, total));
+      }
+    })();
+    return breakdownInCrypto.andThen((breakdown) =>
+      PaymentBreakdown.traverse(breakdown, (amount) =>
+        AmountFx.crypto2Any(fx, amount, destCurrency)).mapErr(
+          // The original error is a map - possible error per field
+          // TODO: We should flatten it better.
+          detailedError => stringify(detailedError as Json)
+        )
+    )
+  }
 };
 
 export type ChequeIssuingError =
@@ -279,8 +390,14 @@ export class Channel {
     return this.l1.totalSubmittedCapacity;
   }
 
+  public MIN_ADA = Lovelace.fromAda(Ada.fromDigits(2));
+
   public get totalApprovedCapacity(): Lovelace | null {
-    return this.l1.totalApprovedCapacity;
+    return Lovelace.subtract(this.l1.totalApprovedCapacity, this.MIN_ADA)
+      .match(
+        (capacity) => capacity,
+        (_error) => null
+      );
   }
 
   public get usedCapacity(): Lovelace {
@@ -538,6 +655,10 @@ export class Channel {
       sKey,
       this.squashBody
     );
+  }
+
+  public get allPayments(): AnyPayment[] {
+    return [...this.pending, ...this.confirmed, ...this.expired];
   }
 
   public get wasApproved() {

@@ -2,7 +2,7 @@ import * as codec from "@konduit/codec";
 import type { Tagged } from "type-fest";
 import type { Small } from "@konduit/codec/integers/smallish";
 import { NonNegativeInt } from "@konduit/codec/integers/smallish";
-import type { POSIXMilliseconds, POSIXSeconds } from "./absolute";
+import { POSIXSeconds, type POSIXMilliseconds, type ValidDate } from "./absolute";
 import { altJsonCodecs, type JsonCodec } from "@konduit/codec/json/codecs";
 import { ok, err } from "neverthrow";
 import type { Result } from "neverthrow";
@@ -58,6 +58,8 @@ export namespace Seconds {
     const diff = timestamp2 - timestamp1;
     return (diff < 0 ? -diff : diff) as Seconds;
   }
+  export const fromDiffDates = (date1: ValidDate, date2: ValidDate): Seconds =>
+    fromDiffTime(POSIXSeconds.fromValidDate(date1), POSIXSeconds.fromValidDate(date2));
   export const ord = mkOrdForScalar<Seconds>();
 }
 export const json2SecondsCodec = codec.rmap(NonNegativeInt.jsonCodec, (n) => Seconds.fromNonNegativeInt(n), (s) => s);

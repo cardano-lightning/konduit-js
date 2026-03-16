@@ -22,7 +22,7 @@ import { BlockDepth, NetworkMagicNumber, PlutusVersion, SlotNo } from "./ledger"
 import { TxIx, type TxOutRef } from "./tx";
 import { HexString } from "@konduit/codec/hexString";
 import { PositiveBigInt } from "@konduit/codec/integers/big";
-import { json2POSIXMillisecondsCodec, type POSIXMilliseconds } from "../time/absolute";
+import { POSIXMilliseconds } from "../time/absolute";
 
 export type ValueRecord = {
   unit: string;
@@ -93,7 +93,7 @@ export const json2TxRecordCodec: JsonCodec<TxRecord> = (() => {
     invalid_before: jsonCodecs.nullable(SlotNo.jsonCodec),
     invalid_after: jsonCodecs.nullable(SlotNo.jsonCodec),
     outputs: jsonCodecs.arrayOf(TxOutRecord.jsonCodec),
-    timestamp: json2POSIXMillisecondsCodec,
+    timestamp: POSIXMilliseconds.jsonCodec,
   });
 })();
 
