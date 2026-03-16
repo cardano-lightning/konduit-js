@@ -63,25 +63,40 @@ const buttons: ButtonProps[] = [
     <div id="logo"><KonduitLogo /></div>
     <p>A Cardano to Bitcoin Lightning Pipe</p>
     <ButtonGroup :buttons="buttons" />
-    <div class="link">
-      <a href="https://cardano-lightning.org">Cardano-Lightning</a>
+    <div id="link">
+      <span>by</span>
+      <a href="https://cardano-lightning.org">cardano-lightning.org</a>
     </div>
   </div>
 </template>
 
 <style scoped>
+#app {
+  max-width: 640px;
+}
+
 #container {
   display: flex;
   flex-direction: column;
   justify-content: space-around;
+  padding: var(--main-container-padding);
   text-align: center;
 }
 
 #logo {
   display: flex;
-  font-size: 3em;
+  font-size: 1em;
+  max-height: 5em;
   justify-content: center;
   padding: 20vh 0 2vh;
+}
+
+#link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 1em;
+  color: var(--text-secondary);
 }
 
 .button-group {

@@ -34,7 +34,6 @@
               fill: none;
               fill-opacity: none;
               stroke-width: 2;
-              stroke: #162456;
               stroke-opacity: 1;
             "
           />

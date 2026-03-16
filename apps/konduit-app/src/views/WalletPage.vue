@@ -55,86 +55,20 @@ watch(addressBech32, generateQR, {
 
 <template>
   <MainContainer>
-    <TheHeader :back-page-name="'home'" />
-    <WalletBalance />
-    <Hr />
-    <WalletSummary />
-    <!-- TODO: Bring back this functionality
-      <QrCode
-        class="button"
-        title="Show QR code"
-      />
-      <Share2
-        v-if="shareSupported"
-        class="button"
-        title="Share address"
-      />
-    -->
-    <!--
-    <div id="qr-container" v-html="qrSvg" ref="qrContainer"></div>
-    -->
+    <TheHeader :back="'home'" />
+    <div id="body">
+      <WalletBalance />
+      <Hr />
+      <WalletSummary />
+    </div>
   </MainContainer>
   <NavBar />
 </template>
 
 <style scoped>
-h2 {
-  font-size: 1.2rem;
-  font-weight: normal;
-  margin-top: 1rem;
-}
-#total {
-  text-align: center;
-}
-#total .amount {
-  font-size: 1.5rem;
-}
-#total .synced-at {
-  display: block;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  margin-top: 1rem;
-  text-align: center;
-}
-
-hr {
-  margin: 2.5rem 0;
-}
-
-#address-row {
+#body {
   display: flex;
-  font-size: 0.9rem;
-  line-height: 1.2rem;
-  margin-top: 3rem;
-}
-#address-row .address {
-  flex-grow: 1;
-  font-family: 'JetBrains Mono', monospace;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-#address-row .buttons {
-  display: flex;
-  align-items: center;
-}
-
-#address-row a.button {
-  color: inherit;
-  cursor: pointer;
-  text-decoration: none;
-}
-
-#address-row .buttons svg {
-  height: 1.2rem;
-  margin-left: 0.2rem;
-  vertical-align: middle;
-}
-
-#qr-container {
-  /* This is inherited to the svg element */
-  border-color: var(--primary-color);
-  margin-top: 2rem;
-  text-align: center;
+  flex-direction: column;
+  gap: var(--data-listing-gap);
 }
 </style>

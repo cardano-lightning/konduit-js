@@ -1,8 +1,11 @@
+import Decimal from "decimal.js";
 import { createApp } from "vue";
 import router from "./router";
 import App from "./App.vue";
 import Toastification from "vue-toastification";
 import { Notifications } from "./composables/notifications";
+
+Decimal.set({ precision: 50 });
 
 // Application level styles are defined in the `App.vue` file
 createApp(App)

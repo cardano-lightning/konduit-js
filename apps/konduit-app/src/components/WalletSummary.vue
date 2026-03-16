@@ -1,21 +1,29 @@
+<script lang="ts">
+export type Props = {
+  showWalletBalance?: boolean;
+  showWalletHistory?: boolean;
+}
+</script>
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
 import qr from "qrcode";
-import DataListing from "../components/DataListing.vue";
+import DataListing, { type RowConfig } from "../components/DataListing.vue";
 import type { Action } from "../components/DataListing/DataRow.vue";
 // import QrCode from "../components/icons/QrCode.vue";
-// import Share2 from "../components/icons/Share2.vue";
 import { wallet } from "../store";
-import { NetworkMagicNumber } from "@konduit/konduit-consumer/cardano";
+import { Lovelace, NetworkMagicNumber } from "@konduit/konduit-consumer/cardano";
 import { MISSING_PLACEHOLDER } from "../utils/formatters";
 import { useEmbeddedWalletDetails } from "../composables/walletDetails";
 import { abbreviated } from "../composables/formatters";
+import { useDefaultFormatters } from "../composables/l10n";
 
-const { cardanoScanLink } = useEmbeddedWalletDetails(wallet);
+const props = defineProps<Props>();
+
+const { formattedLastSyncInfo, cardanoScanLink } = useEmbeddedWalletDetails(wallet);
 
 // Address section:
 // * Address display
-const formattedAddress = abbreviated(() => wallet.value?.addressBech32, 10, 10);
+const formattedAddress = abbreviated(() => wallet.value?.addressBech32, 20, 20);
 
 const addressBech32 = computed(() => wallet.value?.addressBech32 || null);
 
@@ -50,20 +58,6 @@ const generateQR = async () => {
   }
 };
 
-const network = computed(() => {
-  if (!wallet.value) return MISSING_PLACEHOLDER;
-  const networkMagicNumber = wallet.value.networkMagicNumber;
-  if (networkMagicNumber === NetworkMagicNumber.MAINNET) {
-    return "Mainnet";
-  } else if (networkMagicNumber === NetworkMagicNumber.PREPROD) {
-    return "Preprod Testnet";
-  } else if (networkMagicNumber === NetworkMagicNumber.PREVIEW) {
-    return "Preview Testnet";
-  } else {
-    return `Cardano (Network Magic: ${networkMagicNumber})`;
-  }
-});
-
 const addressActions = computed((): Action[] => {
   let actions: Action[] = [];
   actions.push({
@@ -71,8 +65,12 @@ const addressActions = computed((): Action[] => {
     message: "Address copied to clipboard.",
     value: addressBech32.value
   });
-  if (cardanoScanLink.value) {
-    actions.push([cardanoScanLink.value, "external-link"]);
+  if(addressBech32.value) {
+    actions.push({
+      action: "share",
+      value: addressBech32.value,
+      title: "Konduit embbeded wallet address"
+    });
   }
   return actions;
 });
@@ -82,14 +80,71 @@ const addressActions = computed((): Action[] => {
 watch(addressBech32, generateQR, {
   immediate: true,
 });
+
+const formatters = useDefaultFormatters();
+
+const walletRows = computed(() => {
+  const rows: RowConfig[] = [];
+  const network = (() => {
+    if (!wallet.value) return MISSING_PLACEHOLDER;
+    const networkMagicNumber = wallet.value.networkMagicNumber;
+    if (networkMagicNumber === NetworkMagicNumber.MAINNET) {
+      return null;
+    } else if (networkMagicNumber === NetworkMagicNumber.PREPROD) {
+      return "Preprod Testnet";
+    } else if (networkMagicNumber === NetworkMagicNumber.PREVIEW) {
+      return "Preview Testnet";
+    } else {
+      return `Cardano (Network Magic: ${networkMagicNumber})`;
+    }
+  })();
+
+  if(network != null) {
+    rows.push({ label: 'Cardano Network', formattedValue: network, actions: [] });
+  }
+  const walletLovelace = wallet.value?.balance || Lovelace.zero;
+  if(props.showWalletBalance) {
+    const formattedBalanceInfo = (() => {
+      const formattedLovelace = Lovelace.ord.areEqual(walletLovelace, Lovelace.zero) ? '0' : formatters.formatAda(walletLovelace)
+      if(formattedLastSyncInfo.value) {
+        return `${formattedLovelace} (${formattedLastSyncInfo.value})`;
+      }
+      return formattedLovelace;
+    })();
+    rows.push({
+      label: 'Wallet Balance',
+      formattedValue: formattedBalanceInfo,
+      actions: []
+    });
+  }
+  rows.push({ label: 'Address', formattedValue: formattedAddress.value, actions: addressActions.value });
+  if(props.showWalletHistory && cardanoScanLink.value)
+    rows.push({
+      label: 'Wallet history',
+      formattedValue: "On CardanoScan",
+      actions: [{ url: cardanoScanLink.value, action: "external-link" } as Action]
+    });
+  return rows;
+});
 </script>
 
 
 <template>
-  <DataListing :rows="[
-    { label: 'Cardano Network', formattedValue: network },
-    { label: 'Address', formattedValue: formattedAddress, actions: addressActions },
-  ]" />
+  <DataListing :rows="walletRows" />
+    <!-- TODO: Bring back this functionality
+      <QrCode
+        class="button"
+        title="Show QR code"
+      />
+      <Share2
+        v-if="shareSupported"
+        class="button"
+        title="Share address"
+      />
+    -->
+    <!--
+    <div id="qr-container" v-html="qrSvg" ref="qrContainer"></div>
+    -->
 </template>
 
 <style scoped>

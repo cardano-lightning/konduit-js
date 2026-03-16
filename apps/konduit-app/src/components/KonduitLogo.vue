@@ -1,18 +1,15 @@
 <template>
 <svg
-   class ="konduit-logo light"
-   width="23.560795mm"
-   height="4.0160422mm"
+   class="konduit-logo light"
    viewBox="0 0 23.560795 4.0160422"
    version="1.1"
-   id="svg1"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
   <defs
      id="defs1" />
   <g
      id="layer1"
-     transform="translate(151.22986,-52.879956)">
+     transform="translate(151.22986,-52.879952)">
     <g
        id="g464">
       <path
@@ -96,13 +93,11 @@
     </g>
   </g>
 </svg>
+
 <svg
    class="konduit-logo dark"
-   width="23.560795mm"
-   height="4.0199947mm"
-   viewBox="0 0 23.560795 4.0199947"
+   viewBox="0 0 23.560795 4.0199942"
    version="1.1"
-   id="svg1"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
   <defs
@@ -170,6 +165,7 @@
     display: none;
   }
 }
+
 @media (prefers-color-scheme: dark) {
   svg.konduit-logo.dark {
     display: none;

@@ -1,6 +1,9 @@
 import { computed, onMounted, onUnmounted, ref, type Ref } from "vue";
 import { BalanceInfo, CardanoConnectorWallet } from "@konduit/konduit-consumer/wallets/embedded";
 import { Lovelace, NetworkMagicNumber } from "@konduit/konduit-consumer/cardano";
+import { AnyPreciseDuration, NormalisedDuration, Seconds } from "@konduit/konduit-consumer/time/duration";
+import { POSIXSeconds } from "@konduit/konduit-consumer/time/absolute";
+import { useDefaultFormatters } from "./l10n";
 
 const mkCardanoScanLink = (wallet: Ref<CardanoConnectorWallet | null>) => {
   if (!wallet.value) return null;
@@ -22,11 +25,34 @@ const mkCardanoScanLink = (wallet: Ref<CardanoConnectorWallet | null>) => {
   return url;
 };
 
+const formatters = useDefaultFormatters();
+
+const formatLastSyncInfo = (walletBalanceInfo: Ref<BalanceInfo | null>) => {
+  const now = POSIXSeconds.now();
+  if(walletBalanceInfo?.value?.lastSuccessfulFetch != null) {
+    const secondsSinceLastSync = Seconds.fromDiffTime(
+      now,
+      POSIXSeconds.fromValidDate(walletBalanceInfo.value.lastSuccessfulFetch.fetchedAt)
+    );
+    if(secondsSinceLastSync == 0) return "Synced just now";
+
+    let normalized = (() => {
+      let normalized = NormalisedDuration.fromAnyPreciseDuration(AnyPreciseDuration.fromSeconds(secondsSinceLastSync));
+      if(secondsSinceLastSync < 60) {
+        return normalized;
+      }
+      return { ...normalized, seconds: Seconds.fromDigits(0) };
+    })();
+    return `Synced ${formatters.formatDurationShort(normalized)} ago`;
+  }
+  return "Not synced";
+};
+
 export const useEmbeddedWalletDetails = (wallet: Ref<CardanoConnectorWallet | null>) => {
+  const walletBalanceInfo = ref(wallet.value) as Ref<BalanceInfo | null>;
   const walletBalance = computed(() => {
     return walletBalanceInfo.value?.lastValue || Lovelace.zero;
   });
-  const walletBalanceInfo = ref(wallet.value) as Ref<BalanceInfo | null>;
   const cardanoScanLink = computed(() => mkCardanoScanLink(wallet));
 
   const subscriptions: (() => void)[] = [];
@@ -42,6 +68,7 @@ export const useEmbeddedWalletDetails = (wallet: Ref<CardanoConnectorWallet | nu
     subscriptions.forEach(unsubscribe => unsubscribe());
   });
   return {
+    formattedLastSyncInfo: computed(() => formatLastSyncInfo(walletBalanceInfo)),
     walletBalance,
     walletBalanceInfo,
     cardanoScanLink

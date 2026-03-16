@@ -11,13 +11,16 @@ import '@formatjs/intl-durationformat/polyfill-force.js';
 import "./colar.css";
 import "normalize.css";
 import "vue-toastification/dist/index.css";
+import { useTheme } from "./composables/theme";
+useTheme();
 </script>
 
 <template>
   <RouterView />
 </template>
-
 <style>
+
+
 /* The **only** global styles should reference
  * the html and body elements, and #app container at minimum.
  * Nothing more.
@@ -51,52 +54,64 @@ import "vue-toastification/dist/index.css";
   --frame-border-color: #d1d5db;
 
   /* TODO: Drop "secondary color" - use more semantically named colors instead. */
-  --secondary-background-color: var(--colar-gray-1);
-  --secondary-color: var(--colar-gray-5);
+  --secondary-background-color: var(--colar-blue-10);
+  --secondary-color: var(--colar-blue-0);
 
   --error-color: #ffe2e2;
   --error-background-color: #4b0e0e;
   --error-border-color: var(--error-color);
 
-  --hint-color: #f5f3f7;
-  --hint-background-color: var(--colar-blue-10);
+  --hint-background-color: var(--colar-blue-11);
   --hint-border-color: var(--frame-border-color);
+  --hint-color: var(--colar-blue-1);
+
+  /* A bit less muted than the hint, to be used for "card buttons" etc. */
+  --focus-background-color: var(--colar-blue-10);
+  --focus-border-color: var(--frame-border-color);
+  --focus-color: var(--colar-blue-0);
 
   /* Nice green but doesn't necessarily play nicely with our background. */
-  --success-background-color: #f4fbf8; /* #f0f8f2 #e6f4ea; */
-  --success-border-color: #95c896;
-  --success-color: #3e7840;
+  --success-background-color: var(--colar-green-11);
+  --success-border-color: var(--colar-green-8);
+  --success-color: var(--colar-green-1);
 
   --warning-background-color: #c3630a;
   --warning-border-color: #fac798;
   --warning-color: #fef3e9;
 
-  --missing-data-color: #fff8fa;
+  --missing-data-color: var(--colar-gray-6);
 }
+/* @media (prefers-color-scheme: light) { */
+:root[data-theme="light"],
+:root[data-theme="system"][data-prefers-color="light"] {
+  --primary-background-color: var(--colar-pink-0);
+  --primary-color: var(--colar-blue-12);
+  --frame-border-color: #d1d5db;
 
-@media (prefers-color-scheme: light) {
-  :root {
-    --primary-background-color: #fff1f2;
-    --primary-color: #162456;
-    --frame-border-color: #d1d5db;
+  --secondary-background-color: var(--colar-gray-0);
+  --secondary-color: var(--colar-gray-9);
 
-    --secondary-background-color: #888;
-    --secondary-color: #2c3a70;
+  --hint-background-color: var(--colar-gray-1);
+  --hint-border-color: var(--frame-border-color);
+  --hint-color: var(--colar-gray-10);
 
-    --hint-background-color: var(--colar-gray-1);
-    --hint-border-color: var(--frame-border-color);
-    --hint-color: var(--colar-gray-8);
+  --focus-background-color: var(--colar-gray-0);
+  --focus-border-color: var(--frame-border-color);
+  --focus-color: var(--colar-gray-10);
 
-    --error-background-color: #ffe2e2;
-    --error-color: #e57373;
-    --error-border-color: var(--error-color);
+  --error-background-color: #ffe2e2;
+  --error-color: #e57373;
+  --error-border-color: var(--error-color);
 
-    --warning-background-color: #fdeee0;
-    --warning-color: #c3630a;
-    --warning-border-color: #fac798;
+  --success-background-color: var(--colar-green-0);
+  --success-border-color: var(--colar-green-8);
+  --success-color: var(--colar-green-9);
 
-    --missing-data-color: #344480;
-  }
+  --warning-background-color: #fdeee0;
+  --warning-color: #c3630a;
+  --warning-border-color: #fac798;
+
+  --missing-data-color: var(--colar-gray-7);
 }
 
 html, body {

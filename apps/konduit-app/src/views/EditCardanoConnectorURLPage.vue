@@ -133,7 +133,7 @@ const buttons: ComputedRef<ButtonProps[]> = computed(() => {
 
 <template>
   <MainContainer :buttons="buttons">
-    <TheHeader :back-page-name="'settings'" />
+    <TheHeader :back="'settings'" />
     <Form :buttons="[]" :fields="fields" :formState="formState" :handleSubmit="handleSubmit" :touch="touch" />
   </MainContainer>
 </template>

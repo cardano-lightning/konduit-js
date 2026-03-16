@@ -1,5 +1,5 @@
 <script lang="ts">
-export type ActionIcon = "pen" | "download" | "trash" | "copy" | "external-link" | "loading" | "info";
+export type ActionIcon = "pen" | "download" | "trash" | "copy" | "external-link" | "loading" | "info" | "wallet" | "konduit" | "share" | "chevron-right";
 
 export type Href = string;
 export type Action =
@@ -7,6 +7,7 @@ export type Action =
   | { action: "copy", message: string, value: string | null }
   | { action: "external-link", url: string }
   | { action: "loading" }
+  | { action: "share", value: string, title?: string };
 
 export type ValueImportance = "missing" | "important" | "very-important";
 export type ValueConfig =
@@ -16,26 +17,40 @@ export type ValueConfig =
     importance: ValueImportance;
   }
 export type Props = {
-  actions?: Action[];
+  // If there is only a single action then the whole row becomes clickable.
+  actions?: Action[] | { rowAction: Action };
   label: string;
   formattedValue: ValueConfig;
+}
+
+const shareSupported = "share" in navigator;
+
+async function doShare(action: { value: string, title?: string }) {
+  if(!shareSupported) return;
+  await navigator.share({ text: action.value, title: action.title || "Konduit Data" })
 }
 
 </script>
 
 <script setup lang="ts">
+import { ChevronRight } from "lucide-vue-next";
 import ClockThrobber from "../ClockThrobber.vue";
 import Copy from "../icons/Copy.vue";
 import Download from "../icons/Download.vue";
 import ExternalLink from "../icons/SquareArrowOutUpRight.vue";
 import Info from "../icons/Info.vue";
+import Konduit from "../icons/Konduit.vue";
 import Link from "../Link.vue";
+import { mkClickHandler } from "../Link.vue";
 import Pen from "../icons/Pen.vue";
 import Trash from "../icons/Trash.vue";
+import WalletMinimal from "../icons/WalletMinimal.vue";
+import { Share2 } from "lucide-vue-next";
 import type { OnClick } from "../Link.vue";
 import { useClipboard } from "@vueuse/core";
 import { useNotifications } from "../../composables/notifications";
 import { computed } from "vue";
+import { useRouter } from "vue-router";
 
 const props = defineProps<Props>();
 
@@ -65,15 +80,44 @@ const toBasicAction = (action: Action): BasicAction => {
       return [action.url, action.url, "external-link"];
     case "loading":
       return ["", "#", "loading"];
+    case "share":
+      return [() => doShare(action), "#", "share"];
   }
 };
 
-const basicActions = computed(() => props.actions?.map(toBasicAction));
+const basicActions = computed(() => {
+  // props.actions?.map(toBasicAction)
+  if(Array.isArray(props.actions)) {
+    const actions: Action[] = props.actions;
+    return actions.map(toBasicAction);
+  } else if(props.actions && "rowAction" in props.actions) {
+    return [toBasicAction(props.actions.rowAction)];
+  } else {
+    return null;
+  }
+});
+
+const router = useRouter();
+
+const rowOnClick = computed(() => {
+  if(props.actions && !Array.isArray(props.actions) && "rowAction" in props.actions) {
+    const onClick: OnClick = toBasicAction(props.actions.rowAction)[0];
+    return mkClickHandler(router, onClick);
+  }
+});
 
 </script>
 
 <template>
-  <div :class="'data-pair ' + (props.actions == undefined? 'without-actions':'with-actions')">
+  <div
+    :class="{
+      'data-pair': true,
+      'without-actions': props.actions == undefined,
+      'with-actions': props.actions != undefined,
+      'row-clickable': rowOnClick,
+    }"
+    @click="rowOnClick?rowOnClick($event):undefined"
+  >
     <dt>
         <div class="label">{{ props.label }}</div>
         <div class="actions" v-if="props.actions">
@@ -87,11 +131,15 @@ const basicActions = computed(() => props.actions?.map(toBasicAction));
               :click="action[0]"
             >
               <Copy v-if="action[2] === 'copy'" />
+              <ChevronRight v-else-if="action[2] === 'chevron-right'" />
               <Download v-else-if="action[2] === 'download'" />
               <ExternalLink v-else-if="action[2] === 'external-link'" />
               <Info v-else-if="action[2] === 'info'" />
+              <Konduit v-else-if="action[2] === 'konduit'" />
               <Pen v-else-if="action[2] === 'pen' || !action[2]" />
+              <Share2 v-else-if="action[2] === 'share' && shareSupported" />
               <Trash v-else-if="action[2] === 'trash'" />
+              <WalletMinimal v-else-if="action[2] === 'wallet'" />
             </Link>
           </template>
         </div>
@@ -113,6 +161,9 @@ const basicActions = computed(() => props.actions?.map(toBasicAction));
   gap: calc(var(--data-listing-gap) / 3);
   overflow: hidden;
   width: 100%;
+}
+.data-pair.row-clickable {
+  cursor: pointer;
 }
 .data-pair.with-actions {
   flex-direction: column;

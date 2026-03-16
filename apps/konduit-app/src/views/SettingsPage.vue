@@ -40,7 +40,7 @@ const formattedAddress = computed(() => orPlaceholder(wallet.value?.addressBech3
 
 <template>
   <MainContainer>
-    <TheHeader :back-page-name="'home'" />
+    <TheHeader :back="'home'" />
     <DataListing :rows="[
       { label: 'Cardano connector', formattedValue: formattedConnector, actions: [['edit-cardano-connector-url', 'pen']] },
       'separator',

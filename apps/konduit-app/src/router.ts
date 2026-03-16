@@ -5,6 +5,7 @@ import * as store from "./store";
 // import AddChannelPage from "./views/AddChannelPage.vue";
 import ChannelOpenWalletSelectPage from "./views/ChannelOpenWalletSelectPage.vue";
 import ChannelOpenWithEmbeddedWalletPage from "./views/ChannelOpenWithEmbeddedWalletPage.vue";
+import ChannelOpenEmbeddedWalletTopUpPage from "./views/ChannelOpenEmbeddedWalletTopUpPage.vue";
 import CreatePage from "./views/CreatePage.vue";
 import EditCardanoConnectorURLPage from "./views/EditCardanoConnectorURLPage.vue";
 import HomePage from "./views/HomePage.vue";
@@ -14,22 +15,20 @@ import SettingsPage from "./views/SettingsPage.vue";
 import WalletPage from "./views/WalletPage.vue";
 
 const routes = [
-  /* 
-  { name: "open-channel",
-    path: "/open-channel",
-    component: AddChannelPage,
-    meta: { title: "Open Channel" },
-  },
-  */
   { name: "channel-open-wallet-select",
     path: "/open-channel/wallet-selection",
     component: ChannelOpenWalletSelectPage,
     meta: { title: "Funding Wallet" },
   },
+  { name: "channel-open-embedded-wallet-top-up",
+    path: "/open-channel/embedded-wallet/top-up",
+    component: ChannelOpenEmbeddedWalletTopUpPage,
+    meta: { title: "Embedded wallet" },
+  },
   { name: "channel-open-with-embedded-wallet",
     path: "/open-channel/embedded-wallet",
     component: ChannelOpenWithEmbeddedWalletPage,
-    meta: { title: "Open Channel" },
+    meta: { title: "Open channel" },
   },
   {
     name: "create",
@@ -41,7 +40,7 @@ const routes = [
     name: "edit-cardano-connector-url",
     path: "/settings/edit/cardano-connector-url",
     component: EditCardanoConnectorURLPage,
-    meta: { title: "Cardano Connector" },
+    meta: { title: "Cardano connector" },
   },
   {
     name: "home",
@@ -71,7 +70,7 @@ const routes = [
     name: "wallet",
     path: "/wallet",
     component: WalletPage,
-    meta: { title: "Embedded Wallet" },
+    meta: { title: "Embedded wallet" },
   }
 ];
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-export type CalloutVariant = "info" | "warning" | "error" | "success" | "tip" | "critical";
+export type CalloutVariant = "info" | "warning" | "error" | "success" | "hint" | "critical" | "neutral";
 
 export type Props = {
   title: string;
@@ -24,7 +24,7 @@ const props = defineProps<Props>();
       <TriangleAlert v-if="props.variant === 'warning' || props.variant === 'error'" />
       <Check v-else-if="props.variant === 'success'" />
       <Info v-else-if="props.variant === 'info'" />
-      <NotepadPen v-else-if="props.variant === 'tip'" />
+      <NotepadPen v-else-if="props.variant === 'hint'" />
       <Skull v-else-if="props.variant === 'critical'" />
     </slot>
     {{ props.title }}
@@ -54,9 +54,9 @@ const props = defineProps<Props>();
     margin: 0;
     padding: 0;
   }
-    .callout h2 svg {
-      width: 1.5em;
-      height: 1.5em;
+    .callout h2 :deep(svg) {
+      height: 1.2em;
+      width: 1.2em;
       flex-shrink: 0;
     }
 
@@ -95,6 +95,18 @@ const props = defineProps<Props>();
   background-color: var(--warning-background-color);
   border-color: var(--warning-border-color);
   color: var(--warning-color);
+}
+
+.callout.neutral {
+  background-color: inherit;
+  color: inherit;
+  border-color: var(--frame-border-color);
+}
+
+.callout.hint {
+  background-color: var(--hint-background-color);
+  border-color: var(--hint-border-color);
+  color: var(--hint-color);
 }
 
 </style>

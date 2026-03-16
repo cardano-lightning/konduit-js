@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import ButtonGroup from "../components/ButtonGroup.vue";
 import { type Props as ButtonProps } from "../components/Button.vue";
+import WalletMinimal from "./icons/WalletMinimal.vue";
 import Sliders from "./icons/Sliders.vue";
 /* import WalletMinimal from "./icons/WalletMinimal.vue"; */
-import Konduit from "./icons/Konduit.vue";
 import Zap from "./icons/Zap.vue";
 import { computed } from "vue";
 
@@ -33,7 +33,7 @@ const styleFlipped = computed(() => {
     <!-- navbar by default has dark background on the light theme so we sholud flip the button styles accordingly -->
     <ButtonGroup class="content" :buttons="buttons" :style-flipped="!styleFlipped" v-if="showButtons" />
     <div class="content" v-else>
-      <router-link :to="{ name: 'home' }"><Konduit /></router-link>
+      <router-link :to="{ name: 'home' }"><WalletMinimal /></router-link>
       <router-link :to="{ name: 'pay' }"><Zap /></router-link>
       <router-link :to="{ name: 'settings' }"><Sliders /></router-link>
     </div>

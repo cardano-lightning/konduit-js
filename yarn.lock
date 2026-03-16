@@ -6524,6 +6524,7 @@ __metadata:
     bip21: "npm:^3.0.0"
     decimal.js-i18n: "npm:^0.3.1"
     idb: "npm:^8.0.3"
+    lucide-vue-next: "npm:^0.577.0"
     neverthrow: "npm:^8.2.0"
     normalize.css: "npm:^8.0.1"
     qrcode: "npm:^1.5.4"
@@ -6659,6 +6660,15 @@ __metadata:
   dependencies:
     yallist: "npm:^4.0.0"
   checksum: 10c0/cb53e582785c48187d7a188d3379c181b5ca2a9c78d2bce3e7dee36f32761d1c42983da3fe12b55cb74e1779fa94cdc2e5367c028a9b35317184ede0c07a30a9
+  languageName: node
+  linkType: hard
+
+"lucide-vue-next@npm:^0.577.0":
+  version: 0.577.0
+  resolution: "lucide-vue-next@npm:0.577.0"
+  peerDependencies:
+    vue: ">=3.0.1"
+  checksum: 10c0/0a1b5e7e390546ebc1f3f5ab15bc6a73eade96305727f5583f878faa52755680a0d63035828ee55b28839cebe7cf71600ee41a9da74dec9e469e5b3b50363984
   languageName: node
   linkType: hard
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
-import { mkLovelaceAmount } from "../components/FancyAmount.vue";
+import { PossibleAmount } from "../components/FancyAmount.vue";
 import FancyAmount from "../components/FancyAmount.vue";
 import { useDefaultFormatters } from "../composables/l10n";
 import { POSIXSeconds } from "@konduit/konduit-consumer/time/absolute";
@@ -14,10 +14,7 @@ const { walletBalance, walletBalanceInfo } = useEmbeddedWalletDetails(wallet);
 // Amount section:
 // * Total balance section
 const amount = computed(() => {
-  if (walletBalance.value != null) {
-    return mkLovelaceAmount(walletBalance.value);
-  }
-  return mkLovelaceAmount(Lovelace.zero);
+  return PossibleAmount.fromLovelace(walletBalance.value || Lovelace.zero);
 });
 
 // * Sync info section
@@ -72,6 +69,7 @@ const formattedSyncInfo = computed(() => {
 .wallet-balance .synced-at {
   display: block;
   font-size: 0.8rem;
+  font-style: italic;
   color: var(--text-secondary);
   margin-top: 1rem;
   text-align: center;

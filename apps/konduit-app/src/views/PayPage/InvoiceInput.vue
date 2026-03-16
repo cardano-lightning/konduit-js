@@ -4,34 +4,27 @@ import type { Invoice } from "@konduit/konduit-consumer/bitcoin/bolt11";
 export type Props = {
   previousInvoice: Invoice | null;
 };
-
 </script>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch, type ComputedRef, type Ref } from "vue";
-import { type Props as ButtonProps } from "../../components/Button.vue";
 import ButtonGroup from "../../components/ButtonGroup.vue";
+import MainContainer from "../../components/MainContainer.vue";
 import QrScan from "../../components/QrScan.vue";
-import { Result } from "neverthrow";
-import { string2InvoiceCodec } from "@konduit/konduit-consumer/bitcoin/bolt11";
+import TheHeader from "../../components/TheHeader.vue";
 import type { JsonError } from "@konduit/codec/json/codecs";
+import { Result } from "neverthrow";
+import { computed, onMounted, onUnmounted, ref, watch, type ComputedRef, type Ref } from "vue";
+import { string2InvoiceCodec } from "@konduit/konduit-consumer/bitcoin/bolt11";
 import { stringify } from "@konduit/codec/json";
+import { type Props as ButtonProps } from "../../components/Button.vue";
 
 const props = defineProps<Props>();
 
-// InvoiceInfo is just a tuple of `[InvoiceString, DecodedInvoice]`
-const emit: ((event: "invoice", value: Invoice) => void) & ((event: "title", value: string) => void) = defineEmits(["invoice", "title"]);
-// const emitTitle: ((event: "title", value: string) => void) = defineEmits(["title"]);
+const emit: ((event: "invoice", value: Invoice) => void) = defineEmits(["invoice"]);
 
 const useQrScan: Ref<boolean> = ref(true);
 
-watch(useQrScan, (newVal) => {
-  if(newVal) {
-    emit("title", "Scan invoice");
-  } else {
-    emit("title", "Enter invoice");
-  }
-});
+const title: ComputedRef<string> = computed(() => useQrScan.value ? "Scan invoice" : "Enter invoice");
 
 // Both QR scan and manual input use the same decodedInvoice ref to emit results
 const decodedInvoice: Ref<Invoice | null> = ref(null);
@@ -88,6 +81,12 @@ const testingInvoices = [
     autoTrigger: false,
   }, {
     invoice: "LNTB50U1P56ARVEPP5ZM40QW7EH9S69DWY5Q8F7TALXGK82M2V5QRN4GREY9HSM4LGQ5GQDQQCQZZSXQRRSSSP5W7A4XNAM2PXKT94M9K70AH2Y7LXTSKHLL8S3FYQ66PN4MJVT28YS9QXPQYSGQAEJ37CDPYUEKHS75QTDKWT0VJ5CAJ8P0KFJLQZLAH5MCQSC2V7EQY3QQA4XHEJZKARCHGW20UXTH57M6SSEHNZGNHGUJ7SX6L6A6JXGPC06RWM",
+    autoTrigger: false,
+  }, {
+    invoice: "LNTB3U1P5MQC0QPP5Y3SN97PATVSDY9644HP9Y7F086UUV0FUY8FAR7S9EKF8TWP3LECSDQQCQZZSXQRRSSSP5DH2NAR3ULU7TMZUU5SZRRGTSZL7XUSK8QTWH8HN2L2TRHWSDGMTQ9QXPQYSGQME4G3XW5QWQYL0NJFW2SZKSTVL244T8YN2X78T3N2MX6G25PPZ75SWZTTTUQ9P4WGRG3PZTXDYWDJJ677H5L6XNGAKKJH0HHL2S3VJQQKCLVST",
+    autoTrigger: false,
+  }, {
+    invoice: "LNTB2001P5MSQ3APP5XAXTFUT5CF4V970GEZM878N6D3K98RG40QY7T3Q3AD98NFZH9A2QDQQCQZZSXQRRSSSP57CHXD2SCEKCHXGQJJF6PRNFC6MUHDVFJQZF9PC27JX082J2J7J2S9QXPQYSGQ959VVP8EE9KTXZCCVLGVVCQ7E5UZ2VW8PKX4RMYASLDP45W682W82H9DFTVGXY0KTHKLVWDL6MVWE2SVPSWCLYX8R72D7U5A5Y37PAGQWL0LHZ",
     autoTrigger: true,
   }
 ];
@@ -210,58 +209,74 @@ const manualButtons: ButtonProps[] = [{
 
 
 <template>
-  <div v-if="useQrScan">
-    <div v-if="qrPayloadValidationError" class="parsing-error">
-      {{ qrPayloadValidationError || 'Invalid invoice format.' }}
+  <MainContainer>
+    <TheHeader :title="title" id="header" />
+    <div id="input-container">
+      <div v-if="useQrScan" id="qr-input">
+        <div v-if="qrPayloadValidationError" class="parsing-error">
+          {{ qrPayloadValidationError || 'Invalid invoice format.' }}
+        </div>
+        <QrScan @payload="onQrScan" />
+        <div class="alternative">or</div>
+        <ButtonGroup :buttons="qrButtons" />
+      </div>
+      <div v-else id="manual-input">
+        <div v-if="invoiceInputValidationError" class="parsing-error">
+          {{ invoiceInputValidationError || 'Invalid invoice format.' }}
+        </div>
+        <form>
+          <textarea
+            ref="textAreaRef"
+            class="text-input"
+            id="invoice"
+            v-model="invoiceInputContent"
+            style="width: {{ textAreaSize.width }}px; height: {{ textAreaSize.height }}px;"
+            placeholder="lntb..."
+            />
+        </form>
+        <div class="alternative">or</div>
+        <ButtonGroup :buttons="manualButtons" />
+      </div>
+      <template v-if="props.previousInvoice">
+        <div class="alternative">or</div>
+        <ButtonGroup :buttons="[{
+          label: 'Use Existing Invoice',
+          action: () => decodedInvoice = props.previousInvoice || null,
+          primary: false,
+        }]" />
+      </template>
     </div>
-    <QrScan @payload="onQrScan" />
-    <div class="alternative">or</div>
-    <ButtonGroup :buttons="qrButtons" />
-  </div>
-  <div v-else>
-    <div v-if="invoiceInputValidationError" class="parsing-error">
-      {{ invoiceInputValidationError || 'Invalid invoice format.' }}
-    </div>
-    <form>
-      <textarea
-        ref="textAreaRef"
-        class="text-input"
-        id="invoice"
-        v-model="invoiceInputContent"
-        style="width: {{ textAreaSize.width }}px; height: {{ textAreaSize.height }}px;"
-        placeholder="lntb..."
-        />
-    </form>
-    <div class="alternative">or</div>
-    <ButtonGroup :buttons="manualButtons" />
-  </div>
-  <template v-if="props.previousInvoice">
-    <div class="alternative">or</div>
-    <ButtonGroup :buttons="[{
-      label: 'Use Existing Invoice',
-      action: () => decodedInvoice = props.previousInvoice || null,
-      primary: false,
-    }]" />
-  </template>
+  </MainContainer>
 </template>
 
 <style scoped>
+#input-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+}
+  #input-container #qr-input, #input-container #manual-input {
+    flex-grow: 1;
+    max-width: 70vh;
+  }
+
 .alternative {
   text-align: center;
   margin: 1rem 0;
   font-size: 0.9rem;
-  color: #6b7280;
+  color: var(--primary-color);
   width: 100%;
 }
 
 form {
-  background-color: white;
+  background-color: var(--hint-background-color);
   border: 2px solid var(--frame-border-color);
   padding: 1rem;
 }
 
 .text-input {
   aspect-ratio: 1 / 1;
+  background-color: var(--hint-background-color);
   border: none;
   display: block;
   padding: 0;
@@ -270,6 +285,9 @@ form {
 
 .text-input:focus {
   outline: none;
+}
+textarea.text-input::placeholder {
+  color: var(--missing-data-color);
 }
 
 .parsing-error {

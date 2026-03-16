@@ -24,17 +24,21 @@ const props = defineProps<Props>();
 const hasErrors = (): boolean => {
   return extractFieldErrorsMessages(null, props.errors || []).length > 0;
 };
+
+const optionValue = (opt: string | { value: string; label: string, disabled?: boolean }): string => {
+  return typeof opt === 'string' ? opt : opt.value;
+};
 </script>
 
 <template>
-  <label :for="props.name">
+  <label :for="props.name" v-if="props.label">
     <span>{{ props.label }}</span>
     <Link v-if="props.info" :href="'#'" @click="props.info" class="info"><Info /></Link>
   </label>
   <span class="select-wrapper">
     <select
       v-model="props.state.value"
-      :class="{ error: props.isValid === false || hasErrors() }"
+      :class="{ error: props.isValid === false || hasErrors(), placeholder: optionValue(props.state.value) === '' }"
       :disabled="props.disabled || options.length === 0"
       @blur="props.touch()"
       @change="props.touch()"
@@ -44,6 +48,7 @@ const hasErrors = (): boolean => {
         :key="typeof opt === 'string' ? opt : opt.value"
         :value="typeof opt === 'string' ? opt : opt.value"
         :disabled="typeof opt === 'string' ? false : opt.disabled"
+        :class="optionValue(opt) == '' ? 'placeholder' : ''"
       >
         {{ typeof opt === 'string' ? opt : opt.label }}
       </option>
@@ -113,6 +118,9 @@ select:focus {
 
 select:disabled {
   background-color: oklch(from var(--primary-background-color) calc(l * 0.95) c h);
+}
+select.placeholder {
+  opacity: 0.5;
 }
 
 select.error {

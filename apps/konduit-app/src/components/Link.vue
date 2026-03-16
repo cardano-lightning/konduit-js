@@ -1,23 +1,7 @@
 <script lang="ts">
 export type OnClick = string | RouteLocationRaw | (() => void);
-</script>
 
-<script setup lang="ts">
-import { useRouter, type RouteLocationRaw } from 'vue-router';
-import SquareArrowOutUpRight from './icons/SquareArrowOutUpRight.vue';
-
-interface Props {
-  href: string;
-  click?: OnClick;
-  underscore?: boolean; // default: true
-  showIcon?: boolean; // default: false
-  useBold?: boolean; // default: false
-}
-
-const props = defineProps<Props>();
-const router = useRouter();
-
-const handleClick = (action: OnClick, event: MouseEvent) => {
+export const mkClickHandler = (router: Router, action: OnClick) => (event: MouseEvent) => {
   event.preventDefault();
   if (typeof action === "function") {
     action();
@@ -33,11 +17,27 @@ const handleClick = (action: OnClick, event: MouseEvent) => {
 };
 </script>
 
+<script setup lang="ts">
+import { useRouter, type RouteLocationRaw, type Router } from 'vue-router';
+import SquareArrowOutUpRight from './icons/SquareArrowOutUpRight.vue';
+
+interface Props {
+  href: string;
+  click?: OnClick;
+  underscore?: boolean; // default: true
+  showIcon?: boolean; // default: false
+  useBold?: boolean; // default: false
+}
+
+const props = defineProps<Props>();
+const router = useRouter();
+</script>
+
 <template>
   <a
     :href="props.href"
     :class="{ 'no-underline': props.underscore || true, 'bold': props.useBold }"
-    @click="props.click ? handleClick(props.click, $event) : handleClick(props.href, $event)"
+    @click="props.click ? mkClickHandler(router, props.click)($event) : mkClickHandler(router, props.href)($event)"
   >
     <slot></slot>
     <SquareArrowOutUpRight v-if="props.showIcon" class="external-icon" />

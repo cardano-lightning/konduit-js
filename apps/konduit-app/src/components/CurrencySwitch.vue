@@ -2,7 +2,7 @@
 import { computed } from "vue";
 import CircleAdaSign from "./icons/CircleAdaSign.vue";
 import CircleBitcoinSign from "./icons/CircleBitcoinSign.vue";
-import CircleDolarSign from "./icons/CircleDolarSign.vue";
+import CircleDollarSign from "./icons/CircleDolarSign.vue";
 import type { AnyAmountSymbol } from "@konduit/konduit-consumer/amounts";
 
 const props = defineProps<{
@@ -33,7 +33,7 @@ const onClick = () => {
       <CircleBitcoinSign />
     </template>
     <template v-else-if="currentCurrency === 'BTC'">
-      <CircleDolarSign />
+      <CircleDollarSign />
     </template>
     <template v-else-if="currentCurrency === 'USD'">
       <CircleAdaSign />

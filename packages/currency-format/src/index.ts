@@ -151,9 +151,6 @@ export class CurrencyFormat<N extends Notation> {
       }
     })();
     this.subunitFormatter = (() => {
-      console.log("Initializing subunit formatter with subunit code:", this.subunitCode);
-      console.log("Locales for subunit formatter:", locales);
-      console.log("Internal options for subunit formatter:", internalOptions);
       if (this.subunitCode) {
         // subunits are formatted differently the `sat` or `lovelace` is name not symbol really
         return new Decimal.DecimalFormat<N, "currency">(locales, {

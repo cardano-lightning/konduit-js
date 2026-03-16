@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import MainContainer from "../components/MainContainer.vue";
-import { invoice, konduitConsumer } from "../store";
+import { invoice, konduitConsumer, wallet } from "../store";
 import { type Props as ButtonProps } from "../components/Button.vue";
 import TheHeader from "../components/TheHeader.vue";
 import Form from "../components/Form.vue";
@@ -23,6 +23,7 @@ import type { JsonError } from "@konduit/codec/json/codecs";
 import { Ada, Lovelace } from "@konduit/konduit-consumer/cardano";
 import { err, ok, Result } from "neverthrow";
 import { isEmpty } from "@regle/rules";
+import { useEmbeddedWalletDetails } from "../composables/walletDetails";
 
 const formatters = useDefaultFormatters();
 
@@ -243,18 +244,21 @@ const touch = (fieldName: string) => {
 };
 
 const notifications = useNotifications();
+const { walletBalance } = useEmbeddedWalletDetails(wallet);
 
 const fields = computed(() => {
+  const minAda = Lovelace.fromAda(Ada.fromDigits(2));
   return {
     amount: {
+      errors: r$.amount.$errors,
       fieldWidth: FieldWidth.half,
       isValid: isValid(
         r$.amount.$dirty,
         r$.amount.$rules.ada.$valid,
       ),
       label: "Amount",
+      placeholder: `${formatters.formatAda(minAda)} - ${formatters.formatAda(walletBalance.value)}`,
       type: TextField.number,
-      errors: r$.amount.$errors,
     },
     // Placeholder for the future currency choice
     currency: {
@@ -344,13 +348,13 @@ const buttons: ComputedRef<ButtonProps[]> = computed(() => {
   })();
   return [
     {
-      label: "Cancel",
+      label: "Go back",
       action: () => { router.push(cancelUrl); },
       primary: false,
     },
     {
       disabled: !r$.$ready || submitting.value,
-      label: "Add",
+      label: "Add Channel",
       action: handleSubmit,
       primary: true,
     },
