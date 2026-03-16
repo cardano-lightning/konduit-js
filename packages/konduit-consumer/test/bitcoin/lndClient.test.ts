@@ -176,50 +176,12 @@ describe("LND client basic interactions", () => {
       const lndInvoicing = integrationTestEnv.mkLndInvoicing(test);
       const lndPaying = integrationTestEnv.mkLndPaying(test);
 
-      const msat = Millisatoshi.fromDigits(1, 0, 0, 0, 0);
+      const msat = Millisatoshi.fromDigits(1, 0, 0, 0);
       const memo = `An invoice from TS lnd client integration test at ${new Date().toISOString()}`;
 
       const invoiceResult = await lndInvoicing.addLndInvoice(msat, memo);
       const invoiceResponse = expectOk(invoiceResult);
       console.debug("Invoice created on invoicing node:", invoiceResponse);
-
-      //  let routes = self.v1_graph_routes(req.payee, req.amount_msat).await?;
-      //  let route = routes.routes.first().ok_or(Error::ApiError {
-      //      status: 404,
-      //      message: "No route".into(),
-      //  })?;
-
-      //  let blocks = route
-      //      .total_time_lock
-      //      .checked_sub(self.block_height().await?)
-      //      .ok_or(Error::Time)?;
-      //  let relative_timeout = self
-      //      .config
-      //      .block_time
-      //      .checked_mul(blocks as u32)
-      //      .ok_or(Error::Time)?;
-
-      //  Ok(QuoteResponse {
-      //      relative_timeout,
-      //      fee_msat: route.total_fees_msat,
-      //  })
-      // pub async fn v1_graph_routes(
-      //     &self,
-      //     payee: [u8; 33],
-      //     amount_msat: u64,
-      // ) -> crate::Result<graph_routes::GraphRoutes> {
-      //     let path = format!(
-      //         "v1/graph/routes/{}/{}",
-      //         hex::encode(payee),
-      //         amount_msat / 1000 + 1
-      //     );
-      //     self.execute(self.get(&path)).await
-      // }
-      //
-      // graphRoutes: (
-      //   payeePubkey: Uint8Array, // 33 bytes
-      //   amountMsat: Millisatoshi
-      // ) => Promise<Result<GraphRoutesResponse, HttpEndpointError>>;
       const payReq = invoiceResponse.invoice.raw;
 
       const route = (await lndPaying.graphRoutes(invoiceResponse.invoice.payee, invoiceResponse.invoice.amount)).match(
@@ -229,9 +191,6 @@ describe("LND client basic interactions", () => {
           throw new Error("Failed to fetch graph routes on paying node");
         }
       );
-      console.debug(`Graph routes response on paying node: ${stringify(json2GraphRoutesCodec.serialise(route))}`);
-
-      const info = expectOk(await lndPaying.getInfo());
 
       // Construct a minimal router send request similar to the Rust client:
       // we set the payment_request and a simple fee limit.
@@ -239,20 +198,17 @@ describe("LND client basic interactions", () => {
       const feeLimitMsat = originalTotalFeesMsat ? originalTotalFeesMsat : NonNegativeBigInt.fromDigits(1, 0, 0, 0); // allow up to 1 msat fee.
       const totalTimeLock:NonNegativeInt = expectNotNull(route.routes[0]?.total_time_lock);
 
-      const cltvLimit = expectOk(NonNegativeInt.add(
-        NonNegativeInt.distance(totalTimeLock, info.block_height),
-        NonNegativeInt.fromDigits(3))
-      ); // add some buffer to the CLTV limit based on current block height.
+      const info = expectOk(await lndPaying.getInfo());
 
-      console.debug(`Original total_time_lock from route: ${route.routes[0]?.total_time_lock}, current block height: ${info.block_height}`);
-      console.debug(`Original total_fees_msat from route: ${route.routes[0]?.total_fees_msat}`);
-      console.debug(`Calculated CLTV limit for router send: ${cltvLimit} and fee limit: ${feeLimitMsat.toString()} msat`);
+      // let's delay 1min
+      await new Promise((resolve) => setTimeout(resolve, 60000));
 
-      const sendResult = await lndPaying.v2RouterSend({
+      const originalCltvLimit = NonNegativeInt.distance(totalTimeLock, info.block_height);
+      const sendResultWithoutBump = await lndPaying.v2RouterSend({
         allow_self_payment: true,
         amp: undefined,
         amt_msat: undefined,
-        cltv_limit: cltvLimit,
+        cltv_limit: originalCltvLimit,
         dest: undefined,
         fee_limit_msat: feeLimitMsat,
         last_hop_pubkey: undefined,
@@ -260,22 +216,23 @@ describe("LND client basic interactions", () => {
         payment_request: payReq,
         timeout_seconds: undefined,
       });
-      console.debug(`Router send response on paying node: ${stringify(sendResult as unknown as Json)}`);
-      expectOk(sendResult);
+      expectOk(sendResultWithoutBump);
 
-      // At minimum, we expect LND to have a concrete status and failure_reason.
-      // expectNotNull(sendResponse.status);
-      // expectNotNull(sendResponse.failure_reason);
-
-      // // If it succeeded, we should have a preimage and payment details.
-      // if (sendResponse.status === "SUCCEEDED") {
-      //   expectNotNull(sendResponse.preimage);
-      //   expectNotNull(sendResponse.payment);
-      //   if (sendResponse.payment) {
-      //     expectNotNull(sendResponse.payment.payment_preimage);
-      //   }
-      // }
+      //const cltvLimitBumped = expectOk(NonNegativeInt.add(originalCltvLimit, NonNegativeInt.fromDigits(0)));
+      //const sendResultWithBump = await lndPaying.v2RouterSend({
+      //  allow_self_payment: true,
+      //  amp: undefined,
+      //  amt_msat: undefined,
+      //  cltv_limit: cltvLimitBumped,
+      //  dest: undefined,
+      //  fee_limit_msat: feeLimitMsat,
+      //  last_hop_pubkey: undefined,
+      //  outgoing_chan_ids: undefined,
+      //  payment_request: payReq,
+      //  timeout_seconds: undefined,
+      //});
+      //expectOk(sendResultWithBump);
     },
-    60000
+    120000
   );
 });
