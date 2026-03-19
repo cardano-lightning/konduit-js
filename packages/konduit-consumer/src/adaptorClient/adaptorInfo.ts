@@ -3,7 +3,7 @@ import type { Result } from "neverthrow";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import { json2SecondsCodec, Seconds } from "../time/duration";
 import type { Ed25519VerificationKey } from "@konduit/cardano-keys";
-import { Address, json2ScriptHashCodec, Lovelace, type ScriptHash } from "../cardano";
+import { Address, Lovelace, ScriptHash } from "../cardano";
 import { NonNegativeInt } from "@konduit/codec/integers/smallish";
 import { json2Ed25519VerificationKeyCodec } from "../cardano";
 import type { Json } from "@konduit/codec/json";
@@ -65,7 +65,7 @@ export const json2AdaptorInfoCodec: jsonCodecs.JsonCodec<AdaptorInfo> = (() => {
     }),
     "tx_help": jsonCodecs.objectOf({
       host_address: Address.jsonCodec,
-      validator: json2ScriptHashCodec,
+      validator: ScriptHash.jsonCodec,
     }),
   });
 

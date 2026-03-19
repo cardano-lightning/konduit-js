@@ -161,3 +161,59 @@ export const altCodecs = <Codecs extends readonly Codec<any, any, any>[]>(
     }
   };
 };
+
+export const tupleOf = <
+  Codecs extends readonly Codec<any, any, any>[]
+>(
+  ...codecs: Codecs & {
+    // ensure all error types are the same
+    [K in keyof Codecs]: Codecs[K] extends Codec<any, any, infer E>
+      ? Codec<any, any, E>
+      : never;
+  }
+): Codec<
+  { [K in keyof Codecs]: Codecs[K] extends Codec<infer I, any, any> ? I : never }, // input tuple
+  { [K in keyof Codecs]: Codecs[K] extends Codec<any, infer O, any> ? O : never }, // output tuple
+  Codecs[number] extends Codec<any, any, infer E> ? E : never                       // common error
+> => {
+  type TupleIn = { [K in keyof Codecs]: Codecs[K] extends Codec<infer I, any, any> ? I : never };
+  type TupleOut = { [K in keyof Codecs]: Codecs[K] extends Codec<any, infer O, any> ? O : never };
+  type Err = Codecs[number] extends Codec<any, any, infer E> ? E : never;
+
+  return {
+    deserialise: (input: TupleIn): Result<TupleOut, Err> => {
+      const result: any[] = [];
+      const errors: Err[] = [];
+      let hasErrors = false;
+
+      codecs.forEach((codec, index) => {
+        const value = (input as any)[index];
+        const decoded = codec.deserialise(value);
+        if (decoded.isOk()) {
+          result[index] = decoded.value;
+        } else {
+          errors[index] = decoded.error as Err;
+          hasErrors = true;
+        }
+      });
+
+      if (hasErrors) {
+        const lastError = errors[errors.length - 1]!;
+        return err(lastError);
+      }
+
+      return ok(result as TupleOut);
+    },
+
+    serialise: (value: TupleOut): TupleIn => {
+      const inputs: any[] = [];
+
+      codecs.forEach((codec, index) => {
+        const v = (value as any)[index];
+        inputs[index] = codec.serialise(v);
+      });
+
+      return inputs as TupleIn;
+    },
+  };
+};

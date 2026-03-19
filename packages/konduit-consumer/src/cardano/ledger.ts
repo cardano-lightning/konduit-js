@@ -1,13 +1,17 @@
-import type { JsonCodec } from "@konduit/codec/json/codecs";
+import { json2StringCodec, type JsonCodec } from "@konduit/codec/json/codecs";
+import * as hexString from "@konduit/codec/hexString";
 import { err, ok, Result } from "neverthrow";
 import type { Tagged } from "type-fest";
 import { json2PositiveIntCodec, NonNegativeInt, PositiveInt } from "@konduit/codec/integers/smallish";
 import * as codec from "@konduit/codec";
-import { mkOrdForScalar } from "@konduit/codec/tagged";
+import { mkOrdForScalar, mkOrdForUint8Array } from "@konduit/codec/tagged";
 import { Milliseconds, Seconds } from "../time/duration";
 import { POSIXMilliseconds } from "../time/absolute";
-import type { PositiveBigInt } from "@konduit/codec/integers/big";
+import { PositiveBigInt } from "@konduit/codec/integers/big";
 import type { Codec } from "@konduit/codec";
+import type { HexString } from "@konduit/codec/hexString";
+import { mkHexString2HashCodec } from "./keys";
+import { mkTaggedBytesCborCodec } from "@konduit/codec/cbor/codecs/sync";
 
 export type BlockNo = Tagged<NonNegativeInt, "BlockNo">;
 export const json2BlockNoCodec = codec.rmap(
@@ -15,6 +19,26 @@ export const json2BlockNoCodec = codec.rmap(
   (nonNegative) => nonNegative as BlockNo,
   (blockNo: BlockNo): NonNegativeInt => blockNo as NonNegativeInt
 )
+// 5c571f83fe6c784d3fbc223792627ccf0eea96773100f9aedecf8b1eda4544d7
+export type BlockHash = Tagged<Uint8Array, "BlockHash">;
+export namespace BlockHash {
+  export const LENGTH = 32;
+  export const fromHexString = (hexString: HexString) => BlockHash.hexStringCodec.deserialise(hexString);
+  export const fromBytes = (bytes: Uint8Array) => {
+    if (bytes.length !== LENGTH) {
+      return err(`BlockHash must be ${LENGTH} bytes, got ${bytes.length} bytes`);
+    }
+    return ok(bytes as BlockHash);
+  }
+  export const hexStringCodec = mkHexString2HashCodec<BlockHash>("BlockHash", LENGTH);
+  export const jsonCodec = codec.pipe(hexString.jsonCodec, hexStringCodec);
+  export const cborCodec = mkTaggedBytesCborCodec<BlockHash>(
+    "BlockHash",
+    (arr) => arr.length === LENGTH,
+  );
+  export const ord = mkOrdForUint8Array<BlockHash>();
+}
+
 export type SlotConfigComponents = {
   slotLength: Milliseconds,
   zeroSlot: SlotNo,
@@ -104,20 +128,43 @@ export namespace NetworkMagicNumber {
         return NetworkMagicNumber.PREVIEW;
     }
   }
+  export const jsonCodec: JsonCodec<NetworkMagicNumber> = codec.rmap(
+    PositiveBigInt.jsonCodec,
+    (positiveBigInt) => positiveBigInt as NetworkMagicNumber,
+    (networkMagicNumber: NetworkMagicNumber): PositiveBigInt => networkMagicNumber as PositiveBigInt,
+  )
 }
 export namespace PublicNetwork {
-  export const fromNetworkMagicNumber = (networkMagicNumber: NetworkMagicNumber): PublicNetwork | null => {
+  export const fromNetworkMagicNumber = (networkMagicNumber: NetworkMagicNumber): Result<PublicNetwork, string> => {
     switch (networkMagicNumber) {
       case NetworkMagicNumber.MAINNET:
-        return "Mainnet";
+        return ok("Mainnet");
       case NetworkMagicNumber.PREPROD:
-        return "Preprod";
+        return ok("Preprod");
       case NetworkMagicNumber.PREVIEW:
-        return "Preview";
+        return ok("Preview");
       default:
-        return null;
+        return err(`Unknown network magic number: ${networkMagicNumber}`);
     }
   }
+  export const fromString = (s: string): Result<PublicNetwork, string> => {
+    switch (s) {
+      case "Mainnet":
+        return ok("Mainnet");
+      case "Preprod":
+        return ok("Preprod");
+      case "Preview":
+        return ok("Preview");
+      default:
+        return err(`Unknown network: ${s}, expected "Mainnet", "Preprod" or "Preview"`);
+    }
+  }
+  export const jsonCodec: JsonCodec<PublicNetwork> = codec.pipe(
+    json2StringCodec, {
+      deserialise: (s) => fromString(s),
+      serialise: (network) => network,
+    }
+  )
 }
 // To help the compiler do exhaustiveness checks
 // we expose also the naked enum type.

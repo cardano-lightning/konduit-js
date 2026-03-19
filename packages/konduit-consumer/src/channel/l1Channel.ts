@@ -3,7 +3,7 @@ import { ok, type Result } from "neverthrow";
 import { Ed25519VerificationKey } from "@konduit/cardano-keys";
 import { json2TxOutRefCodec, TxCborBytes, TxHash, unsafeTxCborBytes, type TxInfo } from "../cardano";
 import { POSIXMilliseconds, ValidDate } from "../time/absolute";
-import { ChannelTag, json2ChannelTagCodec, type ConsumerEd25519VerificationKey } from "./core";
+import { ChannelTag, json2ChannelTagCodec, KeyTag, type ConsumerEd25519VerificationKey } from "./core";
 import type { AdaptorEd25519VerificationKey } from "../adaptorClient/adaptorInfo";
 import { json2AdaptorEd25519VerificationKeyCodec } from "../adaptorClient/adaptorInfo";
 import { Days, Hours, Milliseconds, Minutes, Seconds } from "../time/duration";
@@ -562,6 +562,10 @@ export class L1Channel {
 
   get channelTag(): ChannelTag {
     return this.openTx.tag;
+  }
+
+  get keyTag(): KeyTag {
+    return KeyTag.fromKeyAndTag(this.consumerVerificationKey, this.channelTag);
   }
 
   get totalSubmittedCapacity(): Lovelace {

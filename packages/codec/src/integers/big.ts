@@ -65,6 +65,7 @@ export const json2NonNegativeBigIntCodec: JsonCodec<NonNegativeBigInt> = codec.p
 export const json2NonNegativeBigIntThroughStringCodec: JsonCodec<NonNegativeBigInt> = codec.pipe(json2BigIntThroughStringCodec, bigInt2NonNegativeBigIntCodec);
 export const cbor2NonNegativeBigIntCodec: CborCodec<NonNegativeBigInt> = codec.pipe(cbor2IntCodec, bigInt2NonNegativeBigIntCodec);
 export namespace NonNegativeBigInt {
+  export const fromPositiveBigInt = (n: PositiveBigInt) => n as bigint as NonNegativeBigInt;
   export const fromSmallNumber = (n: Small) => BigInt(n) as NonNegativeBigInt;
   export const fromDigits = (n0: ZeroToNine, n1?: ZeroToNine, n2?: ZeroToNine, n3?: ZeroToNine, n4?: ZeroToNine, n5?: ZeroToNine, n6?: ZeroToNine, n7?: ZeroToNine, n8?: ZeroToNine, n9?: ZeroToNine, n10?: ZeroToNine, n11?: ZeroToNine, n12?: ZeroToNine, n13?: ZeroToNine, n14?: ZeroToNine, n15?: ZeroToNine, n16?: ZeroToNine, n17?: ZeroToNine, n18?: ZeroToNine, n19?: ZeroToNine): NonNegativeBigInt => {
     let digits = [n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15, n16, n17, n18, n19].filter((d): d is ZeroToNine => d !== undefined);

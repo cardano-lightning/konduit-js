@@ -279,34 +279,38 @@ export const dictOf = <O>(codec: JsonCodec<O>): JsonCodec<{ [key: string]: O }> 
   };
 }
 
+export const arrayOfDeserialiser = <O>(deserialiser: JsonDeserialiser<O>): JsonDeserialiser<O[]> => {
+  return (data: Json): Result<O[], JsonError> => {
+    return onArray(
+      (value: Json) => err(`Expected array but got ${stringify(value)}`) as Result<O[], JsonError>
+    )(items => {
+      const result: O[] = [];
+      const errors: JsonError[] = [];
+      let hasErrors = false;
+
+      for (const item of items) {
+        const decoded = deserialiser(item);
+        if (decoded.isOk()) {
+          result.push(decoded.value);
+        } else {
+          errors.push(decoded.error);
+          hasErrors = true;
+        }
+      }
+
+      if (hasErrors) {
+        // Collect per-element errors as a JSON array
+        return err(errors as unknown as JsonError);
+      }
+
+      return ok(result);
+    })(data);
+  };
+}
+
 export const arrayOf = <O>(codec: JsonCodec<O>): JsonCodec<O[]> => {
   return {
-    deserialise: (data: Json): Result<O[], JsonError> => {
-      return onArray(
-        (value: Json) => err(`Expected array but got ${stringify(value)}`) as Result<O[], JsonError>
-      )(items => {
-        const result: O[] = [];
-        const errors: JsonError[] = [];
-        let hasErrors = false;
-
-        for (const item of items) {
-          const decoded = codec.deserialise(item);
-          if (decoded.isOk()) {
-            result.push(decoded.value);
-          } else {
-            errors.push(decoded.error);
-            hasErrors = true;
-          }
-        }
-
-        if (hasErrors) {
-          // Collect per-element errors as a JSON array
-          return err(errors as unknown as JsonError);
-        }
-
-        return ok(result);
-      })(data);
-    },
+    deserialise: arrayOfDeserialiser(codec.deserialise),
     serialise: (value: O[]): Json => {
       return value.map(v => codec.serialise(v)) as Json;
     },
@@ -315,7 +319,11 @@ export const arrayOf = <O>(codec: JsonCodec<O>): JsonCodec<O[]> => {
 
 export const tupleOf = <Codecs extends readonly JsonCodec<any>[]>(
   ...codecs: Codecs
-): JsonCodec<{ [K in keyof Codecs]: Codecs[K] extends JsonCodec<infer O> ? O : never }> => {
+): Codec<
+  Json, // input: must be a Json array, enforced at runtime
+  { [K in keyof Codecs]: Codecs[K] extends JsonCodec<infer O> ? O : never },
+  JsonError
+> => {
   type TupleOut = { [K in keyof Codecs]: Codecs[K] extends JsonCodec<infer O> ? O : never };
 
   return {

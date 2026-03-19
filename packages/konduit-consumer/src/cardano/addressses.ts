@@ -13,27 +13,22 @@ import { stringify, type Json } from "@konduit/codec/json";
 import type { Iso } from "@konduit/codec";
 import { mkOrdForUint8Array } from "@konduit/codec/tagged";
 import { cbor2ByteStringCodec, mkTaggedBytesCborCodec, type CborCodec } from "@konduit/codec/cbor/codecs/sync";
-import { NetworkMagicNumber } from "./ledger";
+import { NetworkMagicNumber, PublicNetwork } from "./ledger";
 
 export type ScriptHash = Tagged<Uint8Array, "ScriptHash">;
 export namespace ScriptHash {
   export const LENGTH = 28;
-  export const fromBytes = (hash: Uint8Array) =>
+  export const fromBytes = (hash: Uint8Array): Result<ScriptHash, string> =>
     hash.length !== LENGTH ? err(`Invalid ScriptHash length: expected 28, got ${hash.length}`):ok(hash as ScriptHash);
-  export const fromJson = (json: Json) => json2ScriptHashCodec.deserialise(json);
+  export const fromJson = (json: Json) => jsonCodec.deserialise(json);
   export const ord = mkOrdForUint8Array<ScriptHash>();
-
+  export const hexStringCodec: codec.Codec<HexString, ScriptHash, JsonError> = mkHexString2HashCodec<ScriptHash>("ScriptHash", ScriptHash.LENGTH);
+  export const jsonCodec: JsonCodec<ScriptHash> = codec.pipe(hexString.jsonCodec, hexStringCodec);
   export const cborCodec: CborCodec<ScriptHash> = mkTaggedBytesCborCodec<ScriptHash>(
     "ScriptHash",
     (arr) => arr.length === ScriptHash.LENGTH
   );
 }
-export const hexString2ScriptHashCodec: codec.Codec<HexString, ScriptHash, JsonError> = mkHexString2HashCodec<ScriptHash>("ScriptHash", ScriptHash.LENGTH);
-export const json2ScriptHashCodec = codec.pipe(
-  hexString.jsonCodec,
-  hexString2ScriptHashCodec
-);
-
 export type PubKeyHash = Tagged<Uint8Array, "PubKeyHash">;
 export namespace PubKeyHash {
   export const fromPubKey = (pubKey: Ed25519PublicKey): PubKeyHash => {
@@ -58,6 +53,15 @@ export namespace Network {
   export const fromNetworkMagicNumber = (networkMagicNumber: NetworkMagicNumber): Network => {
     if(networkMagicNumber !== NetworkMagicNumber.MAINNET) return TESTNET;
     return MAINNET;
+  }
+  export const fromPublicNetwork = (publicNetwork: PublicNetwork): Network => {
+    switch(publicNetwork) {
+      case "Mainnet":
+        return MAINNET;
+      case "Preprod":
+      case "Preview":
+        return TESTNET;
+    }
   }
   export const MAINNET: Network = "mainnet" as Network;
   export const TESTNET: Network = "testnet" as Network;

@@ -2,14 +2,14 @@ import type { Tagged } from "type-fest";
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ok, type Result } from "neverthrow";
 import { Wallet, type WalletBackendBase } from '../src/wallets/embedded';
-import { Lovelace, NetworkMagicNumber, type TxHash} from '../src/cardano';
+import { Address, Lovelace, NetworkMagicNumber, TransactionUnspentOutput, type TxHash} from '../src/cardano';
 import { Ed25519PublicKey, generateMnemonic, Ed25519VerificationKey } from '@konduit/cardano-keys';
 import { Milliseconds, Seconds } from '../src/time/duration';
 import type { JsonError } from '@konduit/codec/json/codecs';
 import { PositiveBigInt } from '@konduit/codec/integers/big';
 import { HexString } from '@konduit/codec/hexString';
 import { expectOk, expectToBe } from "./assertions";
-import type { Transaction } from "../src/cardano/connector";
+import type { Transaction } from "../src/txBuilder";
 
 type Ed25519PublicKeyHex = Tagged<HexString, "Ed25519PublicKeyHex">;
 namespace Ed25519PublicKeyHex {
@@ -38,6 +38,10 @@ class MockWalletBackend implements WalletBackendBase {
   async submit(_tx: Transaction): Promise<Result<TxHash, JsonError>> {
     this.txCounter++;
     return ok((new Uint8Array(32).fill(0x00)) as TxHash);
+  }
+
+  async utxosAtAddress(_address: Address): Promise<Result<Array<TransactionUnspentOutput>, JsonError>> {
+    return ok([]);
   }
 }
 

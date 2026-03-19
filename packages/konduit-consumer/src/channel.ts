@@ -6,7 +6,7 @@ import type { AdaptorUrl, SquashResponse } from "./adaptorClient";
 import * as codec from "@konduit/codec";
 import { json2L1ChannelCodec, L1Channel } from "./channel/l1Channel";
 import type { OpenTx } from "./channel/l1Channel";
-import type { ConsumerEd25519VerificationKey } from "./channel/core";
+import { type ConsumerEd25519VerificationKey } from "./channel/core";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import { LockedCheque, json2LockedChequeCodec, json2SquashCodec, Squash, VerifiedLockedCheque, VerifiedSquash, UnlockedCheque, VerifiedUnlockedCheque, json2UnlockedChequeCodec, Index, LockedChequeBody, UnlockedChequeBody, SquashBody, AnyCheque, json2SquashBodyCodec } from "./channel/squash";
 import { json2AbortedErrorCodec, json2DeserialisationErrorCodec, json2HttpErrorCodec, json2NetworkErrorCodec, type AbortedError, type HttpEndpointError, type HttpError, type NetworkError } from "./http";
@@ -114,27 +114,22 @@ export const json2ImmediatePaymentErrorCodec: JsonCodec<ImmediatePaymentError> =
   }
 );
 
-// We construct cheques and send them "atomically"
-// so we either transtion to this `PendingPayment` with failure or
-// to `ConfirmedPayment`.
-//
-// On the other hand we allow loading the channel state
-// solely from the adaptor which means that the 
-export type PendingPayment = {
+export type FailedPayment = {
   cheque: LockedCheque;
   info: {
     error: ImmediatePaymentError | null;
     invoice: Invoice;
   } | null;
 };
-
-export const json2PendingPayment: JsonCodec<PendingPayment> = jsonCodecs.objectOf({
-  cheque: json2LockedChequeCodec,
-  info: jsonCodecs.nullable(jsonCodecs.objectOf({
-    error: jsonCodecs.nullable(json2ImmediatePaymentErrorCodec),
-    invoice: json2InvoiceCodec,
-  })),
-});
+export namespace FailedPayment {
+  export const jsonCodec: JsonCodec<FailedPayment> = jsonCodecs.objectOf({
+    cheque: json2LockedChequeCodec,
+    info: jsonCodecs.nullable(jsonCodecs.objectOf({
+      error: jsonCodecs.nullable(json2ImmediatePaymentErrorCodec),
+      invoice: json2InvoiceCodec,
+    })),
+  });
+}
 
 export type SquashingError =
   | { type: "FailedToSubmitSquash"; error: HttpEndpointError }
@@ -172,7 +167,7 @@ export const json2ExpiredPayment: JsonCodec<ExpiredPayment> = jsonCodecs.objectO
   }),
 });
 
-export type AnyPayment = PendingPayment | ConfirmedPayment | ExpiredPayment;
+export type AnyPayment = FailedPayment | ConfirmedPayment | ExpiredPayment;
 export type PaymentBreakdown<T> = {
   total: T;
   invoice: T;
@@ -207,7 +202,7 @@ export namespace PaymentBreakdown {
 export namespace AnyPayment {
   export const isConfirmed = (payment: AnyPayment): payment is ConfirmedPayment => AnyCheque.isUnlocked(payment.cheque);
   export const isExpired = (payment: AnyPayment): payment is ExpiredPayment => "expiredAt" in payment;
-  export const isPending = (payment: AnyPayment): payment is PendingPayment => !isConfirmed(payment) && !isExpired(payment);
+  export const isFailed = (payment: AnyPayment): payment is FailedPayment => !isConfirmed(payment) && !isExpired(payment);
 
   export const breakItDownInAda = (
     invoiceAmount: Lovelace,
@@ -229,7 +224,7 @@ export namespace AnyPayment {
     totalInMsat: Millisatoshi,
   ): PaymentBreakdown<BitcoinAmount> => {
     const feeInMsat = Millisatoshi.subtractAbs(totalInMsat, invoiceAmount);
-    const feeSign: Sign = Millisatoshi.ord.isGreaterThanOrEqual(feeInMsat, Millisatoshi.zero)?
+    const feeSign: Sign = Millisatoshi.ord.isGreaterThanOrEqual(totalInMsat, invoiceAmount) ?
       "positive"
       : "negative";
     return {
@@ -247,7 +242,7 @@ export namespace AnyPayment {
     return possibleTotal.map((total) => breakItDownInBtc(invoiceAmount, Millisatoshi.fromBitcoinDecimalFloor(total)));
   }
 
-  // Depending on the destination currency we want to use different conversions strategy:
+  // Defailed on the destination currency we want to use different conversions strategy:
   // * The original invoice is in BTC
   // * The real total at some point is provided in Lovelace
   // * BUT when we are presenting in BTC we want to show the original invoice amount.
@@ -286,7 +281,7 @@ export type ChequeIssuingError =
 
 // Invariants:
 // * `confirmed` contains the full payment history as `secrets` represent transfer confirmation,
-// * `pending` contains the cheques which are not included in the squash hence we squash
+// * `failed` contains the cheques which are not included in the squash hence we squash
 //  eagerly whenever unlocked are added.
 // * We play honestly here so we issue cheques only if the L1 capacity is sufficient.
 //
@@ -302,7 +297,7 @@ export type ChequeIssuingError =
 // * `squashBody ≥ squash.body ≥ squashingInfo.lastValue.body` where `≥` means successor squash body
 // Reasoning:
 // * We try eagerly squash into the squashBody and not squash as we do not sKey at hand.
-// * Given the above the squash body together with pending cheques (pending + faieldPending)
+// * Given the above the squash body together with failed cheques (failed + faieldFailed)
 //  should represent the current L2 state. The `confirmed` can be considered to be only
 //  informational.
 // * We eagerly update the squash whenever we have opportunity to sign.
@@ -313,7 +308,7 @@ export class Channel {
   public readonly l1: L1Channel;
   public readonly adaptorUrl: AdaptorUrl;
 
-  public pending: PendingPayment[];
+  public failed: FailedPayment[];
   public confirmed: ConfirmedPayment[];
   public expired: ExpiredPayment[];
 
@@ -323,7 +318,7 @@ export class Channel {
 
   private constructor(
     l1: L1Channel,
-    pending: PendingPayment[],
+    failed: FailedPayment[],
     confirmed: ConfirmedPayment[],
     expired: ExpiredPayment[],
     squashBody: SquashBody,
@@ -332,7 +327,7 @@ export class Channel {
     squashingInfo?: PollingInfo<{ squash: Squash; response: SquashResponse }>
   ) {
     this.l1 = l1;
-    this.pending = pending;
+    this.failed = failed;
     this.confirmed = confirmed;
     this.expired = expired;
     this.adaptorUrl = adaptorUrl;
@@ -343,7 +338,7 @@ export class Channel {
 
   public static load(
     l1: L1Channel,
-    pending: PendingPayment[],
+    failed: FailedPayment[],
     confirmed: ConfirmedPayment[],
     expired: ExpiredPayment[],
     squashBody: SquashBody,
@@ -352,7 +347,7 @@ export class Channel {
     squashingInfo?: PollingInfo<{ squash: Squash; response: SquashResponse }>
   ): Result<Channel, JsonError> {
     const vKey = l1.consumerVerificationKey;
-    for(const { cheque } of [...pending]) {
+    for(const { cheque } of [...failed]) {
       if(VerifiedLockedCheque.fromVerification(l1.channelTag, vKey, cheque).isErr()) {
         return err(`Cheque with index ${cheque.body.index} failed verification with consumer verification key ${vKey}`);
       }
@@ -366,7 +361,7 @@ export class Channel {
       return err(`Provided squash failed verification with consumer verification key ${vKey}`);
     }
     // TODO: Validate consistency of the squash vs the cheques and squashBody vs cheques
-    return ok(new Channel(l1, pending, confirmed, expired, squashBody, squash, adaptorUrl, squashingInfo));
+    return ok(new Channel(l1, failed, confirmed, expired, squashBody, squash, adaptorUrl, squashingInfo));
   }
 
   public static open(openTx: OpenTx, adaptorUrl: AdaptorUrl): Channel {
@@ -401,7 +396,7 @@ export class Channel {
   }
 
   public get usedCapacity(): Lovelace {
-    const used = this.pending.reduce(
+    const used = this.failed.reduce(
       (currSum, { cheque }) => currSum + cheque.body.amount,
       this.squashBody.amount as bigint
     );
@@ -442,22 +437,26 @@ export class Channel {
     return ok(cheque);
   }
 
-  // FIXME?: Ignore most errors?
+  // FIXME?: Swallow some errors?
+  // * Currently we short-circuiting on the first error.
+  // * We have a rather restrictive strategy of validation which could
+  // be revised - for example: if provided unlocked does not match
+  // anything in our failed/pending queue we reject the whole batch.
   //
-  // Currently we report all the failures and reject
-  // processing if anything is incorrect. This is probably
-  // a good debug mode approach but in general we could
-  // probably mostly ignore the errors as consumer resources
-  // are not in real danger here.
+  // ADR: This method does not accept a signing key. The assumption
+  // is that the it could be used in the context where the key vault
+  // is locked.
+  // This means that on the call site where the key is available a
+  // separate call to `doSignSquash` should be made!
   private doUnlock(unlockedCheques: UnlockedCheque[]): Result<null, string> {
-    const unlockPayment = <T extends PendingPayment>(
+    const unlockPayment = <T extends FailedPayment>(
       unlocked: UnlockedCheque,
       payments: T[]
     ): Result<{ confirmedPayment: ConfirmedPayment; remaining: T[] } | null, string> => {
       const payment = payments.find(({ cheque: locked }) => Index.ord.areEqual(locked.body.index, unlocked.body.index));
       if(payment == null) return ok(null);
       if(!LockedChequeBody.areMatching(unlocked.body, payment.cheque.body))
-        return err(`Unlocked cheque with index ${unlocked.body.index} does not match the pending cheque with the same index`);
+        return err(`Unlocked cheque with index ${unlocked.body.index} does not match the failed cheque with the same index`);
       const remaining = payments.filter(({ cheque }) => cheque.body.index !== unlocked.body.index);
       const confirmedPayment = {
         cheque: unlocked,
@@ -468,16 +467,16 @@ export class Channel {
 
     const unlockSingle = (
       unlocked: UnlockedCheque,
-      pending: PendingPayment[],
+      failed: FailedPayment[],
       confirmed: ConfirmedPayment[]
     ) => {
-      const unlockPendingResult = unlockPayment(unlocked, pending);
-      return unlockPendingResult.andThen(
+      const unlockFailedResult = unlockPayment(unlocked, failed);
+      return unlockFailedResult.andThen(
         (possibleUnlock) => {
           if(possibleUnlock != null) {
             const { confirmedPayment, remaining } = possibleUnlock;
             return ok({
-              pending: remaining,
+              failed: remaining,
               confirmed: [...confirmed, confirmedPayment]
             });
           }
@@ -485,18 +484,17 @@ export class Channel {
             Index.ord.areEqual(cheque.body.index, unlocked.body.index));
           // This is recovery scenario. Adaptor sent us previously confirmed cheque.
           if(possiblyConfirmed == null) {
-            return err(`Unlocked cheque with index ${unlocked.body.index} does not match any pending or failed cheque and there is no confirmed cheque with the same index`);
+            return err(`Unlocked cheque with index ${unlocked.body.index} does not match any failed or failed cheque and there is no confirmed cheque with the same index`);
           }
           if(!UnlockedChequeBody.areEqual(possiblyConfirmed.cheque.body, unlocked.body))
             return err(`Unlocked cheque with index ${unlocked.body.index} does not match the confirmed cheque with the same index`);
-          // TODO: Send signals from here.
-          return ok({ pending, confirmed });
+          return ok({ failed, confirmed });
         }
       );
     }
-    let curr = { pending: this.pending, confirmed: this.confirmed };
+    let curr = { failed: this.failed, confirmed: this.confirmed };
     for(const u of unlockedCheques) {
-      const result = unlockSingle(u, curr.pending, curr.confirmed);
+      const result = unlockSingle(u, curr.failed, curr.confirmed);
       if(result.isErr()) return err(result.error);
       curr = result.value;
     }
@@ -504,17 +502,17 @@ export class Channel {
     this.squashBody = Channel.mkSquashBody(
       this.squashBody,
       curr.confirmed,
-      curr.pending
+      curr.failed
     );
-    this.pending = curr.pending;
+    this.failed = curr.failed;
     this.confirmed = curr.confirmed;
     return ok(null);
   }
 
   public doL2Sync = async (sKey: Ed25519SigningKey, _recCounter: number = 10): Promise<Result<null, HttpEndpointError | string>> => {
-    // `this.squash` is not null because after this signing:
     if(!this.isFullySquashed)
       this.doSignSquash(sKey);
+    // `this.squash` can not be null because of the above squashing.
     const response = await this.adaptorClient.chSquash(this.squash!);
     return response.match(
       (squashResponse) => {
@@ -529,7 +527,11 @@ export class Channel {
         if(unlockingResult.isErr())
           return err(`Failed to process the unlockeds from the adaptor response: ${unlockingResult.error}`);
         if(_recCounter <= 0) {
-          return err(`Failed to sync the channel after 10 attempts. Last error: Received a squash proposal without the corresponding unlocked cheque in the unlockeds list`);
+          const json = mkJson2SquashResponseCodec(
+            this.l1.channelTag,
+            this.l1.consumerVerificationKey
+          ).serialise(squashResponse);
+          return err(`Failed to sync the channel after 10 attempts. Last response: ${stringify(json, undefined, 2)}`);
         }
         return this.doL2Sync(sKey, _recCounter - 1);
       },
@@ -548,27 +550,29 @@ export class Channel {
     timeout: ValidDate,
     invoice: Invoice,
     sKey: Ed25519SigningKey,
-  ): Promise<Result<ConfirmedPayment | PendingPayment, ChequeIssuingError>> => {
+  ): Promise<Result<ConfirmedPayment | FailedPayment, ChequeIssuingError>> => {
     return this.mkCheque(amount, timeout, invoice, sKey).match(
       async (cheque) => {
         // We push this internal object right away
-        // to the pending queue but we update
-        // its info as we process the payment.
+        // to the pending queue as the next step pushes
+        // it to the partner. If if the subsequent
+        // `fetch` fails we can not really assume
+        // that the message was not delivered.
         const payment = {
           cheque,
           info: { error: null, invoice }
-        } as PendingPayment;
-        this.pending.push(payment);
+        } as FailedPayment;
+        this.failed.push(payment);
 
         const response =  await this.adaptorClient.chPay(cheque, invoice);
         return response.match(
           (payResponse) => {
             const paymentFailed = (error: ImmediatePaymentError) => {
               // We are mutating here the payment
-              // which we already pushed into the pending.
+              // which we already pushed into the failed.
               payment.info = { error, invoice };
               // Return a fresh object
-              return ok({ cheque, info: { error, invoice } } as PendingPayment);
+              return ok({ cheque, info: { error, invoice } } as FailedPayment);
             };
             if(payResponse === "Complete") return paymentFailed(CriticalError.make(
                 "UnexpectedAdaptorResponse",
@@ -580,10 +584,13 @@ export class Channel {
               "UnexpectedAdaptorResponse",
               `Failed to process the unlockeds from the adaptor response: ${unlockingResult.error}`
             ));
+            // If the cheque was unlocked we can squash it.
             this.doSignSquash(sKey);
 
             // Check if between unlockeds we received a cheque corresponding to the one we just issued.
-            const confirmedPayment = this.confirmed.find(({ cheque }) => Index.ord.areEqual(cheque.body.index, cheque.body.index));
+            const confirmedPayment = this.confirmed.find(({ cheque }) =>
+              Index.ord.areEqual(cheque.body.index, cheque.body.index)
+            );
             if(confirmedPayment == null) return paymentFailed(CriticalError.make(
               "UnexpectedAdaptorResponse",
               "Received a squash proposal without the corresponding unlocked cheque in the unlockeds list"
@@ -607,11 +614,11 @@ export class Channel {
   // Pure helper. We want to keep it pure
   // because the state transition should be
   // internal "atomic":
-  // * `squashBody` assignment then `confirmed` and `pending` update.
+  // * `squashBody` assignment then `confirmed` and `failed` update.
   private static mkSquashBody(
     prevSquashBody: SquashBody,
     confirmed: ConfirmedPayment[],
-    pending: PendingPayment[]
+    failed: FailedPayment[]
   ): SquashBody {
     const newIndex = confirmed.reduce(
       (currMax, { cheque }) => Index.ord.max(currMax, cheque.body.index),
@@ -633,7 +640,7 @@ export class Channel {
         "Failed to calculate the total amount for the squash proposal"
       );
     })();
-    const exclude = pending
+    const exclude = failed
       .map(({ cheque }) => cheque)
       .filter(({ body }) => body.index < newIndex)
       .map((cheque) => cheque.body.index)
@@ -658,7 +665,7 @@ export class Channel {
   }
 
   public get allPayments(): AnyPayment[] {
-    return [...this.pending, ...this.confirmed, ...this.expired];
+    return [...this.failed, ...this.confirmed, ...this.expired];
   }
 
   public get wasApproved() {
@@ -672,7 +679,7 @@ export class Channel {
   }
 
   public get arePaymentsFullyConfirmed() {
-    return this.pending.length === 0;
+    return this.failed.length === 0;
   }
 
   // We have all the time fully squashed `squashBody`
@@ -700,7 +707,7 @@ export const json2ChannelCodec: JsonCodec<Channel> = codec.pipe(
     confirmed: jsonCodecs.arrayOf(json2ConfirmedPayment),
     expired: jsonCodecs.arrayOf(json2ExpiredPayment),
     l1_channel: json2L1ChannelCodec,
-    pending: jsonCodecs.arrayOf(json2PendingPayment),
+    failed: jsonCodecs.arrayOf(FailedPayment.jsonCodec),
     squash_body: json2SquashBodyCodec,
     squash: jsonCodecs.nullable(json2SquashCodec),
     squashing_info: jsonCodecs.identityCodec,
@@ -708,7 +715,7 @@ export const json2ChannelCodec: JsonCodec<Channel> = codec.pipe(
     deserialise: (r) => {
       const json2SquashingInfo = mkJson2SquashingInfoCodec(r.l1_channel.channelTag, r.l1_channel.consumerVerificationKey);
       return json2SquashingInfo.deserialise(r.squashing_info).andThen((squashingInfo) =>
-        Channel.load(r.l1_channel, r.pending, r.confirmed, r.expired, r.squash_body, r.squash, r.adaptor_url, squashingInfo)
+        Channel.load(r.l1_channel, r.failed, r.confirmed, r.expired, r.squash_body, r.squash, r.adaptor_url, squashingInfo)
       );
     },
     serialise: (channel: Channel) => {
@@ -718,7 +725,7 @@ export const json2ChannelCodec: JsonCodec<Channel> = codec.pipe(
         confirmed: channel.confirmed,
         expired: channel.expired,
         l1_channel: channel.l1,
-        pending: channel.pending,
+        failed: channel.failed,
         squash_body: channel.squashBody,
         squash: channel.squash,
         squashing_info: json2SquashingInfo.serialise(channel.squashingInfo),

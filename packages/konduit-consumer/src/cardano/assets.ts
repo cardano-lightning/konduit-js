@@ -12,7 +12,7 @@ import { json2IntCodec, NonNegativeInt, type Int, type OneToNine, type Small, ty
 import { cbor2PositiveBigIntCodec, json2PositiveBigIntCodec, type NonNegativeBigInt, type PositiveBigInt } from "@konduit/codec/integers/big";
 import { mkOrdForScalar, mkOrdForTuple, mkOrdForUint8Array, type Ord } from "@konduit/codec/tagged";
 import { altCborCodecs, cbor2IntCodec, mkTaggedBytesCborCodec, type CborCodec } from "@konduit/codec/cbor/codecs/sync";
-import { json2ScriptHashCodec, ScriptHash } from "./addressses";
+import { ScriptHash } from "./addressses";
 import type { HexString } from "@konduit/codec/hexString";
 import type { Codec } from "@konduit/codec";
 import type { Cbor } from "@konduit/codec/cbor/core";
@@ -163,16 +163,13 @@ export type AssetId = [ScriptHash, AssetName];
 export namespace AssetId {
   export const fromJson = (json: Json): Result<AssetId, JsonError> => jsonCodec.deserialise(json);
   export const ord: Ord<AssetId> = (() => {
-    console.log("Creating AssetId ord");
-    console.log(ScriptHash);
-    console.log(AssetName);
     return mkOrdForTuple(ScriptHash.ord, AssetName.ord) as Ord<AssetId>;
   })();
-  export const jsonCodec: JsonCodec<AssetId> = jsonCodecs.tupleOf(json2ScriptHashCodec, AssetName.jsonCodec);
+  export const jsonCodec: JsonCodec<AssetId> = jsonCodecs.tupleOf(ScriptHash.jsonCodec, AssetName.jsonCodec);
 }
 
-type ValueEntry = [AssetId, PositiveCoin];
-namespace ValueEntry {
+export type ValueEntry = [AssetId, PositiveCoin];
+export namespace ValueEntry {
   export const ord: Ord<ValueEntry> = mkOrdForTuple(AssetId.ord, PositiveCoin.ord) as Ord<ValueEntry>;
 }
 
@@ -183,13 +180,13 @@ export class Value {
 
   private constructor(
     lovelace: Lovelace,
-    assets: [AssetId, PositiveCoin][]
+    assets: ValueEntry[]
   ) {
     this.lovelace = lovelace;
     this.assets = assets;
   }
 
-  private static load(
+  public static load(
     lovelace: Lovelace,
     assets: [AssetId, PositiveCoin][]
   ): Result<Value, string> {

@@ -1,16 +1,15 @@
-import type { JsonError } from "@konduit/codec/json/codecs";
-import * as jsonAsyncCodecs from "@konduit/codec/json/async";
+import { json2StringCodec, type JsonCodec, type JsonError } from "@konduit/codec/json/codecs";
+import * as codec from "@konduit/codec";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
-import * as asyncCodec from "@konduit/codec/async";
-import { type Wallet as WalletBase, type AnyWallet, BlockfrostWallet, CardanoConnectorWallet, json2AnyWalletAsyncCodec, type WalletBackendBase } from "./wallets/embedded";
+import { type Wallet as WalletBase, type AnyWallet, BlockfrostWallet, CardanoConnectorWallet, json2AnyWalletCodec, type WalletBackendBase } from "./wallets/embedded";
 import { err, ok, Result } from "neverthrow";
 import { Ed25519PrivateKey, Mnemonic } from "@konduit/cardano-keys";
 import { AdaptorFullInfo, Quote } from "./adaptorClient";
-import { type AnyChannelTx, Channel, ChannelTag, type ChequeIssuingError, type CloseTx, type ConfirmedPayment, type ConsumerEd25519VerificationKey, json2ChannelCodec, type OpenTx, type PendingPayment } from "./channel";
+import { type AnyChannelTx, Channel, ChannelTag, type ChequeIssuingError, type ConfirmedPayment, type ConsumerEd25519VerificationKey, json2ChannelCodec, type OpenTx, type FailedPayment } from "./channel";
 import { Milliseconds, Seconds } from "./time/duration";
-import { json2Ed25519PrivateKeyCodec, Lovelace } from "./cardano";
-import { Connector, json2ConnectorAsyncCodec } from "./cardano/connector";
-import { promiseToResultAsync, resultAsyncToPromise } from "./neverthrow";
+import { Ada, json2Ed25519PrivateKeyCodec, Lovelace, PublicNetwork } from "./cardano";
+// import { Connector, json2ConnectorAsyncCodec } from "./cardano/connector";
+import { promiseToAsync, toAsync, toPromise } from "./neverthrow";
 import { ValidDate } from "./time/absolute";
 import type { DeserialisationError, HttpEndpointError, HttpError } from "./http";
 import { NonNegativeInt } from "@konduit/codec/integers/smallish";
@@ -18,6 +17,8 @@ import { Squash, SquashBody } from "./channel/squash";
 import type { InvoiceString } from "@konduit/bln/invoice/bolt11";
 import type { Invoice } from "./bitcoin/bolt11";
 import { NetworkMagicNumber, TxIx } from "./cardano";
+import { mkConnectorClient, type ConnectorClient } from "./cardano/connectorClient";
+import { buildOpenTx } from "./txBuilder";
 
 type ConsumerEvent<T> = CustomEvent<T>;
 
@@ -69,7 +70,9 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
   // which should replace the whole consumer instances
   // App should also preserve different states of the
   // consumer for different networks separately.
-  public readonly networkMagicNumber = NetworkMagicNumber.PREPROD;
+  // public readonly networkMagicNumber = NetworkMagicNumber.PREPROD;
+  public readonly publicNetwork: PublicNetwork;
+  public connectorClient: ConnectorClient;
 
   // We keep the signing key separate from wallet
   // because we want to allow users to use different
@@ -79,7 +82,7 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
 
   // The only role of the connector here is to build transactions.
   // We use wallet API for signing and submitting.
-  public readonly txBuilder: Connector;
+  // public readonly txBuilder: Connector;
 
   // FIX: debugging
   public _channels: Map<ChannelTag, Channel>;
@@ -90,12 +93,19 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
   private pollingInterval = Milliseconds.fromNonNegativeInt(NonNegativeInt.fromSmallNumber(0));
 
-  constructor(prvKey: Ed25519PrivateKey, txBuilder: Connector, wallet: Wallet, channels?: Map<ChannelTag, Channel>) {
+  constructor(
+    prvKey: Ed25519PrivateKey,
+    connectorUrl: string,
+    publicNetwork: PublicNetwork,
+    wallet: Wallet,
+    channels?: Map<ChannelTag, Channel>
+  ) {
     this._prvKey = prvKey;
     this._wallet = wallet;
     // Currently we just copy the connector from the wallet.
     this._channels = channels ?? new Map<ChannelTag, Channel>();
-    this.txBuilder = txBuilder;
+    this.connectorClient = mkConnectorClient(connectorUrl);
+    this.publicNetwork = publicNetwork;
   }
 
   // A memory leak debugging helper
@@ -167,29 +177,41 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
 
   public static async createUsingConnector(
     cardanoConnectBackend: string,
-  ): Promise<Result<{ consumer: KonduitConsumer<CardanoConnectorWallet>, mnemonic: Mnemonic }, JsonError>> {
-    let possibleWallet = await CardanoConnectorWallet.create(cardanoConnectBackend);
-    return possibleWallet.map((walletWithMnemonic) => {
-      let wallet = walletWithMnemonic.wallet;
-      let connector = wallet.walletBackend.connector;
-      const prvKey = Ed25519PrivateKey.fromMnemonic(walletWithMnemonic.mnemonic);
-      return { consumer: new KonduitConsumer(prvKey, connector, walletWithMnemonic.wallet), mnemonic: walletWithMnemonic.mnemonic };
-    });
+    publicNetwork: PublicNetwork,
+  ): Promise<{ consumer: KonduitConsumer<CardanoConnectorWallet>, mnemonic: Mnemonic }> {
+    let networkMagicNumber: NetworkMagicNumber = NetworkMagicNumber.fromPublicNetwork(publicNetwork);
+    let walletWithMnemonic = await CardanoConnectorWallet.create(cardanoConnectBackend, networkMagicNumber);
+    const prvKey = Ed25519PrivateKey.fromMnemonic(walletWithMnemonic.mnemonic);
+    return {
+      consumer: new KonduitConsumer(
+        prvKey,
+        cardanoConnectBackend,
+        publicNetwork,
+        walletWithMnemonic.wallet
+      ),
+      mnemonic: walletWithMnemonic.mnemonic
+    };
   }
 
   public static async createUsingBlockfrost(
     cardanoConnectBackend: string, // TODO: this is only needed for tx building. Should be dropped.
     blockfrostProjectId: string,
   ): Promise<Result<{ consumer: KonduitConsumer<BlockfrostWallet>, mnemonic: Mnemonic }, JsonError>> {
-    let possibleWallet = await BlockfrostWallet.create(blockfrostProjectId);
-    let possibleConnector = await Connector.new(cardanoConnectBackend);
-    return Result.combine([
-      possibleWallet,
-      possibleConnector,
-    ]).map(([walletWithMnemonic, connector]) => {
-      const prvKey = Ed25519PrivateKey.fromMnemonic(walletWithMnemonic.mnemonic);
-      return { consumer: new KonduitConsumer(prvKey, connector, walletWithMnemonic.wallet), mnemonic: walletWithMnemonic.mnemonic };
-    });
+    return toPromise(
+      promiseToAsync(BlockfrostWallet.create(blockfrostProjectId))
+        .andThen(acc => {
+            const networkMagicNumber = acc.wallet.networkMagicNumber;
+            return toAsync(PublicNetwork.fromNetworkMagicNumber(networkMagicNumber))
+              .map(publicNetwork => ({ publicNetwork, ...acc }))
+          })
+        .map(({ wallet, mnemonic, publicNetwork }) => {
+          const prvKey = Ed25519PrivateKey.fromMnemonic(mnemonic);
+          return {
+            consumer: new KonduitConsumer(prvKey, cardanoConnectBackend, publicNetwork, wallet),
+            mnemonic
+          };
+        })
+      );
   }
 
   // FIXME: those will be replaced by internal properties once we separate wallet from consumer
@@ -295,7 +317,7 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
     };
   }
 
-  public pay = async (channel: Channel, quote: Quote, invoice: Invoice): Promise<Result<ConfirmedPayment | PendingPayment, PayError>> => {
+  public pay = async (channel: Channel, quote: Quote, invoice: Invoice): Promise<Result<ConfirmedPayment | FailedPayment, PayError>> => {
     const timeout = ValidDate.addMilliseconds(ValidDate.now(), quote.relativeTimeout);
     return timeout.match(
       async (timeout) => {
@@ -313,105 +335,116 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
     closePeriod: Milliseconds,
   ): Promise<Result<Channel, JsonError>> {
     const channelTag = await ChannelTag.fromRandomBytes();
-    const [adaptorUrl, adaptorInfo] = adaptorFullInfo;
-    return await resultAsyncToPromise(
-      promiseToResultAsync(this.txBuilder.buildOpenTx(
-        channelTag,
-        this.vKey,
-        adaptorInfo.adaptorEd25519VerificationKey,
-        closePeriod,
-        amount,
-      )).andThen((openTx) =>
-        promiseToResultAsync(this.wallet.sign(openTx))
-      ).andThen((signedTx) => {
-        const now = ValidDate.now();
-        return promiseToResultAsync(this.wallet.submit(signedTx))
-          .andThen((txHash) => {
-            const openTx = {
-              adaptor: adaptorInfo.adaptorEd25519VerificationKey,
-              adaptorApproved: false,
-              amount: amount,
-              created: now,
-              closePeriod: closePeriod,
-              consumer: this.vKey as ConsumerEd25519VerificationKey,
-              lastSubmitted: now,
-              tag: channelTag,
-              txCbor: signedTx.toCbor(),
-              txHash: txHash,
-              // FIXME: This should be derived from the body of the tx
-              txIx: TxIx.fromDigits(0),
-              type: "OpenTx" as const,
-            } as OpenTx;
-            const channel = Channel.open(openTx, adaptorUrl);
-            try {
-              this._channels.set(channelTag, channel);
-            } catch(e) {
-              return err(`Panic: Failed to add channel to the map: ${e}`);
-            }
-            this.emit("channel-tx-submitted", { channel });
-            return ok(channel);
-          });
-      })
-    );
+    return toPromise(
+      Lovelace.add(amount, Lovelace.fromAda(Ada.fromDigits(2)))
+      .asyncAndThen((amountWithFee) =>
+          promiseToAsync(this.wallet.selectUtxos(amountWithFee)))
+      .andThen((fundingUtxos) => {
+          const [_adaptorUrl, adaptorInfo] = adaptorFullInfo;
+          return toAsync(buildOpenTx(
+            channelTag,
+            this.vKey,
+            adaptorInfo.adaptorEd25519VerificationKey,
+            fundingUtxos,
+            this.publicNetwork,
+            adaptorInfo.closePeriod,
+            amount,
+          ))
+        })
+      .andThen(openTx => promiseToAsync(this.wallet.sign(openTx)))
+      .andThen(signedTx =>
+          promiseToAsync(this.wallet.submit(signedTx))
+            .map(txHash => ({ txHash, signedTx })))
+      .andThen(acc => {
+          const now = ValidDate.now();
+          const [adaptorUrl, adaptorInfo] = adaptorFullInfo;
+          const openTx = {
+            adaptor: adaptorInfo.adaptorEd25519VerificationKey,
+            adaptorApproved: false,
+            amount: amount,
+            created: now,
+            closePeriod: closePeriod,
+            consumer: this.vKey as ConsumerEd25519VerificationKey,
+            lastSubmitted: now,
+            tag: channelTag,
+            txCbor: acc.signedTx.toCbor(),
+            txHash: acc.txHash,
+            // FIXME: This should be derived from the body of the tx
+            txIx: TxIx.fromDigits(0),
+            type: "OpenTx" as const,
+          } as OpenTx;
+          const channel = Channel.open(openTx, adaptorUrl);
+          try {
+            this._channels.set(channelTag, channel);
+          } catch(e) {
+            return err(`Panic: Failed to add channel to the map: ${e}`);
+          }
+          this.emit("channel-tx-submitted", { channel });
+          return ok(channel);
+        })
+      );
   };
 
-  // FIXME: this and the above logic should be pushed to the channel
-  // Resubmission on demand should be part of that lower layer as well
-  // so the consumer does not manipuate the state of those pieces directly.
-  public async closeChannel(channelTag: ChannelTag): Promise<Result<boolean, JsonError>> {
-    const channel = this._channels.get(channelTag);
-    if (!channel) {
-      return err(`Channel with tag ${channelTag} not found`);
-    }
-    if(!channel.l1.canClose()) {
-      return ok(false);
-    }
-    return await resultAsyncToPromise(
-      promiseToResultAsync(this.txBuilder.buildCloseTx(
-        channelTag,
-        this.vKey,
-      )).andThen((closeTx) =>
-        promiseToResultAsync(this.wallet.sign(closeTx))
-      ).andThen((signedTx) => {
-        const now = ValidDate.now();
-        return promiseToResultAsync(this.wallet.submit(signedTx))
-          .andThen((txHash) => {
-            const closeTx = {
-              created: now,
-              lastSubmitted: now,
-              txCbor: signedTx.toCbor(),
-              txHash: txHash,
-              // FIXME: This should be derived from the body of the tx
-              txIx: TxIx.fromDigits(0),
-              type: "CloseTx" as const,
-            } as CloseTx;
-            channel.l1.closeSubmitted(closeTx);
-            this.emit("channel-tx-submitted", { channel });
-            return ok(true);
-          });
-      })
-    );
-  }
+  // // FIXME: this and the above logic should be pushed to the channel
+  // // Resubmission on demand should be part of that lower layer as well
+  // // so the consumer does not manipuate the state of those pieces directly.
+  // public async closeChannel(channelTag: ChannelTag): Promise<Result<boolean, JsonError>> {
+  //   const channel = this._channels.get(channelTag);
+  //   if (!channel) {
+  //     return err(`Channel with tag ${channelTag} not found`);
+  //   }
+  //   if(!channel.l1.canClose()) {
+  //     return ok(false);
+  //   }
+  //   return await resultAsyncToPromise(
+  //     promiseToResultAsync(this.txBuilder.buildCloseTx(
+  //       channelTag,
+  //       this.vKey,
+  //     )).andThen((closeTx) =>
+  //       promiseToResultAsync(this.wallet.sign(closeTx))
+  //     ).andThen((signedTx) => {
+  //       const now = ValidDate.now();
+  //       return promiseToResultAsync(this.wallet.submit(signedTx))
+  //         .andThen((txHash) => {
+  //           const closeTx = {
+  //             created: now,
+  //             lastSubmitted: now,
+  //             txCbor: signedTx.toCbor(),
+  //             txHash: txHash,
+  //             // FIXME: This should be derived from the body of the tx
+  //             txIx: TxIx.fromDigits(0),
+  //             type: "CloseTx" as const,
+  //           } as CloseTx;
+  //           channel.l1.closeSubmitted(closeTx);
+  //           this.emit("channel-tx-submitted", { channel });
+  //           return ok(true);
+  //         });
+  //     })
+  //   );
+  // }
 }
 
-export const json2KonduitConsumerAsyncCodec: jsonAsyncCodecs.JsonAsyncCodec<KonduitConsumer<AnyWallet>> = (() => {
-  return asyncCodec.rmap(
-    jsonAsyncCodecs.objectOf({
-      channels: asyncCodec.fromSync(jsonCodecs.arrayOf(json2ChannelCodec)),
-      private_key: asyncCodec.fromSync(json2Ed25519PrivateKeyCodec),
-      tx_builder: json2ConnectorAsyncCodec,
-      wallet: json2AnyWalletAsyncCodec,
+export const json2KonduitConsumerCodec: JsonCodec<KonduitConsumer<AnyWallet>> = (() => {
+  return codec.rmap(
+    jsonCodecs.objectOf({
+      channels: jsonCodecs.arrayOf(json2ChannelCodec),
+      connector_url: json2StringCodec,
+      public_network: PublicNetwork.jsonCodec,
+      private_key: json2Ed25519PrivateKeyCodec,
+      wallet: json2AnyWalletCodec,
     }),
-    async (r) => {
+    (r) => {
       const channelsMap = new Map<ChannelTag, Channel>();
       r.channels.forEach((channel) => channelsMap.set(channel.channelTag, channel));
-      return new KonduitConsumer(r.private_key, r.tx_builder, r.wallet, channelsMap);
+      return new KonduitConsumer(r.private_key, r.connector_url, r.public_network, r.wallet, channelsMap);
     },
     (consumer) => {
       return {
         channels: consumer.channels,
+        connector_url: consumer.connectorClient.baseUrl,
+        public_network: consumer.publicNetwork,
         private_key: consumer["_prvKey"],
-        tx_builder: consumer.txBuilder,
+        // tx_builder: consumer.txBuilder,
         wallet: consumer.wallet,
       };
     }

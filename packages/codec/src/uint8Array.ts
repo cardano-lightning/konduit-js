@@ -4,6 +4,7 @@ import type { JsonCodec, JsonError } from "./json/codecs";
 import { lmap, pipe, rmap, type Codec } from "./codec";
 import { err, ok, Result } from "neverthrow";
 import * as base64String from "./base64String";
+import type { Json } from "./json";
 
 // Uint8Array to Tagged Uint8Array Codec with validation. The tag is optional and only used for error messages.
 export const mkTaggedUint8ArrayCodec = <T>(tag: string, validate: (arr: Uint8Array) => boolean): Codec<Uint8Array, T, JsonError> => {
@@ -129,3 +130,26 @@ export const toArrayBuffer = (uint8Array: Uint8Array): ArrayBuffer => {
   ) as ArrayBuffer;
 }
 
+
+// Friendly helper for debugging.
+//
+// FIXME: It should be moved to a json module but it requires some
+// rearrangement to avoid circular dependencies which we avoid.
+export type Jsonifable = Json | Uint8Array ;
+
+export const jsonify  = (data: Jsonifable): Json => {
+  if (data instanceof Uint8Array) {
+    return hexString.fromUint8Array(data);
+  }
+  if(Array.isArray(data)) {
+    return data.map(jsonify);
+  }
+  if(typeof data === "object" && data !== null) {
+    const result: { [key: string]: Json } = {};
+    for (const key in data) {
+      result[key] = jsonify(data[key]!);
+    }
+    return result;
+  }
+  return data;
+}

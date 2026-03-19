@@ -16,10 +16,11 @@ import * as cborCodecs from "@konduit/codec/cbor/codecs/sync";
 import type { JsonError, JsonCodec } from "@konduit/codec/json/codecs";
 import { NonNegativeInt, type ZeroToNine } from "@konduit/codec/integers/smallish";
 import { altCborCodecs, cbor2EmbededCborCodec, json2CborCodec, mkTaggedBytesCborCodec, type CborCodec } from "@konduit/codec/cbor/codecs/sync";
-import { Address } from "./addressses";
+import { Address, ScriptHash } from "./addressses";
 import type { Cbor } from "@konduit/codec/cbor/core";
 import { Value } from "./assets";
 import { mkOrdForScalar, mkOrdForUint8Array } from "@konduit/codec/tagged";
+import type { PlutusVersion } from "./ledger";
 
 // We do not provide validation for TxCborBytes and TxBodyCborBytes here. Please use it when you can trust the source of the CBOR.
 export type TxCborBytes = typeFest.Tagged<Uint8Array, "TxCborBytes">;
@@ -299,6 +300,26 @@ export namespace TxOut {
   })();
 }
 
+export type TxIx = Tagged<NonNegativeInt, "TxIx">;
+export namespace TxIx {
+  export const fromNonNegativeInt = (nonNegative: NonNegativeInt): TxIx => nonNegative as TxIx;
+  export const fromDigits = (n0: ZeroToNine, n1?: ZeroToNine, n2?: ZeroToNine, n3?: ZeroToNine): TxIx => {
+    return NonNegativeInt.fromDigits(n0, n1, n2, n3) as TxIx;
+  }
+  export const jsonCodec = codec.rmap(
+    NonNegativeInt.jsonCodec,
+    (nonNegative) => nonNegative as TxIx,
+    (txIx: TxIx): NonNegativeInt => txIx as NonNegativeInt,
+  );
+  export const cborCodec: CborCodec<TxIx> = codec.rmap(
+    NonNegativeInt.cborCodec,
+    (nonNegative) => nonNegative as TxIx,
+    (txIx: TxIx): NonNegativeInt => txIx as NonNegativeInt,
+  );
+  export const ord = mkOrdForScalar<TxIx>();
+}
+
+
 export type TxHash = Tagged<Uint8Array, "TxHash">;
 export type TxId = TxHash;
 
@@ -324,14 +345,15 @@ export namespace TxHash {
 }
 
 // TODO: Redundant - we have TxOutRef in the ledger module.
-export type TxInput = Tagged<[TxId, NonNegativeInt], "TxInput">;
+export type TxInput = Tagged<[TxId, TxIx], "TxInput">;
 export namespace TxInput {
+  export const fromComponents = (txId: TxId, txIx: TxIx): TxInput => [txId, txIx] as TxInput;
   export const fromJson = (json: Json): Result<TxInput, JsonError> => jsonCodec.deserialise(json);
 
   export const jsonCodec: JsonCodec<TxInput> = codec.rmap(
     jsonCodecs.tupleOf(
       TxHash.jsonCodec,
-      NonNegativeInt.jsonCodec
+      TxIx.jsonCodec
     ),
     (val) => val as TxInput,
     (txInput) => txInput
@@ -345,7 +367,7 @@ export namespace TxInput {
     cborCodecs.tupleOf(
       cborCodecs.definiteLength,
       TxHash.cborCodec,
-      NonNegativeInt.cborCodec,
+      TxIx.cborCodec,
     ),
     (val) => val as TxInput,
     (txInput) => txInput
@@ -362,6 +384,15 @@ export type TxInfo = {
   txHash: TxHash;
   inputs: TxInput[];
   outputs: TxOut[];
+}
+
+// Some extra information which can be associated with the output
+export type TxOutInfo = {
+  consumedBy: TxHash | null;
+  referenceScript: {
+    hash: ScriptHash;
+    version: PlutusVersion;
+  } | null;
 }
 
 // TODO: create a separate cip30.ts module
@@ -396,20 +427,6 @@ export namespace TransactionUnspentOutput {
     (txUnspentOutput: TransactionUnspentOutput) =>
       [txUnspentOutput.input, txUnspentOutput.output] as [TxInput, TxOut]
   );
-}
-
-export type TxIx = Tagged<NonNegativeInt, "TxIx">;
-export namespace TxIx {
-  export const fromNonNegativeInt = (nonNegative: NonNegativeInt): TxIx => nonNegative as TxIx;
-  export const fromDigits = (n0: ZeroToNine, n1?: ZeroToNine, n2?: ZeroToNine, n3?: ZeroToNine): TxIx => {
-    return NonNegativeInt.fromDigits(n0, n1, n2, n3) as TxIx;
-  }
-  export const jsonCodec = codec.rmap(
-    NonNegativeInt.jsonCodec,
-    (nonNegative) => nonNegative as TxIx,
-    (txIx: TxIx): NonNegativeInt => txIx as NonNegativeInt,
-  );
-  export const ord = mkOrdForScalar<TxIx>();
 }
 
 export type TxOutRef = { txId: TxHash, txIx: TxIx };

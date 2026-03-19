@@ -219,7 +219,7 @@ export const mkPostEndpoint = <Req, Res>(
   url: Url,
   requestSerialiser: RequestSerialiser<Req>,
   responseDeserialiser: ResponseDeserialiser<Res>
-) => {
+): ((requestBody: Req, headers?: [string, string][], signal?: AbortSignal) => Promise<Result<Res, HttpEndpointError>>) => {
   return async (
     requestBody: Req,
     headers: [string, string][] = [],
@@ -375,10 +375,9 @@ export const mkGetEndpoint = <Req, Res>(
   baseUrl: Url,
   pathSerialiser: TextSerialiser<Req>,
   responseDeserialiser: ResponseDeserialiser<Res>,
-  signal?: AbortSignal
-) => {
+): ((req: Req, headers?: [string, string][], signal?: AbortSignal) => Promise<Result<Res, HttpEndpointError>>) => {
   const normalisedBaseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
-  return async (req: Req, headers: [string, string][] = []): Promise<Result<Res, HttpEndpointError>> => {
+  return async (req: Req, headers: [string, string][] = [], signal?: AbortSignal): Promise<Result<Res, HttpEndpointError>> => {
     const acceptHeader = (() => {
       switch (responseDeserialiser.type) {
         case "json": return "application/json";

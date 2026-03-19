@@ -2,22 +2,23 @@ import type { Json } from "@konduit/codec/json";
 import type { JsonCodec, JsonError } from "@konduit/codec/json/codecs";
 import { err, ok, type Result } from "neverthrow";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
-import * as jsonAsyncCodecs from "@konduit/codec/json/async";
-import * as asyncCodec from "@konduit/codec/async";
-import { Address, AddressBech32, Lovelace, Network, PubKeyHash, TxHash } from "../cardano";
+import { Address, AddressBech32, type Credential, Lovelace, Network, PubKeyHash, TransactionUnspentOutput, TxHash } from "../cardano";
+import * as codec from "@konduit/codec";
 import { NetworkMagicNumber } from "../cardano";
 import type { Mnemonic, Ed25519VerificationKey } from "@konduit/cardano-keys";
 import { generateMnemonic, Ed25519PrivateKey } from "@konduit/cardano-keys";
 import { NonNegativeInt } from "@konduit/codec/integers/smallish";
 import { Milliseconds, type Seconds } from "../time/duration";
 import { json2Ed25519PrivateKeyCodec } from "../cardano/keys";
-import { Connector, type Transaction } from "../cardano/connector";
-import { promiseToResultAsync, resultAsyncToPromise } from "../neverthrow";
+import type { Transaction } from "../txBuilder";
+// import { Connector, type Transaction } from "../cardano/connector";
 import { mkIdentityCodec } from "@konduit/codec";
 import { json2ValidDateCodec, ValidDate } from "../time/absolute";
-import type { JsonAsyncCodec } from "@konduit/codec/json/async";
 import { mkBlockfrostClient } from "../blockfrostClient";
 import { mkJson2PollingInfoCodec, PollingInfo } from "../polling";
+import { mkConnectorClient, type ConnectorClient } from "../cardano/connectorClient";
+import { json2HttpEndpointErrorCodec } from "../http";
+import { unwrapOrPanic } from "../neverthrow";
 
 type WalletEvent<T> = CustomEvent<T>;
 
@@ -37,6 +38,8 @@ export type WalletBackendBase = {
   getBalance: (vKey: Ed25519VerificationKey) => Promise<Result<Lovelace, JsonError>>;
   networkMagicNumber: NetworkMagicNumber;
   submit: (tx: Transaction) => Promise<Result<TxHash, JsonError>>;
+  utxosAtAddress: (address: Address) => Promise<Result<Array<TransactionUnspentOutput>, JsonError>>;
+  // utxosAtAddress(address: Address): Promise<Result<Array<TransactionUnspentOutput>, JsonError>>;
 };
 
 export type SuccessfulFetch = {
@@ -82,6 +85,10 @@ export type BalanceInfo = PollingInfo<Lovelace>;
 export const BalanceInfo = PollingInfo;
 
 export const json2BalanceInfoCodec: JsonCodec<BalanceInfo> = mkJson2PollingInfoCodec(Lovelace.jsonCodec);
+
+export type SelectUtxosError =
+  | { queryError: JsonError }
+  | { insufficientFunds: { available: Lovelace; required: Lovelace } };
 
 /* A simple, single-address, no staking wallet implementation */
 export class Wallet<WalletBackend extends WalletBackendBase> {
@@ -156,6 +163,26 @@ export class Wallet<WalletBackend extends WalletBackendBase> {
 
   public get balanceInfo(): BalanceInfo | null {
     return this._balanceInfo;
+  }
+
+  public async selectUtxos(minLovelace: Lovelace): Promise<Result<Array<TransactionUnspentOutput>, SelectUtxosError>> {
+    return (await this.walletBackend.utxosAtAddress(this.address))
+      .mapErr((error) => {
+        return { queryError: error } as SelectUtxosError;
+      })
+      .andThen((result) => {
+        const reduced = result.reduce((acc, utxo) => {
+          if(acc.sum >= minLovelace) return acc;
+          const sum: bigint = acc.sum + utxo.output.value.lovelace;
+          const utxos = [...acc.utxos, utxo];
+          return { sum, utxos };
+        }, { sum: BigInt(0), utxos: [] as Array<TransactionUnspentOutput> });
+        if (reduced.sum >= minLovelace) return ok(reduced.utxos);
+        else return err({ insufficientFunds: {
+          available: unwrapOrPanic(Lovelace.fromBigInt(reduced.sum), "Failed to convert sum of utxos to Lovelace"),
+          required: minLovelace
+        }});
+      })
   }
 
   private emit<K extends keyof WalletEvents<WalletBackend>>(event: K, payload: WalletEvents<WalletBackend>[K]) {
@@ -245,19 +272,19 @@ export class Wallet<WalletBackend extends WalletBackendBase> {
   }
 }
 
-const mkWalletAsyncCodec = <Backend extends WalletBackendBase>(
-  json2BackendAsyncCodec: JsonAsyncCodec<Backend>,
-): JsonAsyncCodec<Wallet<Backend>> => {
+const mkWalletCodec = <Backend extends WalletBackendBase>(
+  json2BackendCodec: JsonCodec<Backend>,
+): JsonCodec<Wallet<Backend>> => {
   const json2WalletStateRecordCodec:JsonCodec<{ balance_info: BalanceInfo | null, private_key: Ed25519PrivateKey }> = jsonCodecs.objectOf({
     balance_info: jsonCodecs.nullable(json2BalanceInfoCodec),
     private_key: json2Ed25519PrivateKeyCodec,
   });
-  return asyncCodec.rmap(
-    jsonAsyncCodecs.objectOf({
-      backend: json2BackendAsyncCodec,
-      state: asyncCodec.fromSync(json2WalletStateRecordCodec),
+  return codec.rmap(
+    jsonCodecs.objectOf({
+      backend: json2BackendCodec,
+      state: json2WalletStateRecordCodec,
     }),
-    async (r) => {
+    (r) => {
       return new Wallet(r.state.private_key, r.backend, r.state.balance_info || undefined)
     },
     (wallet) => {
@@ -277,91 +304,107 @@ export type CardanoConnectorWallet = Wallet<CardanoConnectorWallet.WalletBackend
 export namespace CardanoConnectorWallet {
   // We additionally store the url
   export type WalletBackend = WalletBackendBase & {
-    readonly connector: Connector;
+    readonly connector: ConnectorClient;
   };
 
-  export const mkWalletBackend = (connector: Connector): WalletBackend => {
+  export const mkWalletBackendFromConnector = (connector: ConnectorClient, networkMagicNumber: NetworkMagicNumber): WalletBackend => {
     return {
       connector,
-      getBalance: async (vKey: Ed25519VerificationKey) => connector.balance(vKey),
+      getBalance: async (vKey: Ed25519VerificationKey) => {
+        const address = {
+          network: Network.fromNetworkMagicNumber(networkMagicNumber),
+          paymentCredential: {
+            type: "PubKeyHash",
+            hash: PubKeyHash.fromPubKey(vKey.key),
+          } as Credential,
+        } as Address;
+        return (await connector.balance(address)).mapErr((error) => {
+          return json2HttpEndpointErrorCodec.serialise(error);
+        });
+      },
       submit: async (tx: Transaction) => {
         // TODO:
         // When we have pure TS implementation of the cardano-connect client
         // then we will be able to remove that _inner lookup completely and
         // just submit the cbor directly.
-        const result = await connector.submit(tx._inner);
-        result.mapErr((error) => {
-          console.debug("Error submitting transaction:", error);
+        return (await connector.submit(tx.toCbor())).mapErr((error) => {
+          return json2HttpEndpointErrorCodec.serialise(error);
         });
-        return result;
       },
-      networkMagicNumber: connector.networkMagicNumber,
+      utxosAtAddress: async (address: Address) => {
+        const utxosWithExtraInfo = await connector.utxosAt(address);
+        return utxosWithExtraInfo
+          .mapErr((error) => {
+            return json2HttpEndpointErrorCodec.serialise(error);
+          })
+          .map((utxos) => utxos.map((u) => u.out));
+      },
+      networkMagicNumber,
     };
+  };
+
+  export const mkWalletBackendFromUrl = (backendUrl: string, networkMagicNumber: NetworkMagicNumber): WalletBackend => {
+    const connector = mkConnectorClient(backendUrl);
+    return mkWalletBackendFromConnector(connector, networkMagicNumber);
   }
 
-  export const createBackend = async (backendUrl: string, httpTimeout?: Milliseconds): Promise<Result<WalletBackend, JsonError>> => {
-    const result = await Connector.new(backendUrl, httpTimeout);
-    return result.map(mkWalletBackend);
+  export const mkWalletBackend = (connectorOrUrl: ConnectorClient | string, networkMagicNumber: NetworkMagicNumber): WalletBackend => {
+    if(typeof connectorOrUrl === "string") {
+      return mkWalletBackendFromUrl(connectorOrUrl, networkMagicNumber);
+    } else {
+      return mkWalletBackendFromConnector(connectorOrUrl, networkMagicNumber);
+    }
   }
 
-  export async function fromPrivateKey(
-    connector: string | Connector,
+  export const createBackend = (backendUrl: string, networkMagicNumber: NetworkMagicNumber): WalletBackend => {
+    return mkWalletBackend(backendUrl, networkMagicNumber);
+  }
+
+  export function fromPrivateKey(
+    connectorConfig: string | ConnectorClient,
+    networkMagicNumber: NetworkMagicNumber,
     privateKey: Ed25519PrivateKey,
     balanceInfo?: BalanceInfo
-  ): Promise<Result<Wallet<CardanoConnectorWallet.WalletBackend>, JsonError>> {
-    if(connector instanceof Connector) {
-      const walletBackend =  mkWalletBackend(connector);
-      return ok(new Wallet(privateKey, walletBackend, balanceInfo));
-    }
-    return resultAsyncToPromise(promiseToResultAsync(createBackend(connector)).map(async (backend) => {
-      return new Wallet(privateKey, backend, balanceInfo);
-    }));
+  ): Wallet<CardanoConnectorWallet.WalletBackend> {
+    const walletBackend = mkWalletBackend(connectorConfig, networkMagicNumber);
+    return new Wallet(privateKey, walletBackend, balanceInfo);
   }
 
   export async function create(
-    connector: string | Connector,
-  ): Promise<Result<{ wallet: Wallet<WalletBackend>; mnemonic: Mnemonic }, JsonError>> {
-    if(connector instanceof Connector) {
-      const walletBackend =  mkWalletBackend(connector);
-      return ok(await Wallet.create(walletBackend));
-    }
-    return resultAsyncToPromise(promiseToResultAsync(createBackend(connector)).map(async (backend) => {
-      return Wallet.create(backend);
-    }));
+    connector: string | ConnectorClient,
+    networkMagicNumber: NetworkMagicNumber,
+  ): Promise<{ wallet: Wallet<WalletBackend>; mnemonic: Mnemonic }> {
+    const backend = mkWalletBackend(connector, networkMagicNumber);
+    return Wallet.create(backend);
   }
 
   export async function restore(
-    connector: string | Connector,
+    connector: string | ConnectorClient,
+    networkMagicNumber: NetworkMagicNumber,
     mnemonic: Mnemonic,
-  ): Promise<Result<Wallet<WalletBackend>, JsonError>> {
-    if(connector instanceof Connector) {
-      const walletBackend =  mkWalletBackend(connector);
-      return ok(await Wallet.restore(walletBackend, mnemonic));
-    }
-    return resultAsyncToPromise(promiseToResultAsync(createBackend(connector)).map(async (connector) => {
-      return Wallet.restore(connector, mnemonic);
-    }));
+  ): Promise<Wallet<WalletBackend>> {
+    const backend = mkWalletBackend(connector, networkMagicNumber);
+    return Wallet.restore(backend, mnemonic);
   }
 
-  export const json2WalletBackendAsyncCodec: JsonAsyncCodec<WalletBackend> = (asyncCodec.pipe(
-    asyncCodec.fromSync(jsonCodecs.objectOf({
+  export const json2WalletBackendCodec: JsonCodec<WalletBackend> = codec.rmap(
+    jsonCodecs.objectOf({
       backend_url: jsonCodecs.json2StringCodec,
+      network_magic_number: NetworkMagicNumber.jsonCodec,
       type: jsonCodecs.constant("CardanoConnectorWallet.WalletBackend"),
-    })), {
-      deserialise: async (r) => {
-        return createBackend(r.backend_url);
-      },
-      serialise: (walletBackend: WalletBackend) => {
+    }),
+    (r) => createBackend(r.backend_url, r.network_magic_number),
+    (walletBackend: WalletBackend) => {
         return {
-          backend_url: walletBackend.connector.backendUrl,
+          backend_url: walletBackend.connector.baseUrl,
+          network_magic_number: walletBackend.networkMagicNumber,
           type: "CardanoConnectorWallet.WalletBackend" as const,
         };
-      }
     }
-  ));
+  );
 
-  export const json2WalletAsyncCodec: JsonAsyncCodec<Wallet<WalletBackend>> =
-    mkWalletAsyncCodec(json2WalletBackendAsyncCodec);
+  export const json2WalletCodec: JsonCodec<Wallet<WalletBackend>> =
+    mkWalletCodec(json2WalletBackendCodec);
 }
 
 export type BlockfrostWallet = Wallet<BlockfrostWallet.WalletBackend>;
@@ -391,6 +434,13 @@ export namespace BlockfrostWallet {
           const txCbor = tx.toCbor();
           return blockfrostClient.submitTx(txCbor);
         },
+        utxosAtAddress: async (address: Address) => {
+          const utxosWithExtraInfo = await blockfrostClient.utxosAt(AddressBech32.fromAddress(address));
+          return utxosWithExtraInfo
+            .mapErr((error) => {
+              return json2HttpEndpointErrorCodec.serialise(error);
+            });
+        },
         networkMagicNumber: blockfrostClient.networkMagicNumber,
       } as WalletBackend;
     });
@@ -415,12 +465,12 @@ export namespace BlockfrostWallet {
     );
   }
 
-  export const json2WalletBackendAsyncCodec: JsonAsyncCodec<WalletBackend> = (asyncCodec.pipe(
-    asyncCodec.fromSync(jsonCodecs.objectOf({
+  export const json2WalletBackendCodec: JsonCodec<WalletBackend> = codec.pipe(
+    jsonCodecs.objectOf({
       project_id: jsonCodecs.json2StringCodec,
       type: jsonCodecs.constant("BlockfrostWallet.WalletBackend"),
-    })), {
-      deserialise: async (r) => {
+    }), {
+      deserialise: (r) => {
         return createBackend(r.project_id);
       },
       serialise: (walletBackend: WalletBackend) => {
@@ -430,10 +480,10 @@ export namespace BlockfrostWallet {
         };
       }
     }
-  ));
+  );
 
-  export const json2WalletAsyncCodec: JsonAsyncCodec<Wallet<WalletBackend>>
-    = mkWalletAsyncCodec(json2WalletBackendAsyncCodec);
+  export const json2WalletCodec: JsonCodec<Wallet<WalletBackend>>
+    = mkWalletCodec(json2WalletBackendCodec);
 }
 
 export type AnyWalletBackend =
@@ -459,28 +509,24 @@ export const isBlockfrostWallet = (wallet: AnyWallet): wallet is BlockfrostWalle
 export const isCardanoConnectorWallet = (wallet: AnyWallet): wallet is CardanoConnectorWallet => {
   return isCardanoConnectorBackend(wallet.walletBackend);
 }
-export const json2AnyWalletBackendAsyncCodec: JsonAsyncCodec<AnyWalletBackend> = asyncCodec.altCodec(
-  CardanoConnectorWallet.json2WalletBackendAsyncCodec,
-  BlockfrostWallet.json2WalletBackendAsyncCodec,
+export const json2AnyWalletBackendCodec: JsonCodec<AnyWalletBackend> = jsonCodecs.altJsonCodecs(
+  [CardanoConnectorWallet.json2WalletBackendCodec, BlockfrostWallet.json2WalletBackendCodec],
   (serConnector, serBlockfrost) => (backend: AnyWalletBackend) => {
     if (isCardanoConnectorBackend(backend)) {
       return serConnector(backend);
     }
     return serBlockfrost(backend);
   },
-  (...errors: JsonError[]): JsonError => errors
 );
 
 
-export const json2AnyWalletAsyncCodec: JsonAsyncCodec<AnyWallet> = asyncCodec.altCodec(
-  CardanoConnectorWallet.json2WalletAsyncCodec,
-  BlockfrostWallet.json2WalletAsyncCodec,
+export const json2AnyWalletCodec: JsonCodec<AnyWallet> = jsonCodecs.altJsonCodecs(
+  [CardanoConnectorWallet.json2WalletCodec, BlockfrostWallet.json2WalletCodec],
   (serConnector, serBlockfrost) => (wallet: AnyWallet) => {
     if (isCardanoConnectorWallet(wallet)) {
       return serConnector(wallet);
    }
     return serBlockfrost(wallet);
   },
-  (...errors: JsonError[]): JsonError => errors
 );
 

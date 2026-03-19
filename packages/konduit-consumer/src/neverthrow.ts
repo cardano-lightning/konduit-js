@@ -2,6 +2,7 @@ import { isJson, stringify } from '@konduit/codec/json';
 import type { Result } from 'neverthrow';
 import { ok, err, ResultAsync } from 'neverthrow';
 
+// DEPRECATED: Use shorter toPromise instead
 export const resultAsyncToPromise = async <T, E>(resultAsync: ResultAsync<T, E>): Promise<Result<T, E>> => {
   return resultAsync.match(
     (value) => Promise.resolve(ok(value)),
@@ -9,12 +10,29 @@ export const resultAsyncToPromise = async <T, E>(resultAsync: ResultAsync<T, E>)
   );
 }
 
+export const toPromise = async <T, E>(resultAsync: ResultAsync<T, E>): Promise<Result<T, E>> => {
+  return resultAsync.match(
+    (value) => Promise.resolve(ok(value)),
+    (error) => Promise.resolve(err(error))
+  );
+}
+
+// DEPRECATED: Use constructor directly or shorter promiseToAsync instead
 export const promiseToResultAsync = <T, E>(promise: Promise<Result<T, E>>): ResultAsync<T, E> => {
   return new ResultAsync(promise);
 }
 
+export const promiseToAsync = <T, E>(promise: Promise<Result<T, E>>): ResultAsync<T, E> => {
+  return new ResultAsync(promise);
+}
+
+// DEPRECATED: Use shorter toAsync instead
 export const hoistToResultAsync = <T, E>(result: Result<T, E>): ResultAsync<T, E> => {
   return promiseToResultAsync(Promise.resolve(result));
+}
+
+export const toAsync = <T, E>(result: Result<T, E>): ResultAsync<T, E> => {
+  return new ResultAsync(Promise.resolve(result));
 }
 
 export const unwrapOrPanic = <T, E>(result: Result<T, E>, errorMessage: string): T => {

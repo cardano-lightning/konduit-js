@@ -31,15 +31,15 @@ describe('Cardano Addresses', () => {
     it('should deserialize JSON string to ScriptHash', () => {
       const validHex = 'b'.repeat(56);
       const json = expectOk(parse(`"${validHex}"`));
-      const result = addresses.json2ScriptHashCodec.deserialise(json);
+      const result = addresses.ScriptHash.jsonCodec.deserialise(json);
       const hash = expectOk(result);
       expect(hash.length).toBe(28);
     });
 
     it('should roundtrip through JSON', () => {
       const hash = new Uint8Array(28).fill(0xcd) as addresses.ScriptHash;
-      const json = addresses.json2ScriptHashCodec.serialise(hash);
-      const decoded = expectOk(addresses.json2ScriptHashCodec.deserialise(json));
+      const json = addresses.ScriptHash.jsonCodec.serialise(hash);
+      const decoded = expectOk(addresses.ScriptHash.jsonCodec.deserialise(json));
       expect(decoded).toEqual(hash);
     });
   });
