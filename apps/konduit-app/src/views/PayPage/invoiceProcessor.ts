@@ -1,7 +1,6 @@
 import type { AppKonduitConsumer } from "../../store";
-import { AnyPayment, type Channel } from "@konduit/konduit-consumer/channel";
-import type { ChannelQuoteInfo, ChannelQuoteResult } from "@konduit/konduit-consumer";
-import type { JsonError } from "@konduit/codec/json/codecs";
+import { AnyPayment, type Channel, type ConfirmedPayment, type FailedPayment } from "@konduit/konduit-consumer/channel";
+import type { ChannelQuoteInfo, ChannelQuoteResult, PayError } from "@konduit/konduit-consumer";
 import type { Tagged } from "type-fest";
 import { Fx } from "@konduit/konduit-consumer/fx";
 import { Invoice } from "@konduit/konduit-consumer/bitcoin/bolt11";
@@ -59,31 +58,71 @@ export type ProcessingProgress =
     theBest: ChannelQuoteInfo;
     type: 'quotes-loaded';
   }
+  // TODO:
+  // Context:
+  //
+  // There are three types of failure possible:
+  // * The payment did not pass validation during the payment attempt
+  // and the cheque was not created.
+  // * Delivery of a cheque was not confirmed - networking issue.
+  // * There was a error response from the adaptor - routing failed, cheque rejected etc.
+  //
+  // Handling first case is easy - we have to report that the payment is just invalid
+  // in the current context.
+  // Handling the last is similar to the above but we lock funds and report that situation.
+  //
+  // The second case is the most tricky and should be handled outside of component context,
+  // probably in the background by the KonduitConsumer.
+  // For now we will return in this case a retryable error BUT we will not implement
+  // auto retries. Maybe provide a way to retry manually from the UI.
   | {
       allQuoteResults: ChannelQuoteResult[];
-      // Aborting will be allowed only mid-payment.
-      // abortController?: AbortController;
-      lastRetryTime?: Date;
-      // FIXME: We should switch to a more
-      // robust error handling here.
-      lastRetryError?: string;
-      retryCount: number;  // Starts at 0, increments on auto-retries
+      // lastRetryTime?: Date;
+      // // FIXME: We should switch to a more
+      // // robust error handling here.
+      // lastRetryError?: string;
+      // retryCount: number;  // Starts at 0, increments on auto-retries
       theBest: ChannelQuoteInfo;
       type: 'paying';
   }
+  // export type ChequeIssuingError =
+  //   | { type: "ChannelNotOperational", message: "The channel is not operational" }
+  //   | { type: "OverspendsChannel", message: "Total sum of the cheques will exceed the channel capacity" }
+  //   | { type: "TimeoutInThePast"; message: "Cheque timeout has to be in the future" }
+  // 
+  // export type PayError =
+  //   | { type: "TimeoutCalculation"; error: string }
+  //   | ChequeIssuingError
   | {
     allQuoteResults: ChannelQuoteResult[];
-    usedQuote: ChannelQuoteInfo;
-    type: 'payment-successful';
+    error: PayError;
+    theBest: ChannelQuoteInfo;
+    type: 'cheque-issuing-failed';
   }
   | {
     allQuoteResults: ChannelQuoteResult[];
-    reason: string;
-    retryCount: number;  // Total attempts made in the previous round.
-    retryable: boolean;
+    // Internally failed payment stores the error
+    // export type FailedPayment = {
+    //   cheque: LockedCheque;
+    //   info: {
+    //     error: ImmediatePaymentError | null;
+    //     invoice: Invoice;
+    //   } | null;
+    // };
+    payment: FailedPayment;
+    // retryable: {
+    //   lastAttempt: ValidDate
+    //   retryCount: number,
+    // } | false;
     theBest: ChannelQuoteInfo;
     type: 'payment-failed';
-  };
+  }
+  | {
+    allQuoteResults: ChannelQuoteResult[];
+    payment: ConfirmedPayment;
+    type: 'payment-successful';
+    usedQuote: ChannelQuoteInfo;
+  }
 
 export type ProcessorState = {
   expirationInfo: Ref<InvoiceExpirationInfo>;
@@ -171,7 +210,7 @@ const init = (
     getInvoiceExpirationInfo(invoice)
   );
   return validateInvoice(invoice, expirationInfoRef.value, consumer, fx).match(
-    (_validatedInvoice) => {
+    (validatedInvoice) => {
       const abortController = new AbortController();
       const processingProgressRef: Ref<ProcessingProgress> = createOrReuseRef(progressRef, {
           abortController,
@@ -204,14 +243,17 @@ const init = (
             type: 'quoting-failed',
           };
         else {
-          // The stack of errors is rather big here :-)
+          // TODO: Please check the TODO section above the 'paying' type in the ProcessingProgress type.
+          //
+          // Let's leave this summary of the error structure for now here for a context.
+          //
           // export type ImmediatePaymentError =
           //   | AbortedError
           //   | NetworkError
           //   | AdaptorRejection
           //   | CriticalError
           // 
-          // export type PendingPayment = {
+          // export type FailedPayment = {
           //   cheque: LockedCheque;
           //   info: {
           //     error: ImmediatePaymentError | null;
@@ -228,7 +270,7 @@ const init = (
           //   | { type: "TimeoutCalculation"; error: string }
           //   | ChequeIssuingError
           // 
-          //   public pay = async (channel: Channel, quote: Quote, invoice: Invoice): Promise<Result<ConfirmedPayment | PendingPayment, PayError>> => {
+          //   public pay = async (channel: Channel, quote: Quote, invoice: Invoice): Promise<Result<ConfirmedPayment | FailedPayment, PayError>> => {
           //     const timeout = ValidDate.addMilliseconds(ValidDate.now(), quote.relativeTimeout);
           //     return timeout.match(
           //       async (timeout) => {
@@ -241,29 +283,39 @@ const init = (
           const pay = async (quote: ChannelQuoteInfo, consumer: AppKonduitConsumer, invoice: Invoice): Promise<void> => {
             if(paymentInProgress.value) return;
             paymentInProgress.value = true;
-
-            // public pay = async (channel: Channel, quote: Quote, invoice: Invoice): Promise<Result<ConfirmedPayment | PendingPayment, PayError>> => {
+            processingProgressRef.value = {
+              allQuoteResults: results,
+              theBest: quote,
+              type: 'paying',
+            };
             const result = await consumer.pay(quote.channel, quote.quote, invoice);
             paymentInProgress.value = false;
             result.match(
-              (_payment) => {
+              (payment) => {
+                if(AnyPayment.isConfirmed(payment)) {
+                  processingProgressRef.value = {
+                    allQuoteResults: results,
+                    payment,
+                    usedQuote: quote,
+                    type: 'payment-successful',
+                  };
+                  return;
+                }
                 processingProgressRef.value = {
                   allQuoteResults: results,
-                  usedQuote: quote,
-                  type: 'payment-successful',
+                  payment,
+                  theBest: quote,
+                  type: 'payment-failed',
                 };
-              }),
+              },
               (error) => {
                 processingProgressRef.value = {
                   allQuoteResults: results,
-                  reason: `Payment failed: ${error}`,
-                  retryable: false,
+                  error,
                   theBest: quote,
-                  type: 'payment-failed',
-                  retryCount: 0,
+                  type: 'cheque-issuing-failed',
                 };
                }
-              )
             );
           }
 
@@ -335,13 +387,23 @@ const mkPaymentBreakdown = (
         ).map(details => ({ estimate: false, ...details }));
     switch(processingProgress.value.type) {
       case 'quoting-failed':
-      case 'quoting-blocked': return mkPureEstimate();
+      case 'quoting-blocked':
+        return mkPureEstimate();
       case 'quotes-loading':
         if(processingProgress.value.bestSoFar === null) return mkPureEstimate();
         return mkBreakdown(processingProgress.value.bestSoFar);
       case 'quotes-loaded':
+      case 'paying':
+      case 'cheque-issuing-failed':
       case 'payment-failed':
         return mkBreakdown(processingProgress.value.theBest);
+      case 'payment-successful':
+        return AnyPayment.breakItDown(
+          invoice.amount,
+          processingProgress.value.payment.cheque.body.amount,
+          currentFx,
+          currentCurrency.value
+        ).map(details => ({ estimate: false, ...details }));
     }
   });
 }
@@ -350,6 +412,9 @@ export type UseInvoiceProcessor = {
   expirationInfo: Ref<InvoiceExpirationInfo>;
   paymentBreakdown: ComputedRef<Result<BreakdownOrEstimate, string>>;
   processingProgress: Ref<ProcessingProgress>;
+    // TODO: Rething if this retry should be exposed all the time
+    // It seems that it is sensible only in one state:
+    // `quoting-failed` -> `quoting-networking-failed`.
   retry: () => void;
 };
 

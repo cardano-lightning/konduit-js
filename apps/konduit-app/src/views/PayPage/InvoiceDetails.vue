@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import * as l10n from "../../composables/l10n";
-import Ban from "../../components/icons/Ban.vue";
-import BatteryLow from "../../components/icons/BatteryLow.vue";
-import Callout from "../../components/Callout.vue";
+import * as env from "../../env";
+import Callout, { type CalloutVariant } from "../../components/Callout.vue";
 import ChargingInProgressCallout from "../../components/ChargingInProgressCallout.vue";
-import CurrencySwitch from "../../components/CurrencySwitch.vue";
 import DataListing from "../../components/DataListing.vue";
 import FancyAmount from "../../components/FancyAmount.vue";
-import HandCoins from "../../components/icons/HandCoins.vue";
+import BatteryThrobber from "../../components/BatteryThrobber.vue";
+import ClockThrobber from "../../components/ClockThrobber.vue";
+import CircleAdaSign from "../../components/icons/CircleAdaSign.vue";
+import { AlertTriangle, Ban, BatteryLow, Bug, HandCoins, Home, WalletMinimal, Zap } from "lucide-vue-next";
 import MainContainer from "../../components/MainContainer.vue";
 import MissingDataPlaceholder from "../../components/MissingDataPlaceholder.vue";
 import TheHeader from "../../components/TheHeader.vue";
@@ -16,23 +17,30 @@ import type { RowConfig } from "../../components/DataListing.vue";
 import { Invoice } from "@konduit/konduit-consumer/bitcoin/bolt11";
 import { Milliseconds } from "@konduit/konduit-consumer/time/duration";
 import { POSIXMilliseconds } from "@konduit/konduit-consumer/time/absolute";
+import { FailedPayment } from "@konduit/konduit-consumer/channel";
 import { computed, type ComputedRef } from "vue";
 import { hex, MISSING_PLACEHOLDER, orPlaceholder } from "../../utils/formatters";
 import { type AppKonduitConsumer } from "../../store";
-import { useInvoiceProcessor } from "./invoiceProcessor";
+import { useInvoiceProcessor, type BlockedReason, type QuotingFailureReason } from "./invoiceProcessor";
 import { useFx } from "../../composables/fx";
 import { useFormattedLastSuccessfulSyncInfo } from "../../composables/polling";
+import type { RouteLocationRaw } from "vue-router";
+import { stringify } from "@konduit/codec/json";
 
 type Props = {
   consumer: AppKonduitConsumer;
   invoice: Invoice;
 };
 
-const emit: ((event: "back", value: null) => void) = defineEmits(["back"]);
+const emit: (
+  ((event: "back", value: null) => void) &
+  ((event: 'reset-redirect', value: RouteLocationRaw) => void) &
+  ((event: 'reset-scan', value: null) => void)
+) = defineEmits(["back", "reset-redirect", "reset-scan"]);
 
 const props = defineProps<Props>();
 
-const { expirationInfo, paymentBreakdown, processingProgress } = useInvoiceProcessor(
+const { expirationInfo, paymentBreakdown, processingProgress, retry } = useInvoiceProcessor(
   props.consumer,
   props.invoice,
 );
@@ -58,101 +66,6 @@ const formattedExpiredAgo = computed((): string | null => {
   const expirationTimestamp = POSIXMilliseconds.fromValidDate(info.expiredAt);
   const expiredMillisecondsAgo = Milliseconds.fromDiffTime(nowTimestamp, expirationTimestamp)
   return formatters.formatDurationLong(expiredMillisecondsAgo);
-});
-
-//  result.match(
-//    (_payment) => notifications.redirectSuccess(
-//      "Payment successful.",
-//      { name: "home" }
-//    ),
-//    (error) => notifications.redirectError(
-//      `Payment failed: ${stringify(error)}`,
-//      { name: "home" }
-//    )
-//  );
-
-const buttons = computed((): ButtonProps[] => {
-  const mkPayButton = (disabled: boolean) => ({
-    label: 'Pay',
-    action: pay,
-    primary: true,
-    disabled,
-  } as ButtonProps);
-  if(currentStep.value.index !== 'invoice-details') return [];
-  const processingProgress = currentStep.value.step.processingProgress;
-  if(processingProgress.type === 'blocked') {
-    switch(processingProgress.reason.type) {
-      case 'no-channels-at-all':
-        return [
-        {
-          label: 'Cancel',
-          action: () => router.push({ name: 'home' }),
-          primary: false,
-        },
-        {
-          label: 'Open channel',
-          action: () => router.push({
-            name: 'channel-open-wallet-select',
-            query: { redirectTo: router.currentRoute.value.fullPath }
-          }),
-          primary: true,
-        }];
-      case 'not-enough-capacity':
-        return [
-          {
-            label: 'Cancel',
-            action: () => router.push({ name: 'home' }),
-            primary: false,
-          },
-          {
-            label: 'Top up',
-            action: () => router.push({
-              name: 'channel-top-up',
-              query: { redirectTo: router.currentRoute.value.fullPath }
-            }),
-            primary: true,
-          },
-        ];
-      case 'channels-not-ready':
-        return [
-          {
-            label: 'Cancel',
-            action: () => router.push({ name: 'home' }),
-            primary: false,
-          },
-          mkPayButton(true),
-        ];
-      case 'all-channels-closed':
-        return [
-          {
-            label: 'Cancel',
-            action: () => router.push({ name: 'home' }),
-            primary: false,
-          },
-          {
-            label: 'Open channel',
-            action: () => router.push({
-              name: 'channel-open-wallet-select',
-              query: { redirectTo: router.currentRoute.value.fullPath }
-            }),
-            primary: true,
-          },
-        ];
-      case 'invoice-expired':
-        return [];
-      case 'invoice-invalid':
-        return [];
-    }
-  } else {
-    return [
-      {
-        label: 'Cancel',
-        action: () => router.push({ name: 'home' }),
-        primary: false,
-      },
-      mkPayButton(processingProgress.type === 'loading'),
-    ];
-  }
 });
 
 const totalAmount = computed(() => {
@@ -182,42 +95,6 @@ const routingFeeEstimated = computed(() => {
 });
 
 const fx = useFx();
-
-/*
-    <DataListing :rows="[
-      {
-        label: 'Invoice amount',
-        formattedValue: {
-          string: formattedInvoiceAmount,
-          importance: 'very-important'
-        },
-        actions: [[() => console.log('INFO'), 'info']]
-      },
-      routingFeeEstimated === null?
-       null
-       :
-      {
-        label:  'Routing fee' : 'Estimated routing fee',
-        formattedValue: formattedRoutingFee,
-        actions: [
-          [() => console.log('INFO'), 'info'],
-        ]
-      },
-      'separator',
-      { label: hasExpired?'Expired':'Expires',
-        formattedValue: formattedExpiresAt, actions: []
-      },
-      { label: 'Destination',
-        formattedValue: orPlaceholder(hex(currentStep.step.invoice.payee)),
-        actions: [
-          { action: 'copy' as const,
-            message: 'Destination copied to clipboard.',
-            value: hex(currentStep.step.invoice.payee)
-          }
-        ]
-      },
-    ]" />
-*/
 
 const fxPollingInfo = useFormattedLastSuccessfulSyncInfo(fx.fxPollingInfo, "short");
 const invoiceRows = computed((): RowConfig[] => {
@@ -264,19 +141,297 @@ const invoiceRows = computed((): RowConfig[] => {
   return rows.filter((row) => row !== null);
 });
 
+type PageSetup = {
+  callout: {
+    debug?: string | null;
+    icon: 'alert-triangle' | 'ada' | 'ban' | 'battery-low' | 'battery-throbber' | 'blocked'
+      | 'bug' | 'clock-throbber' | 'hand-coins' | 'hand-raised' | 'home' | 'wallet' | 'zap' ;
+    message: string | string[];
+    title: string;
+    // export type CalloutVariant = "info" | "warning" | "error" | "success" | "hint" | "critical" | "neutral" | "bug";
+    variant: CalloutVariant;
+  } | 'charging-callout';
+  buttons: ButtonProps[];
+}
+
+const pageSetup = computed((): PageSetup => {
+  const mkButtons = (mainButton: ButtonProps | null) => {
+    const backButton: ButtonProps = {
+      label: 'Scan another invoice',
+      action: () => emit('back', null),
+      primary: false,
+    };
+    return mainButton ? [backButton, mainButton] : [backButton];
+  };
+
+  const mkPayButtons = (pay: (() => void | null)) => mkButtons({
+    label: 'Pay',
+    action: pay || (() => null),
+    primary: true,
+    disabled: pay === null,
+  } as ButtonProps);
+
+  const resetButtons = [
+    {
+      label: 'Cancel',
+      action: () => emit('reset-redirect', { name: 'home' }),
+      primary: false,
+    },
+    {
+      label: 'Scan a new invoice',
+      action: () => emit('reset-scan', null),
+      primary: true,
+    }
+  ];
+
+  const mkBlockedCallouts = (reason: BlockedReason): PageSetup => {
+    switch(reason.type) {
+      case 'no-channels-at-all':
+        return {
+          buttons: mkButtons({
+            label: 'Open first channel',
+            action: { name: 'channel-open' },
+            primary: true,
+          }),
+          callout: {
+            icon: 'hand-raised',
+            title: 'First payment – almost there!',
+            variant: 'info',
+            message: [
+              'Open a channel to make it possible.',
+              'Setup should be super quick and in a few minutes you will be ready to pay.',
+            ]
+          }
+        };
+      case 'all-channels-closed':
+        return {
+          buttons: mkButtons({
+            label: 'Open a channel',
+            action: { name: 'channel-open' },
+            primary: true,
+          }),
+          callout: {
+            icon: 'blocked',
+            title: 'All channels are closed',
+            variant: 'warning',
+            message: [
+              'All your channels are closed, so you cannot pay this invoice.',
+              'Please open a channel to proceed.',
+            ]
+          }
+        };
+      case 'fx-not-ready':
+        return {
+          buttons: mkButtons(null),
+          callout: {
+            icon: 'wallet',
+            title: 'Currency exchange is not ready',
+            variant: 'info',
+            message: [
+              'We have some problems communicating with the currency exchange service.',
+              'It is better to wait until the problem is resolved before trying to pay the invoice.',
+            ]
+          }
+        };
+      case 'not-enough-capacity':
+        return {
+          buttons: mkButtons({
+            action: '#',
+            disabled: true,
+            label: 'Coming soon: Top up channel',
+            primary: true,
+          }),
+          callout: {
+            icon: 'battery-low',
+            title: 'Low on capacity!',
+            variant: 'warning',
+            message: [
+              "Oops, your lighting channel can't cover this invoice amount.",
+              'Please top up your channel to proceed.',
+            ]
+          }
+        };
+      case 'channels-not-ready':
+        return {
+          buttons: mkPayButtons(null!),
+          callout: 'charging-callout',
+        };
+      case 'invoice-amount-conversion-failed':
+        return {
+          buttons: mkButtons(null),
+          callout: {
+            icon: 'alert-triangle',
+            title: 'Invoice amount',
+            variant: 'error',
+            message:
+              'Seems like the invoice amount is somewhat invalid or too large to handle.'
+          }
+        };
+      case 'invoice-expired':
+        return {
+          buttons: resetButtons,
+          callout: {
+            icon: 'blocked',
+            title: 'Invoice expired',
+            variant: 'error',
+            message: [
+              `It has expired ${formattedExpiredAgo.value ? `${formattedExpiredAgo.value} ago` : ''}.`,
+              'Please scan a new invoice to proceed.',
+            ]
+          }
+        };
+      case 'invoice-invalid':
+        return {
+          buttons: resetButtons,
+          callout: {
+            icon: 'ban',
+            title: 'Invalid invoice',
+            variant: 'error',
+            message: [
+              'The app had problems parsing the invoice, so it cannot be paid.',
+              'This can be caused by an invalid invoice format or by unsupported features in the invoice.',
+            ]
+          }
+        };
+    }
+  };
+  switch(processingProgress.value.type) {
+    case 'quoting-blocked':
+      return mkBlockedCallouts(processingProgress.value.reason);
+    case 'quoting-failed':
+      switch(processingProgress.value.reason.type as QuotingFailureReason['type']) {
+        case 'quoting-networking-failed':
+          return {
+            buttons: mkButtons({
+              label: 'Retry',
+              action: retry,
+              primary: true,
+            }),
+            callout: {
+              icon: 'clock-throbber',
+              title: 'Network hiccup',
+              variant: 'info',
+              message: [
+                'Trying again soon.',
+                'Tap "Retry" if you\'re in a rush.'
+              ]
+            }
+          } as PageSetup;
+        case 'quotes-failed':
+          return {
+            buttons: resetButtons,
+            callout: {
+              icon: 'ban',
+              title: 'Prelimnary routing failed',
+              variant: 'warning',
+              message: [
+                // TODO:
+                'We had some unexpected issues getting quotes for this invoice.',
+                'Seems like we are not able to process it at the moment.'
+              ]
+            }
+          } as PageSetup;
+      }
+    case 'quotes-loading':
+      return {
+        buttons: mkPayButtons(null!),
+        callout: {
+          icon: 'clock-throbber',
+          title: 'Getting quotes',
+          variant: 'info',
+          message: [
+            'Getting the best route for your payment.',
+            'This usually takes just a few seconds.'
+          ]
+        }
+      } as PageSetup;
+    case 'quotes-loaded':
+      return {
+        buttons: mkPayButtons(processingProgress.value.pay),
+        callout: {
+          icon: 'zap',
+          title: 'Route is ready!',
+          variant: 'success',
+          message: [
+            'We found a good route for your payment.',
+            'You can proceed to pay the invoice.'
+          ]
+        }
+      } as PageSetup;
+    case 'paying':
+      return {
+        buttons: mkPayButtons(null!),
+        callout: {
+          icon: 'clock-throbber',
+          title: 'Paying the invoice',
+          variant: 'info',
+          message: [
+            'Your payment is on its way.',
+            'This usually takes just a few seconds, but can sometimes take longer.'
+          ]
+        }
+      } as PageSetup;
+    case 'payment-successful':
+      return {
+        buttons: [{
+          label: 'Great, take me home',
+          action: { name: 'home' },
+          primary: true,
+        }],
+        callout: {
+          icon: 'home',
+          title: 'Payment successful!',
+          variant: 'success',
+          message: [
+            'Your payment went through successfully.',
+            'Thank you for using our app!'
+          ]
+        }
+      } as PageSetup;
+    case 'cheque-issuing-failed':
+      return {
+        buttons: resetButtons,
+        callout: {
+          icon: 'alert-triangle',
+          title: 'Payment failed at the last step',
+          variant: 'error',
+          message: [
+            // TODO: provide more details here
+            'We were unable to create a payment request.',
+            'Please retry scanning a new invoice'
+          ]
+        }
+      } as PageSetup;
+    case 'payment-failed':
+      return {
+        buttons: resetButtons,
+        callout: {
+          icon: 'alert-triangle',
+          title: 'Payment failed',
+          variant: 'error',
+          debug: !env.debugMode? null : (() => {
+              const json = FailedPayment.jsonCodec.serialise(processingProgress.value.payment);
+              return stringify(json, undefined, 2);
+          })(),
+          message: [
+              'Your payment failed to go through.',
+              '',
+              'Unfortunatelly this payment funds are locked till the invoice will timeout.',
+          ]
+        }
+      } as PageSetup;
+  }
+});
 </script>
 
 <template>
-  <MainContainer :buttons="buttons">
+  <MainContainer :buttons="pageSetup.buttons">
     <TheHeader
       :back="() => emit('back', null)"
       :title="'Payment'"
       id="header"
-    >
-      <template #header-right>
-        <CurrencySwitch v-model="fx.currentCurrency.value" />
-      </template>
-    </TheHeader>
+      :show-fx-currency-switcher="true"
+    />
     <div id="invoice-amount">
       <span class="amount">
         <FancyAmount
@@ -291,72 +446,43 @@ const invoiceRows = computed((): RowConfig[] => {
         <span v-else>{{ invoice.description }}</span>
       </div>
     </div>
-    <template v-if="processingProgress.type === 'quoting-blocked'">
-      <Callout
-        v-if="paymentBreakdown?.isErr()"
-        :title="'Processing error'"
-        :variant="'error'"
-      >
-        <template #icon>
-          <Ban />
+    <Callout
+      v-if="pageSetup.callout !== 'charging-callout'"
+      :title="pageSetup.callout.title"
+      :variant="pageSetup.callout.variant"
+    >
+      <template #icon>
+        <component :is="{
+          'alert-triangle': AlertTriangle,
+          'ada': CircleAdaSign,
+          'ban': Ban,
+          'battery-low': BatteryLow,
+          'battery-throbber': BatteryThrobber,
+          'blocked': HandCoins,
+          'bug': Bug,
+          'clock-throbber': ClockThrobber,
+          'hand-coins': HandCoins,
+          'hand-raised': HandCoins,
+          'home': Home,
+          'wallet': WalletMinimal,
+          'zap': Zap,
+        }[pageSetup.callout.icon]" />
+      </template>
+      <template v-if="typeof pageSetup.callout.message === 'string'">
+        {{ pageSetup.callout.message }}
+      </template>
+      <!-- br in between -->
+      <template v-else>
+        <template v-for="(message, index) in pageSetup.callout.message" :key="index">
+          {{ message }}<br v-if="index < pageSetup.callout.message.length - 1" />
         </template>
-        An unexpected error happened during internal processing of the invoice:<br /> {{ paymentBreakdown?.error }}. <br />
-      </Callout>
-      <Callout
-        v-else-if="processingProgress.reason.type === 'invoice-expired'"
-        :title="'Invoice expired'"
-        :variant="'error'"
-      >
-        <template #icon>
-          <Ban />
-        </template>
-        It has expired {{ formattedExpiredAgo ? `${formattedExpiredAgo} ago` : '' }}. <br />
-      </Callout>
-      <Callout
-        v-else-if="processingProgress.reason.type === 'invoice-invalid'"
-        :title="'Invalid invoice'"
-        :variant="'error'"
-      >
-        <template #icon>
-          <Ban />
-        </template>
-        The app had problems parsing the invoice, so it cannot be paid. This can be caused by an invalid invoice format or by unsupported features in the invoice.
-      </Callout>
-      <ChargingInProgressCallout
-        v-else-if="processingProgress.reason.type === 'channels-not-ready'"
-        :progress="{ type: 'submitted' }"
-      />
-      <Callout
-        v-else-if="processingProgress.reason.type === 'not-enough-capacity'"
-        :title="'Low on capacity!'"
-        :variant="'warning'"
-      >
-        <template #icon>
-          <BatteryLow />
-        </template>
-        Oops, your lighting channel can't cover this invoice amount.<br />
-        Please top up your channel to proceed.
-      </Callout>
-      <Callout
-        v-else-if="processingProgress.reason.type === 'no-channels-at-all'"
-        :title="'First payment – almost there!'"
-        :variant="'info'"
-      >
-        <template #icon>
-          <HandCoins />
-        </template>
-        <div>
-        Open a channel to make it possible.<br />
-        Setup should be super quick and
-        in a few minutes you will be ready to pay.
-        </div>
-      </Callout>
-
-      <p v-else-if="processingProgress.reason.type === 'all-channels-closed'">
-        All your channels are closed, so you cannot pay this invoice.
-      </p>
-
-    </template>
+      </template>
+      <template v-if="pageSetup.callout.debug">
+        <hr />
+        <pre class="debug-info">{{ pageSetup.callout.debug }}</pre>
+      </template>
+    </Callout>
+    <ChargingInProgressCallout v-else :progress="{ type: 'submitted' }" />
     <DataListing :rows="invoiceRows" />
   </MainContainer>
 </template>
@@ -412,83 +538,18 @@ header :deep(.header-right) svg {
   #invoice-amount .description .missing {
     font-style: italic;
   }
-
+.debug-info {
+  background: var(--background-color);
+  font-family: monospace;
+  font-size: 0.8em;
+  margin-top: calc(var(--data-listing-gap) * 0.5);
+  max-height: 20em;
+  overflow: auto;
+  padding: calc(var(--data-listing-gap) * 0.5);
+  text-align: left;
+/* wrap long lines and break the words if needed */
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 </style>
-
-<!--
-<div v-else-if="currentStep.index === 'channels-missing'">
-  <p>You need to have at least one open channel to pay this invoice.</p>
-  <ButtonGroup :buttons="[
-    {
-      label: 'Add channel',
-      action: () => router.push({ name: 'add-channel' }),
-      primary: true,
-    }
-  ]" />
-</div>
-<div v-else-if="currentStep.index === 'channels-not-ready'">
-  <template v-if="channels && channels.length == 1">
-    <MissingDataPlaceholder>
-      You have an open channel, but it's not ready yet.
-      <p>
-      The openning transaction was already submitted but the adaptor server did not confirmed and approved it yet.
-      </p>
-      <p>
-        We will <b>automatically move to the next step</b> once the channel is ready.
-      </p>
-    </MissingDataPlaceholder>
-    <Hr />
-    <DataListing :rows="
-      (channels && channels[0])?
-      [
-        { label: 'Channel Tag', formattedValue: hex(channels[0].channelTag) },
-        { label: 'Last Synced',
-          formattedValue: channels[0].squashingInfo.lastFetchedAt? formatters.formatShortDate(channels[0].squashingInfo.lastFetchedAt) : MISSING_PLACEHOLDER
-        },
-        { label: 'Status', formattedValue: channels[0].isOperational ? 'Operational' : 'Not operational' },
-      ]
-      :[]" />
-  </template>
-</div>
-
-<div v-else-if="currentStep.index === 'quotes'">
-  <p>Quotes step (not implemented)</p>
-</div>
-<div v-else-if="currentStep.index === 'submit'">
-  <p>Submit payment step (not implemented)</p>
-</div>
-
-
-
-// FIXME: Move to the charging component
-// const chargedChannelTxHash = computed(() => {
-//   if(currentStep.value.index !== 'invoice-details') return null;
-//   const processingProgress = currentStep.value.step.processingProgress;
-//   if((processingProgress.type === 'blocked' && processingProgress.reason.type === 'channels-not-ready')) {
-//     const openTx = processingProgress.reason.channel.l1.openTx;
-//     if(openTx) {
-//       return openTx.txHash;
-//     }
-//   }
-//   return null;
-// });
-// 
-// const txUrl = computed(() => {
-//   const txHash = chargedChannelTxHash.value;
-//   const networkMagic = konduitConsumer.value?.networkMagicNumber;
-//   const publicNetwork = networkMagic? PublicNetwork.fromNetworkMagicNumber(networkMagic) : null;
-// 
-//   if(!txHash || !publicNetwork) return null;
-//   return CardanoScan.mkTransactionPageUrl(publicNetwork, txHash);
-// });
-
-// const { tickersInfo } = useKrakenTickers(Seconds.fromSmallNumber(30));
-// 
-// const krakenFx: ComputedRef<Fx | null>  = computed(() => {
-//   if(tickersInfo.value && tickersInfo.value.lastValue) {
-//     return mkKrakenFxFromTickers(tickersInfo.value.lastValue);
-//   }
-//   return null;
-// });
--->
 

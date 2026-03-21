@@ -87,7 +87,7 @@ const testingInvoices = [
     autoTrigger: false,
   }, {
     invoice: "LNTB2001P5MSQ3APP5XAXTFUT5CF4V970GEZM878N6D3K98RG40QY7T3Q3AD98NFZH9A2QDQQCQZZSXQRRSSSP57CHXD2SCEKCHXGQJJF6PRNFC6MUHDVFJQZF9PC27JX082J2J7J2S9QXPQYSGQ959VVP8EE9KTXZCCVLGVVCQ7E5UZ2VW8PKX4RMYASLDP45W682W82H9DFTVGXY0KTHKLVWDL6MVWE2SVPSWCLYX8R72D7U5A5Y37PAGQWL0LHZ",
-    autoTrigger: true,
+    autoTrigger: false,
   }
 ];
 
@@ -252,7 +252,7 @@ const manualButtons: ButtonProps[] = [{
 <style scoped>
 #input-container {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   justify-content: center;
 }
   #input-container #qr-input, #input-container #manual-input {
