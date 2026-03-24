@@ -32,6 +32,7 @@ const router = useRouter();
       <Card
         :title="'Browser wallet'"
         :variant="'neutral'"
+        :disabled="true"
       >
         <template #icon>
           <SquareDot />
@@ -41,6 +42,7 @@ const router = useRouter();
       <Card
         :title="'External wallet'"
         :variant="'neutral'"
+        :disabled="true"
       >
         <template #icon>
           <SquareArrowOutUpRight />

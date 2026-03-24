@@ -3,6 +3,7 @@ export type CardVariant = "info" | "warning" | "error" | "success" | "tip" | "cr
 
 export type Props = {
   action?: () => void;
+  disabled?: boolean;
   title: string;
   variant: CardVariant;
 };
@@ -19,7 +20,13 @@ const props = defineProps<Props>();
 </script>
 
 <template>
-<div :class="['card', props.variant]" @click="props.action ? props.action() : null" :style="props.action ? 'cursor: pointer;' : ''">
+  <div
+    :class="{
+      'card': props.variant,
+      'disabled': props.disabled || false,
+    }"
+    @click="props.action ? props.action() : null"
+    :style="props.action ? (props.disabled ? 'not-allowed' : 'cursor: pointer;') : ''">
   <h2>
     <slot name="icon">
       <TriangleAlert v-if="props.variant === 'warning' || props.variant === 'error'" />
@@ -87,6 +94,12 @@ const props = defineProps<Props>();
   box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.5), 0 2px 6px 0 rgba(0, 0, 0, 0.4);
   /* Optional: Darken background slightly for more "press" vibe */
   /* background-color: var(--button-pressed-bg);  /* e.g., a shade darker than normal */
+}
+
+.card.disabled {
+  opacity: 0.6;
+  pointer-events: none; /* Disable all interactions */
+  cursor: not-allowed; /* Show "not allowed" cursor */
 }
 
 :root[data-theme="light"] .card,
