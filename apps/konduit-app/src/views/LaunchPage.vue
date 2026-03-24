@@ -7,6 +7,7 @@ import { useNotifications } from "../composables/notifications";
 import * as store from "../store";
 import type { JsonError } from "@konduit/codec/json/codecs";
 import { stringify } from "@konduit/codec/json";
+import { useRouter } from "vue-router";
 
 const notifications = useNotifications();
 
@@ -31,13 +32,12 @@ const loadKonduitConsumerJson = async () => {
   );
 };
 
+const router = useRouter();
+
 const createKonduitConsumer = async () => {
   const result = await store.createKonduitConsumer();
   result.match(
-    () => notifications.redirectSuccess(
-      "A new Konduit wallet created successfully.",
-      { name: "home" }
-    ),
+    () => router.push({ name: "home" }),
     (e: any) => {
       notifications.error(`Failed to create Konduit app: ${e}`);
     }
@@ -86,7 +86,7 @@ const buttons: ButtonProps[] = [
 #logo {
   display: flex;
   font-size: 1em;
-  max-height: 5em;
+  max-height: 4em;
   justify-content: center;
   padding: 20vh 0 2vh;
 }

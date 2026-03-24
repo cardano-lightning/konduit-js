@@ -14,6 +14,58 @@ export type JsonObject = { [key: string]: Json };
 export type JsonArray = Json[];
 export type Json = JsonPrimitive | JsonObject | JsonArray;
 
+export namespace Json {
+  export const areEqual = (a: Json, b: Json): boolean => {
+    if (a === b) {
+      // Covers primitives except NaN and also exact same object/array reference
+      // Note: bigint, string, boolean, null, and equal numbers are handled here.
+      return true;
+    }
+
+    // Different primitive types or one primitive vs non-primitive
+    const typeA = typeof a;
+    const typeB = typeof b;
+    if (typeA !== typeB) {
+      return false;
+    }
+
+    // At this point, types are equal and both are "object"
+    if (a === null || b === null) {
+      // previous a === b check already handled both null, here it's one null vs non-null
+      return false;
+    }
+
+    // Arrays
+    const isArrayA = Array.isArray(a);
+    const isArrayB = Array.isArray(b);
+    if (isArrayA || isArrayB) {
+      if (!isArrayA || !isArrayB) return false;
+      const arrA = a as JsonArray;
+      const arrB = b as JsonArray;
+      if (arrA.length !== arrB.length) return false;
+      for (let i = 0; i < arrA.length; i++) {
+        if (!areEqual(arrA[i]!, arrB[i]!)) return false;
+      }
+      return true;
+    }
+
+    // Objects
+    const objA = a as JsonObject;
+    const objB = b as JsonObject;
+    const keysA = Object.keys(objA);
+    const keysB = Object.keys(objB);
+    if (keysA.length !== keysB.length) return false;
+
+    // Keys might be in different order, so we check by key name
+    for (const key of keysA) {
+      if (!(key in objB)) return false;
+      if (!areEqual(objA[key]!, objB[key]!)) return false;
+    }
+
+    return true;
+  };
+}
+
 export const parse = (text: string): Result<Json, string> => {
   return stringifyThrowable(() => JSONBig.parse(text), "Invalid JSON format");
 }
@@ -140,4 +192,3 @@ export const isJson = (data: any): data is Json => {
       return false;
   }
 }
-

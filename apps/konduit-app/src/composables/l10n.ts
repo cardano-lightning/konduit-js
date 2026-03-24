@@ -156,7 +156,8 @@ export function useDefaultFormatters() {
   const durationShortFormatter = useDurationFormatter({ style: 'short' });
   const durationLongFormatter = useDurationFormatter({ style: 'long' });
   const relativeTimeFormatter = useRelativeTimeFormatter();
-  const formatUsDolar = (value: UsMillicent) => {
+  const formatUsDolar = (value: UsMillicent, sign: Sign = "positive") => {
+    console.log("formatUsDolar", { value, sign });
     const usMiillicent2UsDollar = ExchangeRate.reverse(
       ExchangeRate.pipe(usDollar2UsCent, usCent2UsMillicent)
     );
@@ -165,9 +166,11 @@ export function useDefaultFormatters() {
       value,
       (dec) => dec
     );
-    return usDollarFormatter.value.format(usDollarDecimal);
+    const signMultiplier = sign == "positive" ? Decimal(1) : Decimal(-1);
+    return usDollarFormatter.value.format(usDollarDecimal.mul(signMultiplier));
   };
   const formatBtcMsat = (orig: Millisatoshi, sign: Sign = "positive") => {
+    console.log("formatBtcMsat", { orig, sign });
     let oneSatoshiMs = Millisatoshi.fromSatoshi(Satoshi.fromDigits(1))
     let signMultiplier = sign == "positive" ? 1n : -1n;
     if(Millisatoshi.ord.isGreaterThan(orig, oneSatoshiMs)) {

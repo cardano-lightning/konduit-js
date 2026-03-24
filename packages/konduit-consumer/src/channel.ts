@@ -387,6 +387,11 @@ export class Channel {
 
   public MIN_ADA = Lovelace.fromAda(Ada.fromDigits(2));
 
+  public get totalEffectiveSubmittedCapacity(): Lovelace | null {
+    if(this.totalSubmittedCapacity == null) return null;
+    return Lovelace.subtractAbs(this.totalSubmittedCapacity, this.MIN_ADA);
+  }
+
   public get totalApprovedCapacity(): Lovelace | null {
     return Lovelace.subtract(this.l1.totalApprovedCapacity, this.MIN_ADA)
       .match(

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import * as testEnv from "./env";
 import * as wasm from "../wasm/konduit_wasm.js";
 import { Ada, Lovelace } from "../src/cardano";
-import { Days, Milliseconds, Seconds } from "../src/time/duration";
+import { Seconds } from "../src/time/duration";
 import { expectOk } from "./assertions";
 import { stringify, type Json } from "@konduit/codec/json";
 import { Millisatoshi } from "../src/bitcoin";
@@ -34,7 +34,8 @@ describe("End-to-end integration: open channel and poll adaptor squash", () => {
       // const connector = await testEnv.readOrSkipConnector(test);
       // console.debug("Created connector and wallet backend for integration test, now creating consumer...");
 
-      const consumer = await testEnv.readOrSkipKonduitConsumer(test);
+      const consumer = await testEnv.readOrSkipKonduitConsumer(test, "blockfrost");
+      // const consumer = await testEnv.readOrSkipKonduitConsumer(test, "cardano-connector");
 
       const keys = testEnv.readOrSkipKeys(test);
       console.log("Consumer address Bech32:", keys.addressBech32);
@@ -47,10 +48,8 @@ describe("End-to-end integration: open channel and poll adaptor squash", () => {
         // Parameters for opening the channel
         // 10 ADA ~ $3 USD
         const amount = Lovelace.fromAda(Ada.fromSmallNumber(10)); // 5 ADA
-        const closePeriod = Milliseconds.fromAnyPreciseDuration({ type: "days", value: Days.fromSmallNumber(3) });
 
-        console.debug("Opening channel in integration test with parameters:", { amount: amount.toString(), closePeriod: closePeriod.toString() });
-        channel = expectOk(await consumer.openChannel(adaptorFullInfo, amount, closePeriod), "Failed to open channel in integration test");
+        channel = expectOk(await consumer.openChannel(adaptorFullInfo, amount), "Failed to open channel in integration test");
 
         console.debug("Channel opened in integration test, now starting to poll adaptor for squash...");
       } else {

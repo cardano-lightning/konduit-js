@@ -1,24 +1,26 @@
 import { json2StringCodec, type JsonCodec, type JsonError } from "@konduit/codec/json/codecs";
 import * as codec from "@konduit/codec";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
-import { type Wallet as WalletBase, type AnyWallet, BlockfrostWallet, CardanoConnectorWallet, json2AnyWalletCodec, type WalletBackendBase } from "./wallets/embedded";
+import { type Wallet as WalletBase, type AnyWallet, BlockfrostWallet, CardanoConnectorWallet, json2AnyWalletCodec, type WalletBackendBase, type SelectUtxosError } from "../wallets/embedded";
 import { err, ok, Result } from "neverthrow";
 import { Ed25519PrivateKey, Mnemonic } from "@konduit/cardano-keys";
-import { AdaptorFullInfo, Quote } from "./adaptorClient";
-import { type AnyChannelTx, Channel, ChannelTag, type ChequeIssuingError, type ConfirmedPayment, type ConsumerEd25519VerificationKey, json2ChannelCodec, type OpenTx, type FailedPayment } from "./channel";
-import { Milliseconds, Seconds } from "./time/duration";
-import { Ada, json2Ed25519PrivateKeyCodec, Lovelace, PublicNetwork } from "./cardano";
-// import { Connector, json2ConnectorAsyncCodec } from "./cardano/connector";
-import { promiseToAsync, toAsync, toPromise } from "./neverthrow";
-import { ValidDate } from "./time/absolute";
-import type { DeserialisationError, HttpEndpointError, HttpError } from "./http";
+import { AdaptorFullInfo, Quote } from "../adaptorClient";
+import { type AnyChannelTx, Channel, ChannelTag, type ChequeIssuingError, type ConfirmedPayment, type ConsumerEd25519VerificationKey, json2ChannelCodec, type OpenTx, type FailedPayment } from "../channel";
+import { Milliseconds, Seconds } from "../time/duration";
+import { Ada, json2Ed25519PrivateKeyCodec, Lovelace, PublicNetwork } from "../cardano";
+import { promiseToAsync, toAsync, toPromise } from "../neverthrow";
+import { ValidDate } from "../time/absolute";
+import type { DeserialisationError, HttpEndpointError, HttpError } from "../http";
 import { NonNegativeInt } from "@konduit/codec/integers/smallish";
-import { Squash, SquashBody } from "./channel/squash";
+import { Squash, SquashBody } from "../channel/squash";
 import type { InvoiceString } from "@konduit/bln/invoice/bolt11";
-import type { Invoice } from "./bitcoin/bolt11";
-import { NetworkMagicNumber, TxIx } from "./cardano";
-import { mkConnectorClient, type ConnectorClient } from "./cardano/connectorClient";
-import { buildOpenTx } from "./txBuilder";
+import type { Invoice } from "../bitcoin/bolt11";
+import { NetworkMagicNumber, TxIx } from "../cardano";
+import { mkConnectorClient, type ConnectorClient } from "../cardano/connectorClient";
+import { buildOpenTx, type BuildOpenTxError } from "../txBuilder";
+
+import { enableLogsAndPanicHook, LogLevel } from "../../wasm/konduit_wasm";
+enableLogsAndPanicHook(LogLevel.Error);
 
 type ConsumerEvent<T> = CustomEvent<T>;
 
@@ -61,6 +63,14 @@ type OnQuoteInfo = (
 export type PayError =
   | { type: "TimeoutCalculation"; error: string }
   | ChequeIssuingError
+
+export type ChannelOpenError =
+  | { type: "AmountCalculation"; error: string }
+  | { type: "UtxoSelection"; error: SelectUtxosError }
+  | BuildOpenTxError
+  | { type: "Signing"; error: string }
+  | { type: "Submitting"; error: HttpError }
+  | { type: "Panic"; error: string }
 
 type ChannelWithCapacity = { channel: Channel, lovelace: Lovelace };
 export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
@@ -106,6 +116,22 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
     this._channels = channels ?? new Map<ChannelTag, Channel>();
     this.connectorClient = mkConnectorClient(connectorUrl);
     this.publicNetwork = publicNetwork;
+  }
+
+  // TODO: We should clean up the approach:
+  // * On the KonduitConsumer level we should allow any connector:
+  //  `BlockfrostClient` or `KonduitConnectorClient` or CardanoScan etc. in the future.
+  // * This requires us to introduce a bit of gymnastics regarding the
+  // serialisation of the consumer itself - there is similar problem solved for wallets
+  // already.
+  // * For now we pretend only that we are fully flexible.
+  public setConnectorClient(connectorClient: ConnectorClient) {
+    this.connectorClient = connectorClient;
+    const walletBackend = CardanoConnectorWallet.mkWalletBackend(
+      this.connectorClient,
+      NetworkMagicNumber.fromPublicNetwork(this.publicNetwork)
+    );
+    this.wallet.switchBackend(walletBackend);
   }
 
   // A memory leak debugging helper
@@ -332,14 +358,17 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
   public async openChannel(
     adaptorFullInfo: AdaptorFullInfo,
     amount: Lovelace,
-    closePeriod: Milliseconds,
-  ): Promise<Result<Channel, JsonError>> {
+  ): Promise<Result<Channel, ChannelOpenError>> {
     const channelTag = await ChannelTag.fromRandomBytes();
     return toPromise(
-      Lovelace.add(amount, Lovelace.fromAda(Ada.fromDigits(2)))
+      Lovelace.add(amount, Lovelace.fromAda(Ada.fromDigits(3)))
+        .mapErr(e => ({ type: "AmountCalculation" as const, error: e } as ChannelOpenError))
       .asyncAndThen((amountWithFee) =>
-          promiseToAsync(this.wallet.selectUtxos(amountWithFee)))
+          promiseToAsync(this.wallet.selectUtxos(amountWithFee))
+            .mapErr(e => ({ type: "UtxoSelection" as const, error: e } as ChannelOpenError)))
       .andThen((fundingUtxos) => {
+          console.log(fundingUtxos);
+          console.log(amount);
           const [_adaptorUrl, adaptorInfo] = adaptorFullInfo;
           return toAsync(buildOpenTx(
             channelTag,
@@ -349,12 +378,15 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
             this.publicNetwork,
             adaptorInfo.closePeriod,
             amount,
-          ))
+          ));
         })
-      .andThen(openTx => promiseToAsync(this.wallet.sign(openTx)))
+      .andThen(openTx =>
+        promiseToAsync(this.wallet.sign(openTx))
+          .mapErr(e => ({ type: "Signing" as const, error: e.message } as ChannelOpenError)))
       .andThen(signedTx =>
           promiseToAsync(this.wallet.submit(signedTx))
-            .map(txHash => ({ txHash, signedTx })))
+            .map(txHash => ({ txHash, signedTx }))
+            .mapErr(e => ({ type: "Submitting" as const, error: e } as ChannelOpenError)))
       .andThen(acc => {
           const now = ValidDate.now();
           const [adaptorUrl, adaptorInfo] = adaptorFullInfo;
@@ -363,7 +395,7 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
             adaptorApproved: false,
             amount: amount,
             created: now,
-            closePeriod: closePeriod,
+            closePeriod: adaptorInfo.closePeriod,
             consumer: this.vKey as ConsumerEd25519VerificationKey,
             lastSubmitted: now,
             tag: channelTag,
@@ -377,7 +409,10 @@ export class KonduitConsumer<Wallet extends WalletBase<WalletBackendBase>> {
           try {
             this._channels.set(channelTag, channel);
           } catch(e) {
-            return err(`Panic: Failed to add channel to the map: ${e}`);
+            return err({
+              type: "Panic" as const,
+              error: `Failed to add channel to the map: ${e}`
+            } as ChannelOpenError);
           }
           this.emit("channel-tx-submitted", { channel });
           return ok(channel);

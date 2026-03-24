@@ -38,7 +38,21 @@ export namespace Lovelace {
   export const fromSmallNumber = (v: Small): Lovelace => BigInt(v) as Lovelace;
   export const fromJson = (v: Json) => jsonCodec.deserialise(v);
   export const zero = 0n as Lovelace;
-  export const add = (a: Lovelace, b: Lovelace): Result<Lovelace, JsonError> => fromBigInt(a + b);
+
+  export const add = (...values: [Lovelace, ...Lovelace[]]): Result<Lovelace, JsonError> => {
+    let sum = 0n as bigint;
+    for (const v of values) {
+      sum += v as bigint;
+    }
+    return fromBigInt(sum);
+  };
+  export const unsafeAdd = (...values: [Lovelace, ...Lovelace[]]): Lovelace => {
+    let sum = 0n as bigint;
+    for (const v of values) {
+      sum += v as bigint;
+    }
+    return sum as Lovelace;
+  }
   export const subtract = (a: Lovelace, b: Lovelace): Result<Lovelace, JsonError> => fromBigInt(a - b);
   export const subtractAbs = (a: Lovelace, b: Lovelace): Lovelace => (a >= b ? (a - b) : (b - a)) as Lovelace;
   export const scale = (a: Lovelace, multiplier: bigint): Result<Lovelace, JsonError> => fromBigInt(a * multiplier);
@@ -72,6 +86,7 @@ export namespace Ada {
     }
     return value as Ada;
   }
+  export const subtractAbs = (a: Ada, b: Ada): Ada => (a >= b ? (a - b) : (b - a)) as Ada;
   export const fromLovelaceFloor = (lovelace: Lovelace): Ada => {
     const adaValue = Math.floor(Number((lovelace as bigint) / 1_000_000n));
     return adaValue as Ada;

@@ -9,14 +9,14 @@ export type ConsumerEd25519VerificationKey = Tagged<Ed25519VerificationKey, "Con
 export type ChannelTag = Tagged<Uint8Array, "ChannelTag">;
 export namespace ChannelTag {
   export const fromRandomBytes = async () => {
-    const bytes = randomBytes(16);
+    const bytes = randomBytes(32);
     return bytes as ChannelTag;
   }
   export const fromKeyTag = (keyTag: KeyTag): ChannelTag => {
     return keyTag.slice(28) as ChannelTag;
   }
+  export const jsonCodec: JsonCodec<ChannelTag> = mkTaggedJsonCodec("ChannelTag", (arr) => arr.length >= 4);
 }
-export const json2ChannelTagCodec: JsonCodec<ChannelTag> = mkTaggedJsonCodec("ChannelTag", (_arr) => true);
 
 export type KeyTag = Tagged<Uint8Array, "KeyTag">;
 export namespace KeyTag {

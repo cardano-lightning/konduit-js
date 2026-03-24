@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { Props as DataRowProps } from "../components/DataListing/DataRow.vue";
 import CircleAdaSign from "../components/icons/CircleAdaSign.vue";
-import CurrencySwitch from "../components/CurrencySwitch.vue";
 import ButtonGroup from "../components/ButtonGroup.vue";
 import type { Props as ButtonProps } from "../components/Button.vue";
 import DataListing from "../components/DataListing.vue";
@@ -9,7 +8,7 @@ import Callout, { type CalloutVariant } from "../components/Callout.vue";
 import HandRaised from "../components/icons/heroicons/HandRaised.vue";
 import ChannelsMax from "../components/ChannelsMax.vue";
 import Hr from "../components/Hr.vue";
-import Konduit from "../components/icons/Konduit.vue";
+import ClockThrobber from "../components/ClockThrobber.vue";
 import WalletMinimal from "../components/icons/WalletMinimal.vue";
 import Zap from "../components/icons/Zap.vue";
 import MainContainer from "../components/MainContainer.vue";
@@ -23,7 +22,6 @@ import { Lovelace } from "@konduit/konduit-consumer/cardano";
 import { computed, type ComputedRef } from "vue";
 import { Ban, BatteryLow } from "lucide-vue-next";
 import { useFx } from "../composables/fx";
-import { useFormattedLastSuccessfulSyncInfo } from "../composables/polling";
 import { AdaAmount } from "@konduit/konduit-consumer/amounts";
 
 const { walletBalance } = useEmbeddedWalletDetails(wallet);
@@ -74,12 +72,6 @@ type CalloutSetup = {
   buttons: ButtonProps[];
 }
 
-//        <ButtonGroup
-//          :buttons="[
-//            { label: 'Open Your First Channel', action: { name: 'channel-open-wallet-select' }, primary: true },
-//          ]"
-//        />
-
 const calloutSetup: ComputedRef<CalloutSetup | null> = computed(() => {
   switch (renderingContext.value.type) {
     case 'no-channels-wallet-empty':
@@ -89,11 +81,12 @@ const calloutSetup: ComputedRef<CalloutSetup | null> = computed(() => {
         ],
         icon: 'hand-raised',
         message: [
-          'Welcome to lightning payments on Cardano.',
-          'Top up your embedded wallet with a bit of ADA and you’ll be ready to open your first channel.',
+          'Welcome to lightning payments on Cardano!',
+          '',
+          'You\'re just a few quick steps from secure, instant payments which cross to the Bitcoin Lightning Network.',
         ],
-        title: 'Welcome',
-        variant: 'neutral',
+        title: 'Greetings',
+        variant: 'hint',
       };
     case 'no-channels-wallet-funded': {
       const balanceFormatted = formatters.formatAda(walletBalance.value);
@@ -108,7 +101,7 @@ const calloutSetup: ComputedRef<CalloutSetup | null> = computed(() => {
           'Open your first channel to start using instant Lightning payments on Cardano.',
         ],
         title: 'Wallet ready',
-        variant: 'success',
+        variant: 'hint',
       };
     }
     // Should we replace this with ChargingInProgressCallout
@@ -133,10 +126,11 @@ const calloutSetup: ComputedRef<CalloutSetup | null> = computed(() => {
             // FIXME:
             icon: 'konduit',
             title: 'Channel opening in progress',
-            variant: 'info',
+            variant: 'hint',
             message: [
-              'Your first channel request has been submitted.',
-              'This may take a short while to confirm on-chain.',
+              'Your first channel openning transaction has been submitted.',
+              '',
+              'Confirmation on-chain and approval by the adaptor usually take a few minutes.'
             ],
             buttons: []
           };
@@ -147,6 +141,7 @@ const calloutSetup: ComputedRef<CalloutSetup | null> = computed(() => {
         buttons: [{
           label: 'Scan an invoice',
           action: { name: 'pay' },
+          primary: true,
         }],
         icon: 'zap',
         message: [
@@ -188,7 +183,7 @@ const infoRows = computed((): (DataRowProps | "separator")[] => {
     {
       label: 'Channels',
       formattedValue: channels.value? channels.value.length.toString() : "0",
-      actions: { rowAction: ["#", "chevron-right"] as [OnClick, ActionIcon] }
+      actions: { rowAction: ["channel-list", "chevron-right"] as [OnClick, ActionIcon] }
     },
     {
       label: 'Embedded wallet',
@@ -197,47 +192,64 @@ const infoRows = computed((): (DataRowProps | "separator")[] => {
     },
   ];
 });
+const showCurrencySwitcher = computed(() =>
+  ( renderingContext.value.type != 'no-channels-wallet-empty'
+    && renderingContext.value.type != 'no-channels-wallet-funded'
+    && renderingContext.value.type != 'first-channel-opening-in-progress'
+  )
+);
+
+const headerStyling = computed(() => {
+  return {
+    noMarginBottom: renderingContext.value.type === 'no-channels-wallet-empty' || renderingContext.value.type === 'no-channels-wallet-funded',
+    noBorderBottom: renderingContext.value.type === 'no-channels-wallet-empty' || renderingContext.value.type === 'no-channels-wallet-funded',
+  }
+});
 
 </script>
 <template>
   <MainContainer>
-    <TheHeader>
-      <template #header-right>
-        <CurrencySwitch v-model="fx.currentCurrency.value" />
-      </template>
-    </TheHeader>
+  <TheHeader
+    :show-fx-currency-switcher="showCurrencySwitcher"
+    :styling="headerStyling"
+  />
     <div id="body">
-      <Callout
-        v-if="calloutSetup"
-        :title="calloutSetup.title"
-        :variant="calloutSetup.variant"
-      >
-        <template #icon>
-          <component
-            :is="{
-              'hand-raised': HandRaised,
-              'konduit': Konduit, // FIXME: replace with actual konduit icon
-              'zap': Zap,
-              'battery-low': BatteryLow,
-              'blocked': Ban,
-              'wallet': WalletMinimal,
-              'ada': CircleAdaSign,
-            }[calloutSetup.icon]"
-          />
-        </template>
-        <template v-if="typeof calloutSetup.message === 'string'">
-          {{ calloutSetup.message }}
-        </template>
-        <template v-else>
-          <template v-for="(message, index) in calloutSetup.message" :key="index">
-            {{ message }}<br v-if="index < calloutSetup.message.length - 1" />
-          </template>
-        </template>
-      </Callout>
-      <ButtonGroup v-if="calloutSetup && calloutSetup.buttons.length > 0" :buttons="calloutSetup.buttons" />
-      <template v-else>
+      <template v-if="renderingContext.type !== 'no-channels-wallet-empty' && renderingContext.type !== 'no-channels-wallet-funded'" >
         <ChannelsMax />
-        <Hr />
+        <Hr v-if="renderingContext.type === 'regular-use'" />
+      </template>
+
+      <template v-if="calloutSetup">
+        <Callout
+          v-if="calloutSetup"
+          :title="calloutSetup.title"
+          :variant="calloutSetup.variant"
+        >
+          <template #icon>
+            <component
+              :is="{
+                'hand-raised': HandRaised,
+                'konduit': ClockThrobber,
+                'zap': Zap,
+                'battery-low': BatteryLow,
+                'blocked': Ban,
+                'wallet': WalletMinimal,
+                'ada': CircleAdaSign,
+              }[calloutSetup.icon]"
+            />
+          </template>
+          <template v-if="typeof calloutSetup.message === 'string'">
+            {{ calloutSetup.message }}
+          </template>
+          <template v-else>
+            <template v-for="(message, index) in calloutSetup.message" :key="index">
+              {{ message }}<br v-if="index < calloutSetup.message.length - 1" />
+            </template>
+          </template>
+        </Callout>
+        <ButtonGroup id="welcome-buttons" v-if="calloutSetup && calloutSetup.buttons.length > 0" :buttons="calloutSetup.buttons" />
+      </template>
+      <template v-else>
         <DataListing :rows="infoRows" />
       </template>
     </div>
@@ -256,11 +268,6 @@ const infoRows = computed((): (DataRowProps | "separator")[] => {
   flex-direction: column;
   gap: var(--data-listing-gap);
 }
-/* 
-#welcome-buttons {
-  margin-top: var(--data-listing-gap);
-}
-*/
 
 /*
 .missing {

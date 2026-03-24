@@ -51,7 +51,10 @@ useTheme();
 
   /* Inputs, frames, hrs around qr codes, video preview etc. */
   /* TODO: rename this to primary-border-color? */
-  --frame-border-color: #d1d5db;
+  --frame-border-color: var(--colar-gray-6);
+
+  --separator-color: var(--frame-border-color);
+  --separator-subtle-color: var(--colar-gray-6);
 
   /* TODO: Drop "secondary color" - use more semantically named colors instead. */
   --secondary-background-color: var(--colar-blue-10);
@@ -62,12 +65,12 @@ useTheme();
   --error-border-color: var(--error-color);
 
   --hint-background-color: var(--colar-blue-11);
-  --hint-border-color: var(--frame-border-color);
-  --hint-color: var(--colar-blue-1);
+  --hint-border-color: var(--colar-blue-8);
+  --hint-color: var(--colar-blue-0);
 
   /* A bit less muted than the hint, to be used for "card buttons" etc. */
   --focus-background-color: var(--colar-blue-10);
-  --focus-border-color: var(--frame-border-color);
+  --focus-border-color: var(--frame-blue-8);
   --focus-color: var(--colar-blue-0);
 
   /* Nice green but doesn't necessarily play nicely with our background. */
@@ -75,9 +78,9 @@ useTheme();
   --success-border-color: var(--colar-green-8);
   --success-color: var(--colar-green-1);
 
-  --warning-background-color: #c3630a;
-  --warning-border-color: #fac798;
-  --warning-color: #fef3e9;
+  --warning-background-color: var(--colar-pink-10);
+  --warning-border-color: var(--colar-orange-10);
+  --warning-color: var(--colar-pink-1);
 
   --missing-data-color: var(--colar-gray-6);
 }
@@ -103,9 +106,9 @@ useTheme();
   --error-color: #e57373;
   --error-border-color: var(--error-color);
 
-  --success-background-color: var(--colar-green-0);
-  --success-border-color: var(--colar-green-8);
-  --success-color: var(--colar-green-9);
+  --success-background-color: var(--colar-blue-0);
+  --success-border-color: var(--colar-blue-8);
+  --success-color: var(--colar-blue-9);
 
   --warning-background-color: #fdeee0;
   --warning-color: #c3630a;

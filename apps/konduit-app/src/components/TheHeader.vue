@@ -3,11 +3,18 @@ import KonduitLogo from "./KonduitLogo.vue";
 import { computed } from "vue";
 import { useRoute, useRouter, type RouteLocationRaw } from "vue-router";
 import ChevronLeft from "./icons/ChevronLeft.vue";
+import CurrencySwitch from "./CurrencySwitch.vue";
+import { useFx } from "../composables/fx";
 
 // Define props
 const props = defineProps<{
   back?: string | (() => void) | RouteLocationRaw;
   title?: string;
+  showFxCurrencySwitcher?: boolean;
+  styling?: {
+    noMarginBottom?: boolean;
+    noBorderBottom?: boolean;
+  },
   subsection?: string;
 }>();
 
@@ -18,6 +25,8 @@ const isIndex = computed(() => route.path === "/");
 const currentPageName = computed(() => {
   return props.title || route.meta.title || route.name || "Page";
 });
+
+const fx = useFx();
 
 const goBack = () => {
   if (props.back) {
@@ -35,13 +44,28 @@ const goBack = () => {
     router.back();
   }
 };
+const headerClasses = computed(() => {
+  return {
+    'index-header': isIndex.value,
+    'regular-header': !isIndex.value,
+    'no-margin-bottom': props.styling?.noMarginBottom,
+    'no-border-bottom': props.styling?.noBorderBottom
+  };
+});
 </script>
 
 <template>
-  <header v-if="isIndex" class="index-header">
+  <header
+    v-if="isIndex"
+    :class="headerClasses"
+    aria-label="Home"
+  >
+    <div v-if="isIndex" class="header-left">&nbsp;</div>
     <h1><KonduitLogo /></h1>
     <div class="header-right">
-      <slot name="header-right" />
+      <slot name="header-right">
+      <CurrencySwitch v-model="fx.currentCurrency.value" v-if="props.showFxCurrencySwitcher" />
+      </slot>
     </div>
   </header>
   <header v-else class="regular-header" aria-label="Go back">
@@ -56,7 +80,9 @@ const goBack = () => {
       </template>
     </h1>
     <div class="header-right">
-      <slot name="header-right" />
+      <slot name="header-right">
+      <CurrencySwitch v-model="fx.currentCurrency.value" v-if="props.showFxCurrencySwitcher" />
+      </slot>
     </div>
   </header>
 </template>
@@ -65,7 +91,8 @@ const goBack = () => {
 header {
   display: flex;
   font-size: 1.5rem;
-  padding: var(--main-container-padding) 0 calc(var(--data-listing-gap) * 2);
+  margin-bottom: var(--data-listing-gap);
+  padding: var(--main-container-padding) 0 var(--data-listing-gap);
 }
 
 header .header-left,
@@ -101,9 +128,21 @@ header h1 {
     stroke: var(--primary-color) !important;
   }
 
+header {
+  border-bottom: 1px solid var(--frame-border-color);
+}
+header.no-border-bottom {
+  border-bottom: none;
+}
+header.no-margin-bottom {
+  margin-bottom: 0;
+}
 /* Special sizing for the Konduit logo on index header */
 header.index-header h1 :deep(svg.konduit-logo) {
-  height: 1.8rem;
+  height: 2.5rem;
 }
-
+header.index-header .header-left,
+header.index-header .header-right {
+  min-width: 1rem;
+}
 </style>

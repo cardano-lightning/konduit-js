@@ -5,7 +5,7 @@ import { useNotifications } from "../composables/notifications";
 import TheHeader from "../components/TheHeader.vue";
 import MainContainer from "../components/MainContainer.vue";
 import { cardanoConnector, wallet, type AppKonduitConsumer } from "../store";
-import { json2KonduitConsumerAsyncCodec } from "@konduit/konduit-consumer";
+import { json2KonduitConsumerCodec } from "@konduit/konduit-consumer";
 import { konduitConsumer, forget } from "../store";
 import { orPlaceholder } from "../utils/formatters";
 import { computed } from "vue";
@@ -29,11 +29,11 @@ const writeSettings = () => {
     );
     return;
   }
-  const json = json2KonduitConsumerAsyncCodec.serialise(konduitConsumer.value as AppKonduitConsumer);
+  const json = json2KonduitConsumerCodec.serialise(konduitConsumer.value as AppKonduitConsumer);
   writeJson(json, "konduit.json");
 };
 
-const formattedConnector = orPlaceholder(cardanoConnector.value?.backendUrl);
+const formattedConnector = orPlaceholder(cardanoConnector.value?.baseUrl);
 const formattedAddress = computed(() => orPlaceholder(wallet.value?.addressBech32));
 
 </script>

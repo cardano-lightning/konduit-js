@@ -10,6 +10,7 @@ import { PositiveBigInt } from '@konduit/codec/integers/big';
 import { HexString } from '@konduit/codec/hexString';
 import { expectOk, expectToBe } from "./assertions";
 import type { Transaction } from "../src/txBuilder";
+import type { HttpEndpointError } from "../src/http";
 
 type Ed25519PublicKeyHex = Tagged<HexString, "Ed25519PublicKeyHex">;
 namespace Ed25519PublicKeyHex {
@@ -35,12 +36,12 @@ class MockWalletBackend implements WalletBackendBase {
     return ok(this.balances.get(Ed25519PublicKeyHex.fromEd25519VerificationKey(vKey)) || 0n as Lovelace);
   }
 
-  async submit(_tx: Transaction): Promise<Result<TxHash, JsonError>> {
+  async submit(_tx: Transaction): Promise<Result<TxHash, HttpEndpointError>> {
     this.txCounter++;
     return ok((new Uint8Array(32).fill(0x00)) as TxHash);
   }
 
-  async utxosAtAddress(_address: Address): Promise<Result<Array<TransactionUnspentOutput>, JsonError>> {
+  async utxosAtAddress(_address: Address): Promise<Result<Array<TransactionUnspentOutput>, HttpEndpointError>> {
     return ok([]);
   }
 }

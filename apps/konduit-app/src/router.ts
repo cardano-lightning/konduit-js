@@ -2,7 +2,8 @@ import { createRouter, createWebHistory } from "vue-router";
 
 import * as store from "./store";
 
-// import AddChannelPage from "./views/AddChannelPage.vue";
+import ChannelDetailsPage from "./views/ChannelDetailsPage.vue";
+import ChannelListPage from "./views/ChannelListPage.vue";
 import ChannelOpenWalletSelectPage from "./views/ChannelOpenWalletSelectPage.vue";
 import ChannelOpenWithEmbeddedWalletPage from "./views/ChannelOpenWithEmbeddedWalletPage.vue";
 import ChannelOpenEmbeddedWalletTopUpPage from "./views/ChannelOpenEmbeddedWalletTopUpPage.vue";
@@ -15,20 +16,31 @@ import SettingsPage from "./views/SettingsPage.vue";
 import WalletPage from "./views/WalletPage.vue";
 
 const routes = [
+  {
+    name: "channel-list",
+    path: "/channels",
+    component: ChannelListPage,
+    meta: { title: "Channels" },
+  },
   { name: "channel-open-wallet-select",
-    path: "/open-channel/wallet-selection",
+    path: "/channels/open-channel/wallet-selection",
     component: ChannelOpenWalletSelectPage,
     meta: { title: "Funding Wallet" },
   },
   { name: "channel-open-embedded-wallet-top-up",
-    path: "/open-channel/embedded-wallet/top-up",
+    path: "/channels/open-channel/embedded-wallet/top-up",
     component: ChannelOpenEmbeddedWalletTopUpPage,
     meta: { title: "Embedded wallet" },
   },
   { name: "channel-open-with-embedded-wallet",
-    path: "/open-channel/embedded-wallet",
+    path: "/channels/open-channel/embedded-wallet",
     component: ChannelOpenWithEmbeddedWalletPage,
     meta: { title: "Open channel" },
+  },
+  { name: "channel-details",
+    path: "/channels/:tag",
+    component: ChannelDetailsPage,
+    meta: { title: "Channel details" },
   },
   {
     name: "create",

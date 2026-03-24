@@ -10,14 +10,14 @@ import { generateMnemonic, Ed25519PrivateKey } from "@konduit/cardano-keys";
 import { NonNegativeInt } from "@konduit/codec/integers/smallish";
 import { Milliseconds, type Seconds } from "../time/duration";
 import { json2Ed25519PrivateKeyCodec } from "../cardano/keys";
-import type { Transaction } from "../txBuilder";
+import type { Transaction, WasmError } from "../txBuilder";
 // import { Connector, type Transaction } from "../cardano/connector";
 import { mkIdentityCodec } from "@konduit/codec";
 import { json2ValidDateCodec, ValidDate } from "../time/absolute";
 import { mkBlockfrostClient } from "../blockfrostClient";
 import { mkJson2PollingInfoCodec, PollingInfo } from "../polling";
 import { mkConnectorClient, type ConnectorClient } from "../cardano/connectorClient";
-import { json2HttpEndpointErrorCodec } from "../http";
+import { json2HttpEndpointErrorCodec, type HttpEndpointError } from "../http";
 import { unwrapOrPanic } from "../neverthrow";
 
 type WalletEvent<T> = CustomEvent<T>;
@@ -37,8 +37,8 @@ export type WalletEvents<WalletBackend> = {
 export type WalletBackendBase = {
   getBalance: (vKey: Ed25519VerificationKey) => Promise<Result<Lovelace, JsonError>>;
   networkMagicNumber: NetworkMagicNumber;
-  submit: (tx: Transaction) => Promise<Result<TxHash, JsonError>>;
-  utxosAtAddress: (address: Address) => Promise<Result<Array<TransactionUnspentOutput>, JsonError>>;
+  submit: (tx: Transaction) => Promise<Result<TxHash, HttpEndpointError>>;
+  utxosAtAddress: (address: Address) => Promise<Result<Array<TransactionUnspentOutput>, HttpEndpointError>>;
   // utxosAtAddress(address: Address): Promise<Result<Array<TransactionUnspentOutput>, JsonError>>;
 };
 
@@ -256,14 +256,14 @@ export class Wallet<WalletBackend extends WalletBackendBase> {
     }
   }
 
-  public async sign(tx: Transaction, context?: Json): Promise<Result<Transaction, JsonError>> {
+  public async sign(tx: Transaction, context?: Json): Promise<Result<Transaction, WasmError>> {
     return tx.sign(this.privateKey).map((signedTx) => {
       this.emit("tx-signed", context ? { tx: signedTx, context } : { tx: signedTx });
       return signedTx;
     });
   }
 
-  public async submit(tx: Transaction, context?: Json): Promise<Result<TxHash, JsonError>> {
+  public async submit(tx: Transaction, context?: Json): Promise<Result<TxHash, HttpEndpointError>> {
     const result = await this.walletBackend.submit(tx);
     return result.map(txHash => {
       this.emit("tx-submitted", context ? { txHash, context } : { txHash });
@@ -299,7 +299,6 @@ const mkWalletCodec = <Backend extends WalletBackendBase>(
   );
 }
 
-
 export type CardanoConnectorWallet = Wallet<CardanoConnectorWallet.WalletBackend>;
 export namespace CardanoConnectorWallet {
   // We additionally store the url
@@ -322,21 +321,10 @@ export namespace CardanoConnectorWallet {
           return json2HttpEndpointErrorCodec.serialise(error);
         });
       },
-      submit: async (tx: Transaction) => {
-        // TODO:
-        // When we have pure TS implementation of the cardano-connect client
-        // then we will be able to remove that _inner lookup completely and
-        // just submit the cbor directly.
-        return (await connector.submit(tx.toCbor())).mapErr((error) => {
-          return json2HttpEndpointErrorCodec.serialise(error);
-        });
-      },
+      submit: (tx: Transaction) => connector.submit(tx.toCbor()),
       utxosAtAddress: async (address: Address) => {
         const utxosWithExtraInfo = await connector.utxosAt(address);
         return utxosWithExtraInfo
-          .mapErr((error) => {
-            return json2HttpEndpointErrorCodec.serialise(error);
-          })
           .map((utxos) => utxos.map((u) => u.out));
       },
       networkMagicNumber,
@@ -436,10 +424,7 @@ export namespace BlockfrostWallet {
         },
         utxosAtAddress: async (address: Address) => {
           const utxosWithExtraInfo = await blockfrostClient.utxosAt(AddressBech32.fromAddress(address));
-          return utxosWithExtraInfo
-            .mapErr((error) => {
-              return json2HttpEndpointErrorCodec.serialise(error);
-            });
+          return utxosWithExtraInfo;
         },
         networkMagicNumber: blockfrostClient.networkMagicNumber,
       } as WalletBackend;

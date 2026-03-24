@@ -39,6 +39,98 @@ if (Symbol.dispose) Error2.prototype[Symbol.dispose] = Error2.prototype.free;
 export { Error2 as Error }
 
 /**
+ * Consumer intent for an existing channel (add funds or close).
+ */
+export class Intent {
+    static __wrap(ptr) {
+        ptr = ptr >>> 0;
+        const obj = Object.create(Intent.prototype);
+        obj.__wbg_ptr = ptr;
+        IntentFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        IntentFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_intent_free(ptr, 0);
+    }
+    /**
+     * @param {bigint} amount
+     * @returns {Intent}
+     */
+    static add(amount) {
+        const ret = wasm.intent_add(amount);
+        return Intent.__wrap(ret);
+    }
+    /**
+     * @returns {Intent}
+     */
+    static close() {
+        const ret = wasm.intent_close();
+        return Intent.__wrap(ret);
+    }
+}
+if (Symbol.dispose) Intent.prototype[Symbol.dispose] = Intent.prototype.free;
+
+/**
+ * Intent associated with a channel tag (used by general tx builder).
+ */
+export class IntentWithTag {
+    static __unwrap(jsValue) {
+        if (!(jsValue instanceof IntentWithTag)) {
+            return 0;
+        }
+        return jsValue.__destroy_into_raw();
+    }
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        IntentWithTagFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_intentwithtag_free(ptr, 0);
+    }
+    /**
+     * @returns {Intent}
+     */
+    get intent() {
+        const ret = wasm.intentwithtag_intent(this.__wbg_ptr);
+        return Intent.__wrap(ret);
+    }
+    /**
+     * @param {Uint8Array} tag
+     * @param {Intent} intent
+     */
+    constructor(tag, intent) {
+        const ptr0 = passArray8ToWasm0(tag, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        _assertClass(intent, Intent);
+        var ptr1 = intent.__destroy_into_raw();
+        const ret = wasm.intentwithtag_new(ptr0, len0, ptr1);
+        this.__wbg_ptr = ret >>> 0;
+        IntentWithTagFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * @returns {Uint8Array}
+     */
+    get tag() {
+        const ret = wasm.intentwithtag_tag(this.__wbg_ptr);
+        var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        return v1;
+    }
+}
+if (Symbol.dispose) IntentWithTag.prototype[Symbol.dispose] = IntentWithTag.prototype.free;
+
+/**
  * A log level to configure the logger.
  * @enum {0 | 1 | 2 | 3 | 4}
  */
@@ -96,6 +188,77 @@ export class Network {
 if (Symbol.dispose) Network.prototype[Symbol.dispose] = Network.prototype.free;
 
 /**
+ * Open intent for a new channel.
+ */
+export class OpenIntent {
+    static __unwrap(jsValue) {
+        if (!(jsValue instanceof OpenIntent)) {
+            return 0;
+        }
+        return jsValue.__destroy_into_raw();
+    }
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        OpenIntentFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_openintent_free(ptr, 0);
+    }
+    /**
+     * @returns {Uint8Array}
+     */
+    get adaptorVk() {
+        const ret = wasm.openintent_adaptorVk(this.__wbg_ptr);
+        var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        return v1;
+    }
+    /**
+     * @returns {bigint}
+     */
+    get amount() {
+        const ret = wasm.openintent_amount(this.__wbg_ptr);
+        return BigInt.asUintN(64, ret);
+    }
+    /**
+     * @returns {bigint}
+     */
+    get closePeriodSec() {
+        const ret = wasm.openintent_closePeriodSec(this.__wbg_ptr);
+        return BigInt.asUintN(64, ret);
+    }
+    /**
+     * @param {Uint8Array} channel_tag
+     * @param {Uint8Array} adaptor_vk
+     * @param {bigint} close_period_sec
+     * @param {bigint} amount
+     */
+    constructor(channel_tag, adaptor_vk, close_period_sec, amount) {
+        const ptr0 = passArray8ToWasm0(channel_tag, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passArray8ToWasm0(adaptor_vk, wasm.__wbindgen_malloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.openintent_new(ptr0, len0, ptr1, len1, close_period_sec, amount);
+        this.__wbg_ptr = ret >>> 0;
+        OpenIntentFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * @returns {Uint8Array}
+     */
+    get tag() {
+        const ret = wasm.openintent_tag(this.__wbg_ptr);
+        var v1 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        return v1;
+    }
+}
+if (Symbol.dispose) OpenIntent.prototype[Symbol.dispose] = OpenIntent.prototype.free;
+
+/**
  * A reference to fully built transaction
  */
 export class TransactionReadyForSigning {
@@ -149,6 +312,51 @@ export class TransactionReadyForSigning {
 if (Symbol.dispose) TransactionReadyForSigning.prototype[Symbol.dispose] = TransactionReadyForSigning.prototype.free;
 
 /**
+ * @param {Uint8Array} channel_tag
+ * @param {Uint8Array} consumer_vk
+ * @param {bigint} amount
+ * @param {Uint8Array[]} funding_utxos
+ * @param {Network} network
+ * @returns {TransactionReadyForSigning}
+ */
+export function add_tx(channel_tag, consumer_vk, amount, funding_utxos, network) {
+    const ptr0 = passArray8ToWasm0(channel_tag, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(consumer_vk, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArrayJsValueToWasm0(funding_utxos, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    _assertClass(network, Network);
+    const ret = wasm.add_tx(ptr0, len0, ptr1, len1, amount, ptr2, len2, network.__wbg_ptr);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return TransactionReadyForSigning.__wrap(ret[0]);
+}
+
+/**
+ * @param {Uint8Array} channel_tag
+ * @param {Uint8Array} consumer_vk
+ * @param {Uint8Array[]} funding_utxos
+ * @param {Network} network
+ * @returns {TransactionReadyForSigning}
+ */
+export function close_tx(channel_tag, consumer_vk, funding_utxos, network) {
+    const ptr0 = passArray8ToWasm0(channel_tag, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArray8ToWasm0(consumer_vk, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArrayJsValueToWasm0(funding_utxos, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    _assertClass(network, Network);
+    const ret = wasm.close_tx(ptr0, len0, ptr1, len1, ptr2, len2, network.__wbg_ptr);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return TransactionReadyForSigning.__wrap(ret[0]);
+}
+
+/**
  * To be called once in the application life-cycle to make logs from Rust/Wasm displayed in the
  * browser console, and to install a hook on Rust internal panics in order to make them bubble as
  * plain JavaScript errors.
@@ -159,6 +367,22 @@ export function enableLogsAndPanicHook(level) {
     if (ret[1]) {
         throw takeFromExternrefTable0(ret[0]);
     }
+}
+
+/**
+ * @returns {bigint}
+ */
+export function fee_buffer() {
+    const ret = wasm.fee_buffer();
+    return BigInt.asUintN(64, ret);
+}
+
+/**
+ * @returns {bigint}
+ */
+export function min_ada_buffer() {
+    const ret = wasm.min_ada_buffer();
+    return BigInt.asUintN(64, ret);
 }
 
 /**
@@ -182,6 +406,31 @@ export function open_tx(channel_tag, consumer_vk, adaptor_vk, funding_utxos, net
     const len3 = WASM_VECTOR_LEN;
     _assertClass(network, Network);
     const ret = wasm.open_tx(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, network.__wbg_ptr, close_period_sec, amount);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return TransactionReadyForSigning.__wrap(ret[0]);
+}
+
+/**
+ * @param {OpenIntent[]} opens
+ * @param {IntentWithTag[]} intents
+ * @param {Uint8Array} consumer_vk
+ * @param {Uint8Array[]} funding_utxos
+ * @param {Network} network
+ * @returns {TransactionReadyForSigning}
+ */
+export function tx(opens, intents, consumer_vk, funding_utxos, network) {
+    const ptr0 = passArrayJsValueToWasm0(opens, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArrayJsValueToWasm0(intents, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArray8ToWasm0(consumer_vk, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ptr3 = passArrayJsValueToWasm0(funding_utxos, wasm.__wbindgen_malloc);
+    const len3 = WASM_VECTOR_LEN;
+    _assertClass(network, Network);
+    const ret = wasm.tx(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, network.__wbg_ptr);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }
@@ -214,6 +463,10 @@ export function __wbg_error_new(arg0) {
 export function __wbg_info_148d043840582012(arg0) {
     console.info(arg0);
 }
+export function __wbg_intentwithtag_unwrap(arg0) {
+    const ret = IntentWithTag.__unwrap(arg0);
+    return ret;
+}
 export function __wbg_length_32ed9a279acd054c(arg0) {
     const ret = arg0.length;
     return ret;
@@ -227,6 +480,10 @@ export function __wbg_new_8a6f238a6ece86ea() {
 }
 export function __wbg_now_a3af9a2f4bbaa4d1() {
     const ret = Date.now();
+    return ret;
+}
+export function __wbg_openintent_unwrap(arg0) {
+    const ret = OpenIntent.__unwrap(arg0);
     return ret;
 }
 export function __wbg_prototypesetcall_bdcdcc5842e4d77d(arg0, arg1, arg2) {
@@ -259,9 +516,18 @@ export function __wbindgen_init_externref_table() {
 const Error2Finalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_error_free(ptr >>> 0, 1));
+const IntentFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_intent_free(ptr >>> 0, 1));
+const IntentWithTagFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_intentwithtag_free(ptr >>> 0, 1));
 const NetworkFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_network_free(ptr >>> 0, 1));
+const OpenIntentFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_openintent_free(ptr >>> 0, 1));
 const TransactionReadyForSigningFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_transactionreadyforsigning_free(ptr >>> 0, 1));

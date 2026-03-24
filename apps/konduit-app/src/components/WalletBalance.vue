@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
-import { PossibleAmount } from "../components/FancyAmount.vue";
 import FancyAmount from "../components/FancyAmount.vue";
 import { useDefaultFormatters } from "../composables/l10n";
 import { POSIXSeconds } from "@konduit/konduit-consumer/time/absolute";
@@ -8,13 +7,18 @@ import { AnyPreciseDuration, NormalisedDuration, Seconds } from "@konduit/kondui
 import { Lovelace } from "@konduit/konduit-consumer/cardano";
 import { useEmbeddedWalletDetails } from "../composables/walletDetails";
 import { wallet } from "../store";
+import { useFx } from "../composables/fx";
+import { AdaAmount } from "@konduit/konduit-consumer/amounts";
 
 const { walletBalance, walletBalanceInfo } = useEmbeddedWalletDetails(wallet);
+
+const { toCurrentCurrency } = useFx();
 
 // Amount section:
 // * Total balance section
 const amount = computed(() => {
-  return PossibleAmount.fromLovelace(walletBalance.value || Lovelace.zero);
+  const adaAmount = AdaAmount.fromLovelace(walletBalance.value || Lovelace.zero);
+  return toCurrentCurrency(adaAmount).unwrapOr(adaAmount);
 });
 
 // * Sync info section

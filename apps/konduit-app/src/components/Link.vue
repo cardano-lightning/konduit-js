@@ -19,7 +19,7 @@ export const mkClickHandler = (router: Router, action: OnClick) => (event: Mouse
 
 <script setup lang="ts">
 import { useRouter, type RouteLocationRaw, type Router } from 'vue-router';
-import SquareArrowOutUpRight from './icons/SquareArrowOutUpRight.vue';
+import { SquareArrowOutUpRight } from "lucide-vue-next";
 
 interface Props {
   href: string;

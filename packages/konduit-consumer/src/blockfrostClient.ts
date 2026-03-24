@@ -37,6 +37,7 @@ import {
 } from "./cardano/connectorClient";
 import { json2CborCodec } from "@konduit/codec/cbor/codecs/sync";
 import type { Cbor } from "@konduit/codec/cbor/core";
+import { HexString } from "@konduit/codec/hexString";
 
 export type BlockfrostAddressInfo = {
   address: AddressBech32;
@@ -221,9 +222,23 @@ export const mkBlockfrostClient = (projectId: string): neverthrow.Result<Blockfr
       `${baseUrl}/tx/submit`,
       RequestSerialiser.fromOtherSerialiser(
         "application/cbor",
-        (data: ArrayBuffer) => data,
+        (data: ArrayBuffer) => {
+          console.debug("TRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR");
+          console.debug("TRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR");
+          console.debug("TRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR");
+          console.debug(HexString.fromUint8Array(new Uint8Array(data)));
+          return data;
+        }
       ),
-      ResponseDeserialiser.fromJsonDeserialiser(TxHash.jsonCodec.deserialise),
+      ResponseDeserialiser.fromJsonDeserialiser(
+        (txHash) => {
+          console.debug("TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT");
+          console.debug("TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT");
+          console.debug("TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT");
+          console.debug(`Received tx hash from submit endpoint: ${txHash}`);
+          return TxHash.jsonCodec.deserialise(txHash);
+        }
+      )
     );
 
     return {

@@ -8,7 +8,7 @@ import { HexString } from "@konduit/codec/hexString";
 import { Ed25519PrivateKey } from "@konduit/cardano-keys";
 import * as hexString from "@konduit/codec/hexString";
 // import { Connector } from "../src/cardano/connector";
-import { BlockfrostWallet, type AnyWallet } from "../src/wallets/embedded";
+import { BlockfrostWallet, CardanoConnectorWallet, type AnyWallet } from "../src/wallets/embedded";
 import { Ed25519Secret } from "@konduit/cardano-keys/rfc8032";
 import { hoistToResultAsync, promiseToResultAsync, resultAsyncToPromise } from "../src/neverthrow";
 import { mkLndClient, type LndClient } from "../src/bitcoin/lndClient";
@@ -25,7 +25,9 @@ export const konduitConsumerStateFile = import.meta.env.VITE_TEST_KONDUIT_CONSUM
 export const lndMacaroonOpt = import.meta.env.VITE_TEST_LND_INVOICING_MACAROON;
 export const lndBaseUrlOpt = import.meta.env.VITE_TEST_LND_INVOICING_BASE_URL;
 
-export const readOrSkipKonduitConsumer = async (t: any): Promise<KonduitConsumer<AnyWallet>> => {
+export type WalletBackendType = "blockfrost" | "cardano-connector";
+
+export const readOrSkipKonduitConsumer = async (t: any, walletBackend: WalletBackendType): Promise<KonduitConsumer<AnyWallet>> => {
   if(!konduitConsumerStateFile) {
     t.skip();
   }
@@ -40,11 +42,19 @@ export const readOrSkipKonduitConsumer = async (t: any): Promise<KonduitConsumer
       return promiseToResultAsync(result);
     })));
   } else {
-    const blockfrostWallet = await readOrSkipBlockfrostWallet(t);
-    const keys = readOrSkipKeys(t);
-    const connector = readOrSkipConnectorClient(t);
-    const publicNetwork = readOrSkipPublicNetwork(t);
-    return new KonduitConsumer(keys.privateKey, connector.baseUrl, publicNetwork, blockfrostWallet);
+    if(walletBackend === "blockfrost") {
+      const blockfrostWallet = await readOrSkipBlockfrostWallet(t);
+      const keys = readOrSkipKeys(t);
+      const connector = readOrSkipConnectorClient(t);
+      const publicNetwork = readOrSkipPublicNetwork(t);
+      return new KonduitConsumer(keys.privateKey, connector.baseUrl, publicNetwork, blockfrostWallet);
+    } else {
+      const connectorWallet = await readOrSkipCardanoConnectorWallet(t);
+      const keys = readOrSkipKeys(t);
+      const connector = readOrSkipConnectorClient(t);
+      const publicNetwork = readOrSkipPublicNetwork(t);
+      return new KonduitConsumer(keys.privateKey, connector.baseUrl, publicNetwork, connectorWallet);
+    }
   }
 }
 
@@ -81,7 +91,7 @@ export const readOrSkipKeys = (t: any) => {
 }
 
 export const readOrSkipBlockfrostWallet = async (t: any) => {
-  if(!backendUrlOpt) {
+  if(!blockfrostProjectIdOpt) {
     t.skip();
   }
   const blockfrostProjectId = expectNotNull(blockfrostProjectIdOpt);
@@ -89,6 +99,16 @@ export const readOrSkipBlockfrostWallet = async (t: any) => {
   const walletBackend = expectOk(await BlockfrostWallet.fromPrivateKey(blockfrostProjectId, privateKey));
   return walletBackend;
 }
+
+export const readOrSkipCardanoConnectorWallet = async (t: any) => {
+  const { privateKey } = readOrSkipKeys(t);
+  const connector = readOrSkipConnectorClient(t);
+  const publicNetwork = readOrSkipPublicNetwork(t);
+  const networkMagic = NetworkMagicNumber.fromPublicNetwork(publicNetwork);
+  const walletBackend = CardanoConnectorWallet.fromPrivateKey(connector, networkMagic, privateKey);
+  return walletBackend;
+}
+
 
 export const readOrSkipPublicNetwork = (t: any): PublicNetwork => {
   if(!networkPublicNameOpt) {

@@ -55,7 +55,7 @@ watch(addressBech32, generateQR, {
 
 <template>
   <MainContainer>
-    <TheHeader :back="'home'" />
+  <TheHeader :back="'home'" :show-fx-currency-switcher="true" />
     <div id="body">
       <WalletBalance />
       <Hr />

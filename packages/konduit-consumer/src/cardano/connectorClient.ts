@@ -416,18 +416,21 @@ export const mkConnectorClient = (
   );
   const submitEndpoint = mkPostEndpoint(
     `${base}/submit`,
-    RequestSerialiser.fromOtherSerialiser(
-      "application/cbor",
-      (bytes: TxCborBytes) => uint8Array.toArrayBuffer(bytes),
+    RequestSerialiser.fromJsonSerialiser(
+      (data: TxCborBytes) => {
+        return jsonCodecs.objectOf({
+          transaction: uint8Array.jsonCodec
+        }).serialise({ transaction: data })
+      }
     ),
     ResponseDeserialiser.fromJsonDeserialiser(
       codec
         .rmap(
           jsonCodecs.objectOf({
-            tx_id: TxHash.jsonCodec,
+            transaction_id: TxHash.jsonCodec,
           }),
-          (submitResponse) => submitResponse.tx_id,
-          (txId: TxHash) => ({ tx_id: txId }),
+          (submitResponse) => submitResponse.transaction_id,
+          (transaction_id: TxHash) => ({ transaction_id })
         )
         .deserialise,
     ),

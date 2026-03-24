@@ -26,6 +26,10 @@ export const promiseToAsync = <T, E>(promise: Promise<Result<T, E>>): ResultAsyn
   return new ResultAsync(promise);
 }
 
+export const okAsyncPromise = <T, E>(value: Promise<T>): ResultAsync<T, E> => {
+  return promiseToAsync(value.then(v => ok(v) as Result<T, E>));
+}
+
 // DEPRECATED: Use shorter toAsync instead
 export const hoistToResultAsync = <T, E>(result: Result<T, E>): ResultAsync<T, E> => {
   return promiseToResultAsync(Promise.resolve(result));

@@ -28,7 +28,7 @@ export const hex = (bytes: Uint8Array | null | undefined, hexPrefix: string = "0
 
 export const abbreviateHex = (bytes: Uint8Array | null | undefined, prefixLen: number = 8, suffixLen: number = 8, hexPrefix: string = "0x", placeholder: string = MISSING_PLACEHOLDER): string => {
   if(bytes == null || bytes === undefined) return placeholder;
-  const hexStr = `${hexPrefix}${hex(bytes)}`;
+  const hexStr = `${hex(bytes, hexPrefix, placeholder)}`;
   return abbreviate(hexStr, prefixLen, suffixLen, placeholder);
 }
 

@@ -68,7 +68,9 @@ const calloutSetup: ComputedRef<CalloutSetup | null> = computed(() => {
       title: 'Top up your embedded wallet',
       variant: 'hint' as const,
       message: [
-        `Copy or scan the address below and send at least ${formatters.formatAda({ ada: Ada.fromSmallNumber(5) })} to it.`,
+        `Copy or scan the address below and send at least ${formatters.formatAda({ ada: Ada.fromSmallNumber(10) })} to it.`,
+        '',
+        `There is on an operational margin associtated with channel maintainance which is around ${formatters.formatAda({ ada: Ada.fromSmallNumber(5) })}.`,
         'Once funded, you\'re all set to proceed!',
       ]
     }
@@ -82,6 +84,7 @@ const calloutSetup: ComputedRef<CalloutSetup | null> = computed(() => {
       variant: 'success' as const,
       message: [
         'Your embedded wallet is ready to use!',
+        '',
         'You can proceed to open a channel.',
       ]
     }
@@ -131,7 +134,11 @@ const buttons: ComputedRef<ButtonProps[]> = computed(() => {
 
 <template>
   <MainContainer :buttons="buttons">
-    <TheHeader :back="backRoute" title="Fund embedded wallet" />
+    <TheHeader
+      :show-fx-currency-switcher="true"
+      :back="backRoute"
+      title="Fund embedded wallet"
+    />
     <div id="body">
       <WalletBalance />
       <Callout

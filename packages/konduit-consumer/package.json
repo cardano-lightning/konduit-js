@@ -33,9 +33,9 @@
       "types": "./dist/cardano.d.ts",
       "default": "./dist/cardano.js"
     },
-    "./cardano/connector": {
-      "types": "./dist/cardano/connector.d.ts",
-      "default": "./dist/cardano/connector.js"
+    "./cardano/connectorClient": {
+      "types": "./dist/cardano/connectorClient.d.ts",
+      "default": "./dist/cardano/connectorClient.js"
     },
     "./adaptorClient": {
       "types": "./dist/adaptorClient.d.ts",
@@ -76,6 +76,10 @@
     "./amounts": {
       "types": "./dist/amounts.d.ts",
       "default": "./dist/amounts.js"
+    },
+    "./txBuilder": {
+      "types": "./dist/txBuilder.d.ts",
+      "default": "./dist/txBuilder.js"
     }
   },
   "files": [

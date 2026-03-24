@@ -1,5 +1,5 @@
 <script lang="ts">
-export type CalloutVariant = "info" | "warning" | "error" | "success" | "hint" | "critical" | "neutral";
+export type CalloutVariant = "info" | "warning" | "error" | "success" | "hint" | "critical" | "neutral" | "bug";
 
 export type Props = {
   title: string;
@@ -8,11 +8,8 @@ export type Props = {
 </script>
 
 <script setup lang="ts">
-import Check from "./icons/Check.vue";
-import Info from "./icons/Info.vue";
+import { Bug, Check, Info, TriangleAlert, Skull } from "lucide-vue-next";
 import NotepadPen from "./icons/NotepadPen.vue";
-import Skull from "./icons/Skull.vue";
-import TriangleAlert from "./icons/TriangleAlert.vue";
 
 const props = defineProps<Props>();
 </script>
@@ -21,6 +18,7 @@ const props = defineProps<Props>();
 <div :class="['callout', props.variant]">
   <h2>
     <slot name="icon">
+      <Bug v-if="props.variant === 'bug'" />
       <TriangleAlert v-if="props.variant === 'warning' || props.variant === 'error'" />
       <Check v-else-if="props.variant === 'success'" />
       <Info v-else-if="props.variant === 'info'" />
@@ -73,7 +71,7 @@ const props = defineProps<Props>();
       vertical-align: middle;
     }
 
-.callout.error {
+.callout.error, .callout.bug, .callout.critical {
   background-color: var(--error-background-color);
   border-color: var(--error-border-color);
   color: var(--error-color);

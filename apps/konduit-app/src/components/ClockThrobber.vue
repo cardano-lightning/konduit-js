@@ -10,7 +10,7 @@ defineProps<{
 </script>
 
 <template>
-  <div class="clock-throbber" aria-label="Loading…" aria-live="polite" role="status" :style="{ '--cycle-duration': `${duration ?? 1200}ms` }">
+  <div class="clock-throbber" aria-label="Loading…" aria-live="polite" role="status" :style="{ '--cycle-duration': `${duration ?? 2400}ms` }">
     <Clock12 class="clock" />
     <Clock12 class="clock animated clock-12" />
     <Clock03 class="clock animated clock-03" />

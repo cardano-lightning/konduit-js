@@ -111,7 +111,7 @@
           };
       };
       flake = {
-        nixosModules.default = import ./flake/nixos.nix inputs.self;
+        nixosModules.default = import ./nix/nixos.nix inputs.self;
       };
     };
 }

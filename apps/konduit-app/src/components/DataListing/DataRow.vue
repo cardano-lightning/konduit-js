@@ -1,5 +1,5 @@
 <script lang="ts">
-export type ActionIcon = "pen" | "download" | "trash" | "copy" | "external-link" | "loading" | "info" | "wallet" | "konduit" | "share" | "chevron-right";
+export type ActionIcon = "pen" | "download" | "trash" | "copy" | "external-link" | "loading" | "info" | "wallet" | "konduit" | "share" | "chevron-right" | "square-plus" ;
 
 export type Href = string;
 export type Action =
@@ -33,11 +33,11 @@ async function doShare(action: { value: string, title?: string }) {
 </script>
 
 <script setup lang="ts">
-import { ChevronRight } from "lucide-vue-next";
+import { ChevronRight, SquarePlus } from "lucide-vue-next";
 import ClockThrobber from "../ClockThrobber.vue";
 import Copy from "../icons/Copy.vue";
 import Download from "../icons/Download.vue";
-import ExternalLink from "../icons/SquareArrowOutUpRight.vue";
+import { SquareArrowOutUpRight } from "lucide-vue-next";
 import Info from "../icons/Info.vue";
 import Konduit from "../icons/Konduit.vue";
 import Link from "../Link.vue";
@@ -133,11 +133,12 @@ const rowOnClick = computed(() => {
               <Copy v-if="action[2] === 'copy'" />
               <ChevronRight v-else-if="action[2] === 'chevron-right'" />
               <Download v-else-if="action[2] === 'download'" />
-              <ExternalLink v-else-if="action[2] === 'external-link'" />
+              <SquareArrowOutUpRight v-else-if="action[2] === 'external-link'" />
               <Info v-else-if="action[2] === 'info'" />
               <Konduit v-else-if="action[2] === 'konduit'" />
               <Pen v-else-if="action[2] === 'pen' || !action[2]" />
               <Share2 v-else-if="action[2] === 'share' && shareSupported" />
+              <SquarePlus v-else-if="action[2] === 'square-plus'" />
               <Trash v-else-if="action[2] === 'trash'" />
               <WalletMinimal v-else-if="action[2] === 'wallet'" />
             </Link>

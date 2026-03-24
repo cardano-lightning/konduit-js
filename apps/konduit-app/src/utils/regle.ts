@@ -15,7 +15,7 @@ const formatError = (error: JsonError): string => {
 export const ruleFromDeserialiser = <T>(
   deserialiser: Deserialiser<string, T, JsonError>,
   handleResult: (result: Result<T, JsonError>) => void = () => {},
-): RegleRuleDefinition<string, [], true, { $valid: boolean, deserialisationError: JsonError | null, value: T | null }> => {
+): RegleRuleDefinition<string, string, [], true, { $valid: boolean, deserialisationError: JsonError | null, value: T | null }> => {
   return createRule({
     validator: async (value: Maybe<string>) => {
       if(isEmpty(value)) {
@@ -42,7 +42,7 @@ export const ruleFromDeserialiser = <T>(
 export const ruleFromAsyncDeserialiser = <T>(
   deserialiser: (value: string) => Promise<Result<T, JsonError>>,
   handleResult: (result: Result<T, JsonError>) => Promise<void> = () => Promise.resolve()
-): RegleRuleDefinition<string, [], true, { rawValue: Maybe<string>, $valid: boolean, deserialisationError: JsonError | null, value: T | null }> => {
+): RegleRuleDefinition<unknown, string, [], true, { rawValue: Maybe<string>, $valid: boolean, deserialisationError: JsonError | null, value: T | null }> => {
   return createRule({
     validator: async (rawValue: Maybe<string>) => {
       if(isEmpty(rawValue)) {

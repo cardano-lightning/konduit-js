@@ -3,17 +3,16 @@ import { ok, type Result } from "neverthrow";
 import { Ed25519VerificationKey } from "@konduit/cardano-keys";
 import { json2TxOutRefCodec, TxCborBytes, TxHash, unsafeTxCborBytes, type TxInfo } from "../cardano";
 import { POSIXMilliseconds, ValidDate } from "../time/absolute";
-import { ChannelTag, json2ChannelTagCodec, KeyTag, type ConsumerEd25519VerificationKey } from "./core";
+import { ChannelTag,  KeyTag, type ConsumerEd25519VerificationKey } from "./core";
 import type { AdaptorEd25519VerificationKey } from "../adaptorClient/adaptorInfo";
 import { json2AdaptorEd25519VerificationKeyCodec } from "../adaptorClient/adaptorInfo";
-import { Days, Hours, Milliseconds, Minutes, Seconds } from "../time/duration";
+import { Days, Hours, json2SecondsCodec, Milliseconds, Minutes, Seconds } from "../time/duration";
 import { Lovelace } from "../cardano";
 import type { JsonCodec } from "@konduit/codec/json/codecs";
 import * as codec from "@konduit/codec";
 import * as uint8Array from "@konduit/codec/uint8Array";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import { json2Ed25519VerificationKeyCodec } from "../cardano/keys";
-import { json2MillisecondsCodec } from "../time/duration";
 import { json2ValidDateCodec } from "../time/absolute";
 import { TxIx, type BlockNo, type TxOutRef } from "../cardano";
 import { json2BlockNoCodec } from "../cardano/ledger";
@@ -143,7 +142,7 @@ export type OpenTx = TxBase & {
   adaptorApproved: boolean;
   amount: Lovelace;
   created: ValidDate;
-  closePeriod: Milliseconds;
+  closePeriod: Seconds;
   consumer: Ed25519VerificationKey;
   lastSubmitted: ValidDate | null;
   tag: ChannelTag;
@@ -154,8 +153,8 @@ export const json2OpenTxCodec: JsonCodec<OpenTx> = codec.rmap(
   jsonCodecs.objectOf({
     adaptor: json2AdaptorEd25519VerificationKeyCodec,
     amount: Lovelace.jsonCodec,
-    channel_tag: json2ChannelTagCodec,
-    close_period: json2MillisecondsCodec,
+    channel_tag: ChannelTag.jsonCodec,
+    close_period: json2SecondsCodec,
     consumer: json2Ed25519VerificationKeyCodec,
     last_submitted: jsonCodecs.nullable(json2ValidDateCodec),
     tx_cbor: jsonCodecs.nullable(codec.rmap(uint8Array.jsonCodec, unsafeTxCborBytes, (bytes) => bytes)),

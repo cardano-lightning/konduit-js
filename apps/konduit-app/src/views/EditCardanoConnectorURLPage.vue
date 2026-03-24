@@ -5,60 +5,38 @@ import Form from "../components/Form.vue";
 import * as TextField from "../components/Form/TextField.vue";
 import { useRouter } from 'vue-router';
 import { computed, ref, type ComputedRef } from 'vue';
-import { createRule, useRegle, type Maybe } from '@regle/core';
-import { cardanoConnector } from "../store";
+import { useRegle } from '@regle/core';
+import { cardanoConnector, konduitConsumer, setCardanoConnector } from "../store";
 import * as rules from '@regle/rules';
 import { type Props as ButtonProps } from "../components/Button.vue";
-import { CardanoConnectorWallet } from "@konduit/konduit-consumer/wallets/embedded";
+import { mkConnectorClient } from "@konduit/konduit-consumer/cardano/connectorClient";
 import { wallet } from "../store";
-import { isEmpty } from "@regle/rules";
-import { Milliseconds } from "@konduit/konduit-consumer/time/duration";
 import { FieldWidth } from "../components/Form/core";
+import { NetworkMagicNumber, PublicNetwork } from "@konduit/konduit-consumer/cardano";
+import { ruleFromAsyncDeserialiser } from "../utils/regle";
+import { err, ok, Result } from "neverthrow";
 
-const walletBackendRule = createRule({
-  message: ({ backend }) => {
-    if(backend) return "The provided URL is not a valid Cardano Connector backend for the current network.";
-    return "The provided URL is not a valid Cardano Connector backend or the backend is unreachable.";
-  },
-  validator: async (value: Maybe<string>) => {
-    let backendUrl;
-    if(isEmpty(value)) {
-      return {
-        backendUrl: null,
-        backend: null,
-        $valid: false,
-      };
-    }
-    backendUrl = value as string;
-    const createResult = await CardanoConnectorWallet.createBackend(backendUrl, Milliseconds.fromDigits(5, 0, 0));
-    return createResult.match(
-      (newBackend) => {
-        if (wallet.value && wallet.value.networkMagicNumber === newBackend.networkMagicNumber) {
-          return {
-            backendUrl,
-            backend: newBackend,
-            $valid: true
-          };
-        }
-        return {
-          backendUrl,
-          backend: newBackend,
-          $valid: false
-        };
-      },
-      () => {
-        return {
-          backendUrl,
-          backend: null,
-          $valid: false
-        };
+type Url = string;
+
+const backendUrlRule = ruleFromAsyncDeserialiser<Url>(
+  async (backendUrl: string): Promise<Result<Url, string>> => {
+    const connectorClient = mkConnectorClient(backendUrl);
+    return (await connectorClient.network()).match(
+    (publicNetwork: PublicNetwork) => {
+      const networkMagicNumber = NetworkMagicNumber.fromPublicNetwork(publicNetwork);
+      if (wallet.value && wallet.value.networkMagicNumber === networkMagicNumber) {
+        return ok(backendUrl);
       }
-    );
-  },
+      return err("The provided URL is not a valid Cardano Connector backend for the current network.");
+    },
+    () => {
+      return err("The provided URL is not a valid Cardano Connector backend or the backend is unreachable.");
+    }
+  );
 });
 
 const formState = {
-  url: ref(cardanoConnector.value.backendUrl || ''),
+  url: ref(cardanoConnector.value.baseUrl || ''),
 };
 
 const { r$ } = useRegle(
@@ -66,14 +44,7 @@ const { r$ } = useRegle(
   {
     url: {
       required: rules.required,
-      // TODO: I have no clue why this composition of rules doesn't work:
-      // url: rules.withMessage(
-      //   rules.and(rules.url, walletBackendRule),
-      //   () => "Please provide a valid Cardano Connector URL."
-      // ),
-      // TODO: It would be much nicer to error only if the URL is syntactically valid.
-      //       And the root domain does exist.
-      url: walletBackendRule,
+      connectorServer: backendUrlRule,
       $debounce: 1000,
     },
   }
@@ -83,7 +54,7 @@ const fields = computed(() => {
   return {
     url: {
       fieldWidth: FieldWidth.full,
-      isValid: null,
+      isValid: r$.url.$rules.connectorServer.$valid,
       label: "Cardano Connector's URL",
       type: TextField.url,
       placeholder: "https://example-adaptor.com",
@@ -93,8 +64,8 @@ const fields = computed(() => {
 });
 
 const handleSubmit = () => {
-  if (r$.$ready) {
-    console.log("Submitting form", r$.$value);
+  if (r$.$ready && konduitConsumer.value && r$.url.$rules.connectorServer.$metadata?.value) {
+    setCardanoConnector(r$.url.$rules.connectorServer.$metadata.value);
     router.push({ name: 'settings' });
   }
 };
@@ -121,12 +92,12 @@ const buttons: ComputedRef<ButtonProps[]> = computed(() => {
       action: () => { router.push({ name: 'settings' }); },
       primary: false,
     },
-    {
-      disabled: !r$.$ready || r$.$value.url === cardanoConnector.value.backendUrl,
-      label: "Save",
-      action: handleSubmit,
-      primary: true,
-    },
+    // {
+    //   disabled: !r$.$ready || r$.$value.url === cardanoConnector.value.baseUrl,
+    //   label: "Save",
+    //   action: handleSubmit,
+    //   primary: true,
+    // },
   ]
 });
 </script>
