@@ -8,7 +8,7 @@ import { useDefaultFormatters } from "../composables/l10n";
 import { computed } from "vue";
 import { abbreviateHex, hex } from "../utils/formatters";
 import type { OnClick } from "../components/Link.vue";
-import type { Action, ActionIcon } from "src/components/DataListing/DataRow.vue";
+import type { ActionIcon } from "src/components/DataListing/DataRow.vue";
 import type { Channel } from "@konduit/konduit-consumer/channel";
 
 const formatters = useDefaultFormatters();
