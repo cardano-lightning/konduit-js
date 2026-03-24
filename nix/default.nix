@@ -4,6 +4,8 @@
   stdenv,
   yarn-berry_4,
   nodejs,
+  fd,
+  jq,
 }:
 let
   yarn-berry = yarn-berry_4;
@@ -24,6 +26,7 @@ in
       "^yarn.lock$"
       "^packages.*"
       "^apps.*"
+      "^\\.yarnrc.yml$"
     ];
 
     missingHashes = ./missing-hashes.json;
@@ -38,12 +41,14 @@ in
       # If the above command fails because of some missing hashes you should update the missing-hashes.json file:
       # * `$ yarn-berry-fetcher missing-hashes yarn.lock > ./nix/missing-hashes.json`
       # * Then re-run the prefetch command.
-      hash = "sha256-W0xr2OhHSdLLAJi4stLOJTMqroL5Jpmbt216XlnFE+8=";
+      hash = "sha256-FAQG4HnvuzUHapj8OoGGgpnJ1wNgU+avb0qdGDKCiC0=";
 
     };
 
     nativeBuildInputs = [
       # Needed for executing package.json scripts
+      fd
+      jq
       nodejs
       yarn-berry.yarnBerryConfigHook
     ];
@@ -53,6 +58,17 @@ in
     ];
 
     buildPhase = ''
+      # Remove test tsconfig references from all tsconfig*.json
+      fd '^tsconfig.*\.json$' . -0 | xargs -0 -I{} \
+        sh -c '
+          tmp=$(mktemp)
+          # Drop any "references" entries whose "path" contains "test"
+          jq "if has(\"references\") then
+                 .references |= map(select(.path | contains(\"test\") | not))
+              else . end" "$1" > "$tmp" && mv "$tmp" "$1"
+        ' sh {}
+
+      # yarn exec node packages/cardano-keys/scripts/extract-readme-example.js 
       yarn exec vue-tsc --build
       yarn exec vite build apps/konduit-app
     '';

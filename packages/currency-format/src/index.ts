@@ -117,13 +117,10 @@ export class CurrencyFormat<N extends Notation> {
       return currencySpec.code;
     })();
 
-    console.log("Initializing CurrencyFormat with code:", code);
-
     this.code = code;
     if (this.code in currencySymbols) {
       this.symbol = currencySymbols[this.code];
     }
-    console.log("Code:", this.code, "Symbol:", this.symbol);
     // Our main strategy is:
     // * If we have a custom symbol:
     //    * If will use EUR for the reference formatting

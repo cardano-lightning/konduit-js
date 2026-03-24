@@ -67,6 +67,7 @@ const mkCopyHandler = (message: string, value: string | null) => () => {
 type BasicAction = [OnClick, Href, ActionIcon]
 
 const toBasicAction = (action: Action): BasicAction => {
+  console.log("toBasicAction", action);
   if (Array.isArray(action)) {
     if(typeof action[0] === "string")
       return [action[0], action[0], action[1]];

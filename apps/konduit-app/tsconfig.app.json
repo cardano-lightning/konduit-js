@@ -18,7 +18,7 @@
   "references": [
     { "path": "../../packages/bln" },
     { "path": "../../packages/codec" },
-    { "path": "../../packages/konduit-consumer" },
-    { "path": "../../packages/currency-format" }
+    { "path": "../../packages/currency-format" },
+    { "path": "../../packages/konduit-consumer" }
   ]
 }

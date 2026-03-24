@@ -58,24 +58,15 @@ const formattedSyncInfo = computed(() => {
 
 <template>
   <div class="wallet-balance">
-    <span class="amount"><FancyAmount :amount="amount" /></span>
-    <div class="synced-at">{{ formattedSyncInfo }}</div>
+    <FancyAmount :amount="amount">
+    <template #subscript>{{ formattedSyncInfo }}</template>
+    </FancyAmount>
   </div>
 </template>
 
 <style scoped>
 .wallet-balance {
-  text-align: center;
-}
-.wallet-balance .amount {
   font-size: 1.5em;
-}
-.wallet-balance .synced-at {
-  display: block;
-  font-size: 0.8rem;
-  font-style: italic;
-  color: var(--text-secondary);
-  margin-top: 1rem;
   text-align: center;
 }
 </style>

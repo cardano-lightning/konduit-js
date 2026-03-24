@@ -3,6 +3,7 @@ import { Ed25519PublicKey, Ed25519VerificationKey } from "@konduit/cardano-keys"
 import { randomBytes } from "@noble/hashes/utils.js";
 import { mkTaggedHexStringCodec, mkTaggedJsonCodec } from "@konduit/codec/uint8Array";
 import type { JsonCodec } from "@konduit/codec/json/codecs";
+import { mkOrdForUint8Array } from "@konduit/codec/tagged";
 
 export type ConsumerEd25519VerificationKey = Tagged<Ed25519VerificationKey, "ConsumerEd25519VerificationKey">;
 
@@ -16,6 +17,7 @@ export namespace ChannelTag {
     return keyTag.slice(28) as ChannelTag;
   }
   export const jsonCodec: JsonCodec<ChannelTag> = mkTaggedJsonCodec("ChannelTag", (arr) => arr.length >= 4);
+  export const ord = mkOrdForUint8Array<ChannelTag>();
 }
 
 export type KeyTag = Tagged<Uint8Array, "KeyTag">;

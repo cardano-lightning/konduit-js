@@ -437,14 +437,15 @@ const pageSetup = computed((): PageSetup => {
         <FancyAmount
           v-if="totalAmount"
           :amount="totalAmount"
-        />
+        >
+        <template #subscript>
+          <MissingDataPlaceholder v-if="invoice.description">
+            No description provided.
+          </MissingDataPlaceholder>
+          <span v-else>{{ invoice.description }}</span>
+        </template>
+        </FancyAmount>
       </span>
-      <div class="description">
-        <MissingDataPlaceholder v-if="invoice.description">
-          No description provided.
-        </MissingDataPlaceholder>
-        <span v-else>{{ invoice.description }}</span>
-      </div>
     </div>
     <Callout
       v-if="pageSetup.callout !== 'charging-callout'"
@@ -530,6 +531,7 @@ header :deep(.header-right) svg {
   #invoice-amount .amount {
     font-size: 1.5rem;
   }
+  /*
   #invoice-amount .description {
     font-size: 0.9rem;
     margin-top: 1rem;
@@ -538,6 +540,7 @@ header :deep(.header-right) svg {
   #invoice-amount .description .missing {
     font-style: italic;
   }
+  */
 .debug-info {
   background: var(--background-color);
   font-family: monospace;

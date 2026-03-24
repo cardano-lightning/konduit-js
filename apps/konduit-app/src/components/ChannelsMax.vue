@@ -33,11 +33,14 @@ const amount = computed(() => {
 
 <template>
   <div class="channels-total">
-    <span class="amount"><FancyAmount :amount="amount" /></span>
-    <div class="subscript" v-if="activeChannels.length == 0">No active channels</div>
-    <!-- FIXME: Connect help messages -->
-    <div class="subscript" v-if="activeChannels.length == 1">Effective channel capacity <Info /></div>
-    <div class="subscript" v-if="activeChannels.length > 1">Largest effective capacity <Info /></div>
+    <FancyAmount :amount="amount">
+      <template #subscript>
+        <template v-if="activeChannels.length == 0">No active channels</template>
+        <!-- FIXME: Connect help messages -->
+        <template v-if="activeChannels.length == 1">Effective channel capacity <Info /></template>
+        <template v-if="activeChannels.length > 1">Largest effective capacity <Info /></template>
+      </template>
+    </FancyAmount>
   </div>
 </template>
 
@@ -45,9 +48,10 @@ const amount = computed(() => {
 .channels-total {
   text-align: center;
 }
-.channels-total .amount {
+.channels-total :deep(.fancy-amount) {
   font-size: 1.5em;
 }
+/*
 .channels-total .subscript {
   display: block;
   font-size: 0.8rem;
@@ -60,4 +64,5 @@ const amount = computed(() => {
   height: 1em;
   width: auto;
 }
+*/
 </style>

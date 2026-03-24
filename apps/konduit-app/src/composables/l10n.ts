@@ -135,7 +135,12 @@ function mkSafeFn2OptFormatter<T1, T2>(formatter: ((a: T1, b?: T2) => string)): 
 export function useDefaultFormatters() {
   // This expects values in lovelace (could be Decimal or bigint)
   const adaFormatter = useCurrencyFormatter({
-    currency: { code: 'ADA', unit: 'lovelace', lovelaceDisplayThreshold: new Decimal('0.0001') }
+    currency: { code: 'ADA', unit: 'lovelace', lovelaceDisplayThreshold: new Decimal('0.0001') },
+  });
+
+  const adaFormatterRounded = useCurrencyFormatter( {
+    currency: { code: 'ADA', unit: 'lovelace', lovelaceDisplayThreshold: new Decimal('0.0001') },
+    maximumFractionDigits: 2
   });
 
   // This expects values in satoshis (could be Decimal or bigint)
@@ -148,6 +153,7 @@ export function useDefaultFormatters() {
   });
 
   const usDollarFormatter = useCurrencyFormatter({ currency: 'USD' });
+  const usDollarFormatterRounded = useCurrencyFormatter({ currency: 'USD', maximumFractionDigits: 2 });
   const euroFormatter = useCurrencyFormatter({ currency: 'EUR' });
   const britishPoundFormatter = useCurrencyFormatter({ currency: 'GBP' });
 
@@ -156,8 +162,7 @@ export function useDefaultFormatters() {
   const durationShortFormatter = useDurationFormatter({ style: 'short' });
   const durationLongFormatter = useDurationFormatter({ style: 'long' });
   const relativeTimeFormatter = useRelativeTimeFormatter();
-  const formatUsDolar = (value: UsMillicent, sign: Sign = "positive") => {
-    console.log("formatUsDolar", { value, sign });
+  const formatUsDolar = (value: UsMillicent, sign: Sign = "positive", rounded: boolean = true) => {
     const usMiillicent2UsDollar = ExchangeRate.reverse(
       ExchangeRate.pipe(usDollar2UsCent, usCent2UsMillicent)
     );
@@ -167,10 +172,10 @@ export function useDefaultFormatters() {
       (dec) => dec
     );
     const signMultiplier = sign == "positive" ? Decimal(1) : Decimal(-1);
+    if(rounded) return usDollarFormatterRounded.value.format(usDollarDecimal.mul(signMultiplier));
     return usDollarFormatter.value.format(usDollarDecimal.mul(signMultiplier));
   };
   const formatBtcMsat = (orig: Millisatoshi, sign: Sign = "positive") => {
-    console.log("formatBtcMsat", { orig, sign });
     let oneSatoshiMs = Millisatoshi.fromSatoshi(Satoshi.fromDigits(1))
     let signMultiplier = sign == "positive" ? 1n : -1n;
     if(Millisatoshi.ord.isGreaterThan(orig, oneSatoshiMs)) {
@@ -179,14 +184,15 @@ export function useDefaultFormatters() {
     }
     return btcMsatFormatter.value.format(orig * signMultiplier);
   }
-  const formatAda = (value: Lovelace | { ada: Ada }, sign: Sign = "positive") => {
+  const formatAda = (value: Lovelace | { ada: Ada }, sign: Sign = "positive", rounded: boolean = true) => {
     let lovelace = (typeof value == 'object' && 'ada' in value)? Lovelace.fromAda(value.ada) : value;
-    console.log("formatAda", { value, lovelace, sign });
     const signMultiplier = sign == "positive" ? 1n : -1n;
+    if(rounded) return adaFormatterRounded.value.format(lovelace * signMultiplier);
     return adaFormatter.value.format(lovelace * signMultiplier);
   };
   return {
     adaFormatter: adaFormatter.value,
+    adaFormatterRounded: adaFormatterRounded.value,
     btcFormatter: btcFormatter.value,
     durationShortFormatter: durationShortFormatter.value,
     durationLongFormatter: durationLongFormatter.value,

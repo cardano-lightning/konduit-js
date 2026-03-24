@@ -21,7 +21,7 @@ const rows = computed((): RowConfig[] => {
         label: `Channel: ${abbreviateHex(channel.channelTag, 10, 0)}`,
         formattedValue: `initial: ${formatters.formatAda(channel.totalEffectiveSubmittedCapacity)}, available: ${formatters.formatAda(channel.availableApprovedCapacity)}`,
         actions: {
-          rowAction: [{ name: 'channel-details', params: { tag: hex(channel.channelTag) }}, 'chevron-right'] as [OnClick, ActionIcon]
+          rowAction: [{ name: 'channel-details', params: { tag: hex(channel.channelTag, '') }}, 'chevron-right'] as [OnClick, ActionIcon]
         }
       } as RowConfig;
     });
