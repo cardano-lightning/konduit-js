@@ -30,7 +30,7 @@ self: {
   };
 
   mkRoot = name: {flake, ...}:
-    builtins.trace "flake.packages.${pkgs.system}: ${builtins.toJSON flake.packages.${pkgs.system}}.default" flake.packages.${pkgs.system}.app + "/lib/node_modules/konduit-app/dist/";
+    builtins.trace "flake.packages.${pkgs.system}: ${builtins.toJSON flake.packages.${pkgs.system}}.default" flake.packages.${pkgs.system}.app;
 in {
   options = {
     konduit-apps = mkOption {

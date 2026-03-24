@@ -69,8 +69,9 @@ in
         ' sh {}
 
       # yarn exec node packages/cardano-keys/scripts/extract-readme-example.js 
+      cp apps/konduit-app/.env.preprod .env.preprod
       yarn exec vue-tsc --build
-      yarn exec vite build apps/konduit-app
+      yarn exec vite build apps/konduit-app --mode preprod
     '';
 
     installPhase = ''

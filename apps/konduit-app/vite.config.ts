@@ -14,12 +14,10 @@ export default defineConfig({
     VitePWA({
       registerType: "prompt",
       injectRegister: false,
-
       pwaAssets: {
         disabled: false,
         config: true,
       },
-
       manifest: {
         name: "konduit-app",
         short_name: "konduit-app",
@@ -31,6 +29,7 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,svg,png,ico}"],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
 
       devOptions: {
