@@ -5,7 +5,7 @@ import Decimal from 'decimal.js-i18n';
 import { Lovelace, type Ada } from '@konduit/konduit-consumer/cardano';
 import { Millisatoshi, Satoshi } from '@konduit/konduit-consumer/bitcoin';
 import { Milliseconds, NormalisedDuration, type AnyPreciseDuration } from '@konduit/konduit-consumer/time/duration';
-import type { POSIXMilliseconds, ValidDate } from '@konduit/konduit-consumer/time/absolute';
+import { ValidDate, type POSIXMilliseconds } from '@konduit/konduit-consumer/time/absolute';
 import type { PositiveInt } from '@konduit/codec/integers/smallish';
 import type { AnyAmount, AnyAmountSymbol } from '@konduit/konduit-consumer/amounts';
 import { britishPenny2BritishMillipenny, britishPound2BritishPenny, euro2EuroCent, euroCent2EuroMillicent, ExchangeRate, usCent2UsMillicent, usDollar2UsCent } from '@konduit/konduit-consumer/fx';
@@ -158,6 +158,8 @@ export function useDefaultFormatters() {
   const britishPoundFormatter = useCurrencyFormatter({ currency: 'GBP' });
 
   const shortDateFormatter = useDateFormatter({ dateStyle: 'short', timeStyle: undefined });
+  const shortTimeFormatter = useDateFormatter({ dateStyle: undefined, timeStyle: 'short' });
+  const shortDateTimeFormatter = useDateFormatter({ dateStyle: 'short', timeStyle: 'short' });
 
   const durationShortFormatter = useDurationFormatter({ style: 'short' });
   const durationLongFormatter = useDurationFormatter({ style: 'long' });
@@ -197,6 +199,9 @@ export function useDefaultFormatters() {
     durationShortFormatter: durationShortFormatter.value,
     durationLongFormatter: durationLongFormatter.value,
     relativeTimeFormatter: relativeTimeFormatter.value,
+    shortDateFormatter: shortDateFormatter.value,
+    shortTimeFormatter: shortTimeFormatter.value,
+    shortDateTimeFormatter: shortDateTimeFormatter.value,
     formatAda: mkSafeFn2OptFormatter(formatAda),
     formatBtc: mkSafeFn1Formatter((value: Satoshi) => btcFormatter.value.format(value)),
     formatBtcMsat: mkSafeFn2OptFormatter(formatBtcMsat),
@@ -239,7 +244,15 @@ export function useDefaultFormatters() {
       return durationLongFormatter.value.format(finalDuration);
     }),
     formatRelativeTime: mkSafeFn2Formatter((value: AnyPreciseDuration, timeDirection: TimeDirection) => relativeTimeFormatter.value.format(value, timeDirection)),
-    formatShortDate: mkSafeFn1Formatter((value: ValidDate | POSIXMilliseconds) => shortDateFormatter.value.format(value)),
+    formatShortDate: mkSafeFn2OptFormatter((value: ValidDate | POSIXMilliseconds, smartRounding: boolean = true) => {
+      const today = ValidDate.roundToMidnight(ValidDate.now());
+      const valueDate = value instanceof Date ? value : ValidDate.fromPOSIXMilliseconds(value);
+      // For today only display the time
+      if(smartRounding && ValidDate.ord.isGreaterThanOrEqual(valueDate, today)) {
+        return shortTimeFormatter.value.format(valueDate);
+      }
+      return shortDateFormatter.value.format(valueDate);
+    }),
     formatAnyAmount: mkSafeFn1Formatter((amount: AnyAmount) => {
       const symbol: AnyAmountSymbol = amount.symbol;
       switch (symbol) {

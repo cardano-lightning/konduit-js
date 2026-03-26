@@ -395,6 +395,12 @@ export type AnyCheque = LockedCheque | UnlockedCheque;
 export namespace AnyCheque {
   export const isUnlocked = (cheque: AnyCheque): cheque is UnlockedCheque => "secret" in cheque.body;
   export const isLocked = (cheque: AnyCheque): cheque is LockedCheque => !isUnlocked(cheque);
+  export const getLock = (cheque: AnyCheque): HtlcLock => {
+    if (AnyCheque.isUnlocked(cheque)) {
+      return HtlcLock.fromSecret(cheque.body.secret);
+    }
+    return cheque.body.lock;
+  }
 }
 
 export const json2AnyChequeCodec: JsonCodec<AnyCheque> = jsonCodecs.altJsonCodecs(

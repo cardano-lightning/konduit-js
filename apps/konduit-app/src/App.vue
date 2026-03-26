@@ -30,16 +30,16 @@ useTheme();
  */
 :root {
   --max-app-width: 1240px;
-  /* The main container provides what you need (navbar) so just wrap your content in it.
-   * Currently the header has to be included by the page itself.
-   */
-  --main-container-padding: 1.2rem;
-  --navbar-padding-bottom: calc(60px + env(safe-area-inset-bottom)); /* Navbar height + safe area */
 
   /* This variable is used usually for spacing and gaps in the main body of the app.
    * We use it or its multiples or halves.
    */
   --data-listing-gap: 1.2rem;
+  /* The main container provides what you need (navbar) so just wrap your content in it.
+   * Currently the header has to be included by the page itself.
+   */
+  --main-container-padding: var(--data-listing-gap);
+  --navbar-padding-bottom: calc(60px + env(safe-area-inset-bottom)); /* Navbar height + safe area */
 
   /* FIXME: The theming should be reorganized properly - it is still a bit messy
    * but in the future should simplify the refactoring. Ideally we should avoid
@@ -92,9 +92,9 @@ useTheme();
   /* --secondary-background-color: var(--colar-gray-0); */
   --secondary-color: var(--colar-pink-12);
 
-  --hint-background-color: var(--colar-gray-1);
-  --hint-border-color: var(--colar-gray-3);
-  --hint-color: var(--colar-gray-10);
+  --hint-background-color: var(--colar-purple-0);
+  --hint-border-color: var(--colar-purple-1);
+  --hint-color: var(--colar-purple-10);
 
   --focus-background-color: var(--colar-gray-0);
   --focus-border-color: var(--frame-border-color);
@@ -106,7 +106,7 @@ useTheme();
 
   --success-background-color: var(--colar-blue-0);
   --success-border-color: var(--colar-blue-1);
-  --success-color: var(--colar-blue-9);
+  --success-color: var(--colar-blue-10);
 
   --warning-background-color: #fdeee0;
   --warning-color: #c3630a;

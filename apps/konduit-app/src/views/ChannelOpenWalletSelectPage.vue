@@ -15,7 +15,7 @@ const { walletBalance } = useEmbeddedWalletDetails(wallet);
 
 const router = useRouter();
 let isFirstOpening = computed(() => channels.value.length == 0);
-let embeddedWalletNeedsFunding = computed(() =>
+let _embeddedWalletNeedsFunding = computed(() =>
   Lovelace.ord.isLessThan(walletBalance.value, Lovelace.fromAda(Ada.fromDigits(3)))
 );
 </script>

@@ -48,8 +48,13 @@ const onClick = () => {
 </template>
 
 <style scoped>
+#currency-switcher {
+  align-items: center;
+  display: flex;
+  height: 100%;
+}
 #currency-switcher svg {
-  height: 1.4rem;
+  height: 1.2rem;
   width: auto;
   stroke: var(--primary-color);
 }

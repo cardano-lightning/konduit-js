@@ -24,7 +24,6 @@ import { type AppKonduitConsumer } from "../../store";
 import { useInvoiceProcessor, type BlockedReason, type QuotingFailureReason } from "./invoiceProcessor";
 import { useFx } from "../../composables/fx";
 import { useFormattedLastSuccessfulSyncInfo } from "../../composables/polling";
-import type { RouteLocationRaw } from "vue-router";
 import { stringify } from "@konduit/codec/json";
 
 type Props = {
@@ -174,7 +173,7 @@ const pageSetup = computed((): PageSetup => {
   const resetButtons = [
     {
       label: 'Cancel',
-      action: () => emit('reset-redirect-back'),
+      action: () => emit('reset-redirect-back', null),
       primary: false,
     },
     {
@@ -428,7 +427,7 @@ const pageSetup = computed((): PageSetup => {
 <template>
   <MainContainer :buttons="pageSetup.buttons">
     <TheHeader
-      :back="[{ name: 'pay' }, () => emit('back', null)]"
+      :back="[{ name: 'pay' }, () => emit('scan', null)]"
       :title="'Payment'"
       id="header"
       :show-fx-currency-switcher="true"

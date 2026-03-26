@@ -85,7 +85,7 @@ const routes = [
     props: channelRouteProps,
     beforeEnter: resolveChannelFromTag,
     component: ChannelPaymentsPage,
-    meta: { title: "History" },
+    meta: { title: "Payments" },
   },
   {
     name: "channel-on-chain",

@@ -1,5 +1,23 @@
 <script lang="ts">
-export type ActionIcon = "pen" | "download" | "trash" | "copy" | "external-link" | "loading" | "info" | "wallet" | "konduit" | "share" | "chevron-right" | "chevron-down" | "square-plus" | "circle-plus" | "circle-x";
+export type ActionIcon =
+  | "alert-triangle"
+  | "chevron-down"
+  | "chevron-right"
+  | "circle-plus"
+  | "circle-x"
+  | "clock"
+  | "copy"
+  | "download"
+  | "external-link"
+  | "info"
+  | "konduit"
+  | "loading"
+  | "pen"
+  | "share"
+  | "square-check"
+  | "square-plus"
+  | "trash"
+  | "wallet"
 
 export type Href = string;
 export type Action =
@@ -9,17 +27,17 @@ export type Action =
   | { action: "loading" }
   | { action: "share", value: string, title?: string };
 
-export type ValueImportance = "missing" | "important" | "very-important";
+export type Importance = "missing" | "neutral" | "important" | "very-important";
 export type ValueConfig =
   string
   | {
     string: string;
-    importance: ValueImportance;
+    importance: Importance;
   }
 export type Props = {
   // If there is only a single action then the whole row becomes clickable.
-  actions?: Action[] | { rowAction: Action };
-  label: string;
+  actions?: Action[] | { rowAction: Action, importance?: Importance };
+  label: ValueConfig;
   formattedValue: ValueConfig;
 }
 
@@ -33,16 +51,28 @@ async function doShare(action: { value: string, title?: string }) {
 </script>
 
 <script setup lang="ts">
-import { ChevronDown, ChevronRight, CirclePlus, Copy, Download, CircleX, SquarePlus, Trash } from "lucide-vue-next";
+import {
+  AlertTriangle,
+  ChevronDown,
+  ChevronRight,
+  CirclePlus,
+  CircleX,
+  Clock,
+  Copy,
+  Download,
+  Info,
+  Pen,
+  Share2,
+  SquareArrowOutUpRight,
+  SquareCheck,
+  SquarePlus,
+  Trash,
+  WalletMinimal,
+} from "lucide-vue-next";
 import ClockThrobber from "../ClockThrobber.vue";
-import { SquareArrowOutUpRight } from "lucide-vue-next";
-import Info from "../icons/Info.vue";
 import Konduit from "../icons/Konduit.vue";
 import Link from "../Link.vue";
 import { mkClickHandler } from "../Link.vue";
-import Pen from "../icons/Pen.vue";
-import WalletMinimal from "../icons/WalletMinimal.vue";
-import { Share2 } from "lucide-vue-next";
 import type { OnClick } from "../Link.vue";
 import { useClipboard } from "@vueuse/core";
 import { useNotifications } from "../../composables/notifications";
@@ -61,25 +91,25 @@ const mkCopyHandler = (message: string, value: string | null) => () => {
   notifications.success(message);
 };
 
-type BasicAction = [OnClick, Href, ActionIcon]
+type BasicAction = [OnClick, Href, ActionIcon, Importance];
 
-const toBasicAction = (action: Action): BasicAction => {
+const toBasicAction = (action: Action, importance: Importance = "neutral"): BasicAction => {
   console.log("toBasicAction", action);
   if (Array.isArray(action)) {
     if(typeof action[0] === "string")
-      return [action[0], action[0], action[1]];
+      return [action[0], action[0], action[1], importance];
     else
-      return [action[0], "#", action[1]];
+      return [action[0], "#", action[1], importance];
   }
   switch (action.action) {
     case "copy":
-      return [mkCopyHandler(action.message, action.value), "#", "copy"];
+      return [mkCopyHandler(action.message, action.value), "#", "copy", importance];
     case "external-link":
-      return [action.url, action.url, "external-link"];
+      return [action.url, action.url, "external-link", importance];
     case "loading":
-      return ["", "#", "loading"];
+      return ["", "#", "loading", importance];
     case "share":
-      return [() => doShare(action), "#", "share"];
+      return [() => doShare(action), "#", "share", importance];
   }
 };
 
@@ -87,9 +117,9 @@ const basicActions = computed(() => {
   // props.actions?.map(toBasicAction)
   if(Array.isArray(props.actions)) {
     const actions: Action[] = props.actions;
-    return actions.map(toBasicAction);
+    return actions.map((a) => toBasicAction(a));
   } else if(props.actions && "rowAction" in props.actions) {
-    return [toBasicAction(props.actions.rowAction)];
+    return [toBasicAction(props.actions.rowAction, props.actions.importance || "neutral")];
   } else {
     return null;
   }
@@ -117,14 +147,22 @@ const rowOnClick = computed(() => {
     @click="rowOnClick?rowOnClick($event):undefined"
   >
     <dt>
-        <div class="label">{{ props.label }}</div>
+        <div
+          v-if="typeof props.label != 'string'"
+          :class="'label ' + props.label.importance"
+        >
+          {{ props.label.string }}
+        </div>
+        <div :class="'label'" v-else>
+          {{ props.label }}
+        </div>
         <div class="actions" v-if="props.actions">
           <template v-for="(action, index) in basicActions">
-            <ClockThrobber class="edit" v-if="action[2] === 'loading'" />
+            <ClockThrobber class="icon" v-if="action[2] === 'loading'" />
             <Link
               v-else
               :key="index"
-              class="edit"
+              :class="'icon' + (action[3] && ` ${action[3]}`)"
               :href="action[1]"
               :click="action[0]"
             >
@@ -142,6 +180,9 @@ const rowOnClick = computed(() => {
               <CirclePlus v-else-if="action[2] === 'circle-plus'" />
               <Trash v-else-if="action[2] === 'trash'" />
               <WalletMinimal v-else-if="action[2] === 'wallet'" />
+              <AlertTriangle v-else-if="action[2] === 'alert-triangle'" />
+              <SquareCheck v-else-if="action[2] === 'square-check'" />
+              <Clock v-else-if="action[2] === 'clock'" />
             </Link>
           </template>
         </div>
@@ -185,6 +226,13 @@ const rowOnClick = computed(() => {
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    .data-pair dt .label.missing {
+      color: var(--missing-data-color);
+      font-style: italic;
+    }
+    .data-pair dt .label.important {
+      font-weight: 800;
+    }
     /* FIXME: This repeated height: 1.2rem is probably not optimal
      * styling. Please retest that and possibly refactor.
      */
@@ -196,21 +244,25 @@ const rowOnClick = computed(() => {
       text-align: right;
     }
 
-      .data-pair dt .actions .edit {
+      .data-pair dt .actions .icon {
         align-items: center;
         display: inline-block;
         justify-content: center;
         line-height: 1.2em;
       }
 
-      .data-pair dt .actions a.edit {
+      .data-pair dt .actions a.icon {
         cursor: pointer;
       }
 
-        .data-pair dt .actions .edit svg {
+        .data-pair dt .actions .icon svg {
           color: var(--primary-color);
           stroke-width: 1.5;
           height: 1.2em;
+        }
+
+        .data-pair dt .actions .icon.important svg {
+          stroke-width: 2.5;
         }
 
   .data-pair dd {
@@ -238,4 +290,3 @@ const rowOnClick = computed(() => {
     font-weight: 700;
   }
 </style>
-

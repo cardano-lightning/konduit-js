@@ -36,16 +36,24 @@ const rows = computed((): RowConfig[] => {
   return [
     "separator",
     { label: 'Adaptor', formattedValue: channel.adaptorUrl, actions: [] },
+    { label: 'Created', formattedValue: formatters.formatShortDate(channel.createdAt), actions: [] },
     { label: 'Tag', formattedValue: hex(channel.channelTag), actions: [] },
     "separator",
-    { label: 'Created at', formattedValue: formatters.formatShortDate(channel.createdAt) },
-    { label: 'Total', formattedValue: formatAdaInCurrent(channel.totalSubmittedCapacity).value },
-    { label: 'Available', formattedValue: formatAdaInCurrent(channel.availableApprovedCapacity).value },
+    { label: 'Deposited', formattedValue: formatAdaInCurrent(channel.totalSubmittedCapacity).value },
+    { label: 'Spendable', formattedValue: formatAdaInCurrent(channel.availableApprovedCapacity).value },
+    { label: { string: 'Top up', importance: 'important' },
+      formattedValue: '',
+      actions: {
+        rowAction: [{ name: 'channel-details', params: { tag: hex(channel.channelTag, '') }}, 'circle-plus'] as [OnClick, ActionIcon],
+        importance: 'important'
+      }
+    },
     "separator",
     { label: 'History',
       formattedValue: '10 payments',
       actions: {
-        rowAction: [{ name: 'channel-payments', params: { tag: hex(channel.channelTag, '') }}, 'chevron-right'] as [OnClick, ActionIcon]
+        rowAction: [{ name: 'channel-payments', params: { tag: hex(channel.channelTag, '') }}, 'chevron-right'] as [OnClick, ActionIcon],
+        importance: 'important'
       }
     },
     { label: 'On-chain',
@@ -55,13 +63,7 @@ const rows = computed((): RowConfig[] => {
       }
     },
     "separator",
-    { label: 'Top up channel',
-      formattedValue: '',
-      actions: {
-        rowAction: [{ name: 'channel-details', params: { tag: hex(channel.channelTag, '') }}, 'circle-plus'] as [OnClick, ActionIcon]
-      }
-    },
-    { label: 'Close channel',
+    { label: 'Close',
       formattedValue: ' ',
       actions: {
         rowAction: [{ name: 'channel-details', params: { tag: hex(channel.channelTag, '') }}, 'circle-x'] as [OnClick, ActionIcon]

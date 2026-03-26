@@ -95,9 +95,20 @@ const headerClasses = computed(() => {
 <style scoped>
 header {
   display: flex;
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   margin-bottom: var(--data-listing-gap);
   padding: var(--main-container-padding) 0 var(--data-listing-gap);
+}
+
+/* Unfortunatelly this is rather manually calculated to match the final height */
+/* 1.2 * 1.4rem = 1.68rem total line height */
+header.index-header {
+  padding: calc(var(--main-container-padding) - 0.25rem) 0 calc(var(--data-listing-gap) - 0.25rem);
+}
+
+/* Special sizing for the Konduit logo on index header */
+header.index-header h1 :deep(svg.konduit-logo) {
+  height: 2.18rem;
 }
 
 header .header-left,
@@ -142,12 +153,8 @@ header.no-border-bottom {
 header.no-margin-bottom {
   margin-bottom: 0;
 }
-/* Special sizing for the Konduit logo on index header */
-header.index-header h1 :deep(svg.konduit-logo) {
-  height: 2.5rem;
-}
-header.index-header .header-left,
-header.index-header .header-right {
+header .header-left,
+header .header-right {
   min-width: 1.5rem;
 }
 header.index-header .header-right {

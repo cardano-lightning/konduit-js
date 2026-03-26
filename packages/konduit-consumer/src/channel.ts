@@ -13,7 +13,7 @@ import { json2AbortedErrorCodec, json2DeserialisationErrorCodec, json2HttpErrorC
 import { mkJson2PollingInfoCodec, PollingInfo } from "./polling";
 import { mkJson2SquashResponseCodec } from "./adaptorClient/squash";
 import type { ChannelTag } from "./channel/core";
-import { json2InvoiceCodec, type Invoice } from "./bitcoin/bolt11";
+import { HtlcLock, json2InvoiceCodec, type Invoice } from "./bitcoin/bolt11";
 import { Ada, Lovelace } from "./cardano";
 import { json2ValidDateCodec, ValidDate } from "./time/absolute";
 import type { Ed25519SigningKey } from "@konduit/cardano-keys";
@@ -116,18 +116,16 @@ export const json2ImmediatePaymentErrorCodec: JsonCodec<ImmediatePaymentError> =
 
 export type FailedPayment = {
   cheque: LockedCheque;
-  info: {
-    error: ImmediatePaymentError | null;
-    invoice: Invoice;
-  } | null;
+  createdAt: ValidDate;
+  error: ImmediatePaymentError | null;
+  invoice: Invoice | null;
 };
 export namespace FailedPayment {
   export const jsonCodec: JsonCodec<FailedPayment> = jsonCodecs.objectOf({
     cheque: json2LockedChequeCodec,
-    info: jsonCodecs.nullable(jsonCodecs.objectOf({
-      error: jsonCodecs.nullable(json2ImmediatePaymentErrorCodec),
-      invoice: json2InvoiceCodec,
-    })),
+    createdAt: json2ValidDateCodec,
+    error: jsonCodecs.nullable(json2ImmediatePaymentErrorCodec),
+    invoice: jsonCodecs.nullable(json2InvoiceCodec),
   });
 }
 
@@ -136,6 +134,7 @@ export type SquashingError =
 
 export type ConfirmedPayment = {
   cheque: UnlockedCheque;
+  createdAt: ValidDate;
   // If we recover payments from the adaptor
   // we won't get the full invoice back.
   // We don't not yet implement that flow.
@@ -144,6 +143,7 @@ export type ConfirmedPayment = {
 
 export const json2ConfirmedPayment: JsonCodec<ConfirmedPayment> = jsonCodecs.objectOf({
   cheque: json2UnlockedChequeCodec,
+  createdAt: json2ValidDateCodec,
   invoice: jsonCodecs.nullable(json2InvoiceCodec),
 });
 
@@ -151,20 +151,18 @@ export const json2ConfirmedPayment: JsonCodec<ConfirmedPayment> = jsonCodecs.obj
 // agreement and squash.
 export type ExpiredPayment = {
   cheque: LockedCheque;
+  createdAt: ValidDate;
   expiredAt: ValidDate;
-  info: ({
-    error: ImmediatePaymentError;
-    invoice: Invoice;
-  });
+  error: ImmediatePaymentError;
+  invoice: Invoice;
 }
 
 export const json2ExpiredPayment: JsonCodec<ExpiredPayment> = jsonCodecs.objectOf({
   cheque: json2LockedChequeCodec,
+  createdAt: json2ValidDateCodec,
   expiredAt: json2ValidDateCodec,
-  info: jsonCodecs.objectOf({
-    error: json2ImmediatePaymentErrorCodec,
-    invoice: json2InvoiceCodec,
-  }),
+  error: json2ImmediatePaymentErrorCodec,
+  invoice: json2InvoiceCodec,
 });
 
 export type AnyPayment = FailedPayment | ConfirmedPayment | ExpiredPayment;
@@ -203,6 +201,12 @@ export namespace AnyPayment {
   export const isConfirmed = (payment: AnyPayment): payment is ConfirmedPayment => AnyCheque.isUnlocked(payment.cheque);
   export const isExpired = (payment: AnyPayment): payment is ExpiredPayment => "expiredAt" in payment;
   export const isFailed = (payment: AnyPayment): payment is FailedPayment => !isConfirmed(payment) && !isExpired(payment);
+
+  export const getLock = (payment: AnyPayment): HtlcLock => {
+    if(payment.invoice)
+      return payment.invoice.paymentHash;
+    return AnyCheque.getLock(payment.cheque);
+  }
 
   export const breakItDownInAda = (
     invoiceAmount: Lovelace,
@@ -467,7 +471,7 @@ export class Channel {
       const remaining = payments.filter(({ cheque }) => cheque.body.index !== unlocked.body.index);
       const confirmedPayment = {
         cheque: unlocked,
-        invoice: payment.info?.invoice|| null
+        invoice: payment.invoice|| null
       } as ConfirmedPayment;
       return ok({ confirmedPayment, remaining });
     }
@@ -558,6 +562,7 @@ export class Channel {
     invoice: Invoice,
     sKey: Ed25519SigningKey,
   ): Promise<Result<ConfirmedPayment | FailedPayment, ChequeIssuingError>> => {
+    const createdAt = ValidDate.now();
     return this.mkCheque(amount, timeout, invoice, sKey).match(
       async (cheque) => {
         // We push this internal object right away
@@ -565,9 +570,11 @@ export class Channel {
         // it to the partner. If if the subsequent
         // `fetch` fails we can not really assume
         // that the message was not delivered.
-        const payment = {
+        const payment: FailedPayment = {
           cheque,
-          info: { error: null, invoice }
+          createdAt,
+          error: null,
+          invoice
         } as FailedPayment;
         this.failed.push(payment);
 
@@ -577,9 +584,10 @@ export class Channel {
             const paymentFailed = (error: ImmediatePaymentError) => {
               // We are mutating here the payment
               // which we already pushed into the failed.
-              payment.info = { error, invoice };
+              payment.error = error;
+              payment.invoice = invoice;
               // Return a fresh object
-              return ok({ cheque, info: { error, invoice } } as FailedPayment);
+              return ok({ cheque, createdAt, error, invoice });
             };
             if(payResponse === "Complete") return paymentFailed(CriticalError.make(
                 "UnexpectedAdaptorResponse",
@@ -606,10 +614,13 @@ export class Channel {
           },
           (httpEndpointError) => {
             const paymentError = ImmediatePaymentError.fromHttpEndpointError(httpEndpointError);
-            payment.info = { error: paymentError, invoice };
+            payment.invoice = invoice;
+            payment.error = paymentError;
             return ok({
               cheque,
-              info: { error: paymentError, invoice }
+              createdAt,
+              error: paymentError,
+              invoice
             });
           }
         );

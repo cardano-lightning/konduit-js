@@ -24,6 +24,11 @@ export namespace ValidDate {
     const newDate = new Date(date.getTime() + milliseconds);
     return fromDate(newDate);
   }
+  export const roundToMidnight = (date: ValidDate): ValidDate => {
+    const roundedDate = new Date(date);
+    roundedDate.setUTCHours(0, 0, 0, 0);
+    return roundedDate as ValidDate;
+  }
   export const ord = {
     equal: (a: ValidDate, b: ValidDate): boolean => a.getTime() === b.getTime(),
     isLessThan: (a: ValidDate, b: ValidDate): boolean => a.getTime() < b.getTime(),

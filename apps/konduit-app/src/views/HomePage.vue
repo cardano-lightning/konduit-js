@@ -84,7 +84,7 @@ const calloutSetup: ComputedRef<CalloutSetup | null> = computed(() => {
           'You\'re just a few quick steps from secure, instant payments which cross to the Bitcoin Lightning Network.',
         ],
         title: 'Greetings',
-        variant: 'hint',
+        variant: 'neutral',
       };
     case 'no-channels-wallet-funded': {
       const balanceFormatted = formatters.formatAda(walletBalance.value);
