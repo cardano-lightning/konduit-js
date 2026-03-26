@@ -1,0 +1,541 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   id="screenshot-47fe3fba-537f-803b-8006-ad37a7494710"
+   width="80"
+   height="80"
+   viewBox="0 0 38 38"
+   fill="none"
+   version="1.1"
+   sodipodi:docname="konduit-logo.svg"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs9">
+    <defs
+       id="defs1">
+      <clipPath
+         id="frame-clip-47fe3fba-537f-803b-8006-ad37a7494710-render-1"
+         class="frame-clip frame-clip-def">
+        <rect
+           rx="0"
+           ry="0"
+           x="0"
+           y="0"
+           width="38"
+           height="38"
+           transform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)"
+           id="rect1" />
+      </clipPath>
+    </defs>
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath19">
+      <ellipse
+         style="opacity:0.532566;fill:#ff0000;stroke:none;stroke-width:0.0473267"
+         id="ellipse19"
+         cx="19"
+         cy="18.999767"
+         rx="15.999765"
+         ry="15.999768" />
+    </clipPath>
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath28">
+      <ellipse
+         style="opacity:0.532566;fill:#ff0000;stroke:none;stroke-width:0.0473267"
+         id="ellipse29"
+         cx="19"
+         cy="18.999767"
+         rx="15.999765"
+         ry="15.999768" />
+    </clipPath>
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath37">
+      <path
+         style="fill:none;stroke:none;stroke-width:0.475px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         d="m -167.52991,21.094232 h -22.2395 l 0.0771,-7.5 h 23.38462 l -1.22222,7.5"
+         id="path38" />
+    </clipPath>
+  </defs>
+  <sodipodi:namedview
+     id="namedview9"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="1.4142136"
+     inkscape:cx="77.074639"
+     inkscape:cy="-94.752309"
+     inkscape:window-width="1920"
+     inkscape:window-height="1061"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g9" />
+  <g
+     class="frame-container-wrapper"
+     id="g9">
+    <g
+       class="frame-container-blur"
+       id="g8">
+      <g
+         class="frame-container-shadows"
+         id="g7">
+        <g
+           clip-path="url(#frame-clip-47fe3fba-537f-803b-8006-ad37a7494710-render-1)"
+           fill="none"
+           id="g6">
+          <g
+             id="fills-47fe3fba-537f-803b-8006-ad37a7494710"
+             class="fills">
+            <rect
+               rx="0"
+               ry="0"
+               x="0"
+               y="0"
+               width="38"
+               height="38"
+               class="frame-background"
+               id="rect2" />
+          </g>
+          <g
+             class="frame-children"
+             id="g5">
+            <g
+               id="shape-47fe3fba-537f-803b-8006-ad3a2e680e71">
+              <defs
+                 id="defs4">
+                <radialGradient
+                   id="fill-color-gradient-render-2-0"
+                   cx="0.77752936"
+                   cy="-0.03956648"
+                   r="2.1079178"
+                   gradientTransform="matrix(-0.843025,-0.505887,0.514549,-0.857461,1.453365,0.319849)">
+                  <stop
+                     offset="0"
+                     stop-color="#000000"
+                     stop-opacity="1"
+                     id="stop2" />
+                  <stop
+                     offset="0.34"
+                     stop-color="#922256"
+                     stop-opacity="1"
+                     id="stop3" />
+                  <stop
+                     offset="0.86"
+                     stop-color="#ffdbf3"
+                     stop-opacity="1"
+                     id="stop4" />
+                </radialGradient>
+                <pattern
+                   id="fill-0-render-2"
+                   patternUnits="userSpaceOnUse"
+                   x="3"
+                   y="3"
+                   width="32"
+                   height="32"
+                   patternTransform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)">
+                  <g
+                     id="g4">
+                    <rect
+                       width="32"
+                       height="32"
+                       style="                             fill: url(&quot;#fill-color-gradient-render-2-0&quot;);                             fill-opacity: 1;                           "
+                       id="rect4" />
+                  </g>
+                </pattern>
+              </defs>
+              <g
+                 id="fills-47fe3fba-537f-803b-8006-ad3a2e680e71"
+                 class="fills">
+                <path
+                   d="m 18.999878,20.500061 -4.999756,1.500061 5,-19.000122 v 0 14.499939 l 4.999756,-1.500061 -5,19.000122 v 0 -14.499939 m 0,-3.000061 2.44e-4,-6.1e-5 M 30.119751,7.5 C 27.240112,4.7147827 23.318726,3.000061 19.000122,3 14.681274,3 10.76001,4.7147827 7.880249,7.5 H 10.5 v 23 H 7.880249 c 2.879639,2.785217 6.801025,4.499939 11.119629,4.5 4.318848,0 8.240112,-1.714783 11.119873,-4.5 H 27.5 v -23 h 2.619751 M 22.265381,3.3308716 C 21.242798,3.1205444 20.184814,3.007019 19.101562,3.0003052 19.067749,3.0001221 19.033936,3 19.000122,3"
+                   fill="url(#fill-0-render-2)"
+                   id="path4"
+                   sodipodi:nodetypes="ccccccccccccccccccccccccc"
+                   style="fill:#1a1a1a" />
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+    <g
+       class="frame-container-blur"
+       id="g18"
+       transform="rotate(180,-5.8901591,19.261086)">
+      <g
+         class="frame-container-shadows"
+         id="g17">
+        <g
+           clip-path="url(#frame-clip-47fe3fba-537f-803b-8006-ad37a7494710-render-1)"
+           fill="none"
+           id="g16">
+          <g
+             id="g10"
+             class="fills">
+            <rect
+               rx="0"
+               ry="0"
+               x="0"
+               y="0"
+               width="38"
+               height="38"
+               class="frame-background"
+               id="rect9" />
+          </g>
+          <g
+             class="frame-children"
+             id="g15">
+            <g
+               id="g14">
+              <defs
+                 id="defs12">
+                <radialGradient
+                   id="radialGradient12"
+                   cx="0.77752936"
+                   cy="-0.03956648"
+                   r="2.1079178"
+                   gradientTransform="matrix(-0.843025,-0.505887,0.514549,-0.857461,1.453365,0.319849)">
+                  <stop
+                     offset="0"
+                     stop-color="#000000"
+                     stop-opacity="1"
+                     id="stop10" />
+                  <stop
+                     offset="0.34"
+                     stop-color="#922256"
+                     stop-opacity="1"
+                     id="stop11" />
+                  <stop
+                     offset="0.86"
+                     stop-color="#ffdbf3"
+                     stop-opacity="1"
+                     id="stop12" />
+                </radialGradient>
+                <pattern
+                   id="pattern12"
+                   patternUnits="userSpaceOnUse"
+                   x="3"
+                   y="3"
+                   width="32"
+                   height="32"
+                   patternTransform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)">
+                  <g
+                     id="g12">
+                    <rect
+                       width="32"
+                       height="32"
+                       style="                             fill: url(&quot;#fill-color-gradient-render-2-0&quot;);                             fill-opacity: 1;                           "
+                       id="rect12" />
+                  </g>
+                </pattern>
+              </defs>
+              <g
+                 id="g13"
+                 class="fills">
+                <path
+                   d="m 18.999878,20.500061 -4.999756,1.500061 5,-19.000122 v 0 14.499939 l 4.999756,-1.500061 -5,19.000122 v 0 -14.499939 m 0,-3.000061 2.44e-4,-6.1e-5 M 30.119751,7.5 C 27.240112,4.7147827 23.318726,3.000061 19.000122,3 14.681274,3 10.76001,4.7147827 7.880249,7.5 H 10.5 v 23 H 7.880249 c 2.879639,2.785217 6.801025,4.499939 11.119629,4.5 4.318848,0 8.240112,-1.714783 11.119873,-4.5 H 27.5 v -23 h 2.619751 M 6.1279297,28.5 H 8.5 V 9.5 H 6.1279297 C 4.1625977,12.157532 3,15.444092 3,19 c 0,3.555908 1.1625977,6.842468 3.1279297,9.5 M 31.87207,9.5 H 29.5 v 19 h 2.37207 C 33.837402,25.842468 35,22.555908 35,19 35,15.444092 33.837402,12.157532 31.87207,9.5 M 22.265381,3.3308716 C 21.242798,3.1205444 20.184814,3.007019 19.101562,3.0003052 19.067749,3.0001221 19.033936,3 19.000122,3"
+                   fill="url(#fill-0-render-2)"
+                   id="path12" />
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+    <path
+       style="fill:#ececec;stroke:none;stroke-width:0.475px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="M 4.0802491,7.5000001 H 10.5 V 30.5 H 3.1302491 l -1.7523192,-2 H 8.5000001 V 9.5 H 2.3279299 Z"
+       id="path18"
+       sodipodi:nodetypes="ccccccccc"
+       clip-path="url(#clipPath19)" />
+    <path
+       style="fill:#e6e6e6;stroke:none;stroke-width:0.475px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="M 4.0802491,7.5000001 H 10.5 V 30.5 H 3.1302491 l -1.7523192,-2 H 8.5000001 V 9.5 H 2.3279299 Z"
+       id="path19"
+       sodipodi:nodetypes="ccccccccc"
+       clip-path="url(#clipPath28)"
+       transform="matrix(-1,0,0,1,38,-4.9999998e-8)" />
+    <g
+       class="frame-container-blur"
+       id="g28"
+       transform="translate(96.01889,7.0711546)">
+      <g
+         class="frame-container-shadows"
+         id="g27">
+        <g
+           clip-path="url(#frame-clip-47fe3fba-537f-803b-8006-ad37a7494710-render-1)"
+           fill="none"
+           id="g26">
+          <g
+             id="g20"
+             class="fills">
+            <rect
+               rx="0"
+               ry="0"
+               x="0"
+               y="0"
+               width="38"
+               height="38"
+               class="frame-background"
+               id="rect20" />
+          </g>
+          <g
+             class="frame-children"
+             id="g25">
+            <g
+               id="g24">
+              <defs
+                 id="defs22">
+                <radialGradient
+                   id="radialGradient22"
+                   cx="0.77752936"
+                   cy="-0.03956648"
+                   r="2.1079178"
+                   gradientTransform="matrix(-0.843025,-0.505887,0.514549,-0.857461,1.453365,0.319849)">
+                  <stop
+                     offset="0"
+                     stop-color="#000000"
+                     stop-opacity="1"
+                     id="stop20" />
+                  <stop
+                     offset="0.34"
+                     stop-color="#922256"
+                     stop-opacity="1"
+                     id="stop21" />
+                  <stop
+                     offset="0.86"
+                     stop-color="#ffdbf3"
+                     stop-opacity="1"
+                     id="stop22" />
+                </radialGradient>
+                <pattern
+                   id="pattern22"
+                   patternUnits="userSpaceOnUse"
+                   x="3"
+                   y="3"
+                   width="32"
+                   height="32"
+                   patternTransform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)">
+                  <g
+                     id="g22">
+                    <rect
+                       width="32"
+                       height="32"
+                       style="                             fill: url(&quot;#fill-color-gradient-render-2-0&quot;);                             fill-opacity: 1;                           "
+                       id="rect22" />
+                  </g>
+                </pattern>
+              </defs>
+              <g
+                 id="g23"
+                 class="fills">
+                <path
+                   d="m 18.999878,20.500061 -4.999756,1.500061 5,-19.000122 v 0 14.499939 l 4.999756,-1.500061 -5,19.000122 v 0 -14.499939 m 0,-3.000061 2.44e-4,-6.1e-5 M 30.119751,7.5 C 27.240112,4.7147827 23.318726,3.000061 19.000122,3 14.681274,3 10.76001,4.7147827 7.880249,7.5 H 10.5 v 23 H 7.880249 c 2.879639,2.785217 6.801025,4.499939 11.119629,4.5 4.318848,0 8.240112,-1.714783 11.119873,-4.5 H 27.5 v -23 h 2.619751 M 22.265381,3.3308716 C 21.242798,3.1205444 20.184814,3.007019 19.101562,3.0003052 19.067749,3.0001221 19.033936,3 19.000122,3"
+                   fill="url(#fill-0-render-2)"
+                   id="path22"
+                   sodipodi:nodetypes="ccccccccccccccccccccccccc"
+                   style="fill:#1a1a1a" />
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+    <path
+       style="fill:#e6e6e6;stroke:none;stroke-width:0.475px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 166.61567,-25.798076 h -6.41975 v 23 h 7.36975 l 1.75232,-2 h -7.12207 v -19 h 6.17207 z"
+       id="path19-0"
+       sodipodi:nodetypes="ccccccccc"
+       clip-path="none" />
+    <ellipse
+       style="opacity:0.532566;fill:#ff0000;stroke:none;stroke-width:0.0473267"
+       id="ellipse28"
+       cx="-270.45197"
+       cy="26.593094"
+       rx="15.999765"
+       ry="15.999768"
+       transform="scale(-1,1)" />
+    <g
+       class="frame-container-blur"
+       id="g37"
+       transform="translate(159.64966,13.594232)">
+      <g
+         class="frame-container-shadows"
+         id="g36">
+        <g
+           clip-path="url(#frame-clip-47fe3fba-537f-803b-8006-ad37a7494710-render-1)"
+           fill="none"
+           id="g35">
+          <g
+             id="g29"
+             class="fills">
+            <rect
+               rx="0"
+               ry="0"
+               x="0"
+               y="0"
+               width="38"
+               height="38"
+               class="frame-background"
+               id="rect29" />
+          </g>
+          <g
+             class="frame-children"
+             id="g34">
+            <g
+               id="g33">
+              <defs
+                 id="defs31">
+                <radialGradient
+                   id="radialGradient31"
+                   cx="0.77752936"
+                   cy="-0.03956648"
+                   r="2.1079178"
+                   gradientTransform="matrix(-0.843025,-0.505887,0.514549,-0.857461,1.453365,0.319849)">
+                  <stop
+                     offset="0"
+                     stop-color="#000000"
+                     stop-opacity="1"
+                     id="stop29" />
+                  <stop
+                     offset="0.34"
+                     stop-color="#922256"
+                     stop-opacity="1"
+                     id="stop30" />
+                  <stop
+                     offset="0.86"
+                     stop-color="#ffdbf3"
+                     stop-opacity="1"
+                     id="stop31" />
+                </radialGradient>
+                <pattern
+                   id="pattern31"
+                   patternUnits="userSpaceOnUse"
+                   x="3"
+                   y="3"
+                   width="32"
+                   height="32"
+                   patternTransform="matrix(1.000000, 0.000000, 0.000000, 1.000000, 0.000000, 0.000000)">
+                  <g
+                     id="g31">
+                    <rect
+                       width="32"
+                       height="32"
+                       style="                             fill: url(&quot;#fill-color-gradient-render-2-0&quot;);                             fill-opacity: 1;                           "
+                       id="rect31" />
+                  </g>
+                </pattern>
+              </defs>
+              <g
+                 id="g32"
+                 class="fills">
+                <path
+                   d="m 19.000122,3 v 0 l -2.44e-4,32 v 0 M 30.119751,7.5 C 27.240112,4.7147827 23.318726,3.000061 19.000122,3 14.681274,3 10.76001,4.7147827 7.880249,7.5 H 10.5 v 23 H 7.880249 c 2.879639,2.785217 6.801025,4.499939 11.119629,4.5 4.318848,0 8.240112,-1.714783 11.119873,-4.5 H 27.5 v -23 h 2.619751"
+                   fill="url(#fill-0-render-2)"
+                   id="path31"
+                   sodipodi:nodetypes="ccccccccccccccc"
+                   style="fill:#1a1a1a" />
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+    <ellipse
+       style="opacity:1;fill:#1a1a1a;stroke:none;stroke-width:0.0473267"
+       id="ellipse37"
+       cx="-178.64978"
+       cy="32.594002"
+       rx="15.999765"
+       ry="15.999768"
+       transform="rotate(180,-16.324307,45.942907)"
+       clip-path="url(#clipPath37)" />
+    <ellipse
+       style="opacity:1;fill:#1a1a1a;stroke:none;stroke-width:0.0473267"
+       id="ellipse38"
+       cx="-178.64978"
+       cy="32.594002"
+       rx="15.999765"
+       ry="15.999768"
+       transform="matrix(-1,0,0,1,-32.648614,49.69735)"
+       clip-path="url(#clipPath37)" />
+    <ellipse
+       style="opacity:1;fill:#d4aa00;stroke:none;stroke-width:0.0191577"
+       id="ellipse41"
+       cx="-224.25249"
+       cy="20.620729"
+       rx="11.119875"
+       ry="3.77226"
+       transform="scale(-1,1)" />
+    <rect
+       style="opacity:1;fill:#d4aa00;stroke:none;stroke-width:0.0475"
+       id="rect43"
+       width="22.23975"
+       height="0.95000076"
+       x="213.13261"
+       y="19.759792" />
+    <ellipse
+       style="opacity:1;fill:#ffcc00;stroke:none;stroke-width:0.0191577"
+       id="ellipse39"
+       cx="-224.25249"
+       cy="19.670729"
+       rx="11.119875"
+       ry="3.77226"
+       transform="scale(-1,1)" />
+    <ellipse
+       style="opacity:1;fill:#d4aa00;stroke:none;stroke-width:0.0191577"
+       id="ellipse43"
+       cx="-224.25249"
+       cy="32.020737"
+       rx="11.119875"
+       ry="3.77226"
+       transform="scale(-1,1)" />
+    <rect
+       style="opacity:1;fill:#d4aa00;stroke:none;stroke-width:0.0475"
+       id="rect44"
+       width="22.23975"
+       height="0.95000076"
+       x="213.13261"
+       y="31.159801" />
+    <ellipse
+       style="opacity:1;fill:#cccccc;stroke:none;stroke-width:0.0191577"
+       id="ellipse44"
+       cx="-224.25249"
+       cy="31.070736"
+       rx="11.119875"
+       ry="3.77226"
+       transform="scale(-1,1)" />
+    <ellipse
+       style="opacity:1;fill:#d4aa00;stroke:none;stroke-width:0.0191577"
+       id="ellipse45"
+       cx="-224.25249"
+       cy="44.370747"
+       rx="11.119875"
+       ry="3.77226"
+       transform="scale(-1,1)" />
+    <rect
+       style="opacity:1;fill:#d4aa00;stroke:none;stroke-width:0.0475"
+       id="rect45"
+       width="22.23975"
+       height="0.95000076"
+       x="213.13261"
+       y="43.509811" />
+    <ellipse
+       style="opacity:1;fill:#ffd42a;stroke:none;stroke-width:0.0191577"
+       id="ellipse46"
+       cx="-224.25249"
+       cy="43.420746"
+       rx="11.119875"
+       ry="3.77226"
+       transform="scale(-1,1)" />
+  </g>
+</svg>

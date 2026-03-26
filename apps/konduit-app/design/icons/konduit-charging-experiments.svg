@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="24"
+   height="24"
+   viewBox="0 0 24 24"
+   fill="none"
+   stroke="currentColor"
+   stroke-width="2"
+   stroke-linecap="round"
+   stroke-linejoin="round"
+   class="lucide lucide-circle-dollar-sign-icon lucide-circle-dollar-sign"
+   version="1.1"
+   id="svg2"
+   sodipodi:docname="konduit-charging-experiments.svg"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   inkscape:export-filename="circle-ada-sign.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs2" />
+  <sodipodi:namedview
+     id="namedview2"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="1.6106771"
+     inkscape:cx="-13.96928"
+     inkscape:cy="-20.488278"
+     inkscape:window-width="1278"
+     inkscape:window-height="1059"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg2" />
+  <circle
+     cx="12"
+     cy="12"
+     r="7.3344421"
+     id="circle1"
+     style="stroke-width:2;stroke-linecap:butt;stroke-dasharray:none;fill:none" />
+  <g
+     id="g8"
+     transform="translate(-38.601192,-11.043527)">
+    <path
+       d="m -37.769458,31.079859 4.78864,-11.003135"
+       id="path4" />
+    <path
+       d="m -28.192178,31.079859 -4.78864,-11.003135"
+       id="path5" />
+  </g>
+  <path
+     d="M -89.732465,18.65727 V 28.909676"
+     id="path7"
+     style="stroke-width:1.88502" />
+  <path
+     d="M -95.097816,41.956066 V 52.208472"
+     id="path10"
+     style="stroke-width:1.88502" />
+  <g
+     id="g11"
+     transform="translate(0.2522226,0.0933376)">
+    <path
+       d="M 2.9518598,2.1669698 H 20.349677"
+       id="path9"
+       style="stroke-width:2;stroke-dasharray:none" />
+    <path
+       d="M 3.1458776,21.646355 H 20.543695"
+       id="path11"
+       style="stroke-width:2;stroke-dasharray:none" />
+  </g>
+  <path
+     d="m -88.778179,42.181905 -5.853599,6.075585"
+     id="path12"
+     style="stroke-width:1.55118" />
+  <path
+     d="m -88.595843,51.640193 -6.174522,-8.184565"
+     id="path13"
+     style="stroke-width:1.88502" />
+  <path
+     d="m 10.550345,7.203784 v 9.440608"
+     id="path6"
+     style="stroke-width:2;stroke-dasharray:none" />
+  <path
+     d="M 13.449655,7.2312223 V 16.67183"
+     id="path14"
+     style="stroke-width:2;stroke-dasharray:none" />
+  <path
+     d="M 16.348964,9.1105566 V 14.682742"
+     id="path15"
+     style="stroke-width:2;stroke-dasharray:none;fill:#cccccc" />
+  <path
+     d="M 7.651036,9.2751861 V 14.847372"
+     id="path16"
+     style="stroke-width:2;stroke-dasharray:none" />
+  <path
+     d="m 53.666126,-28.317704 -3,5 h 4 l -3,5"
+     id="path1" />
+  <circle
+     cx="52.666126"
+     cy="-23.233629"
+     r="7.3344421"
+     id="circle16"
+     style="fill:none;stroke-width:2;stroke-linecap:butt;stroke-dasharray:none" />
+  <g
+     id="g18"
+     transform="translate(40.91835,-35.140292)">
+    <path
+       d="M 2.9518598,2.1669698 H 20.349677"
+       id="path17"
+       style="stroke-width:2;stroke-dasharray:none" />
+    <path
+       d="M 3.1458776,21.646355 H 20.543695"
+       id="path18"
+       style="stroke-width:2;stroke-dasharray:none" />
+  </g>
+</svg>
