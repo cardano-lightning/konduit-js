@@ -6,18 +6,11 @@ import Card from "../components/Card.vue";
 import MainContainer from "../components/MainContainer.vue";
 import TheHeader from "../components/TheHeader.vue";
 import { useRouter } from "vue-router";
-import { channels, wallet } from "../store";
+import { channels } from "../store";
 import { computed } from "vue";
-import { useEmbeddedWalletDetails } from "../composables/walletDetails";
-import { Ada, Lovelace } from "@konduit/konduit-consumer/cardano";
-
-const { walletBalance } = useEmbeddedWalletDetails(wallet);
 
 const router = useRouter();
 let isFirstOpening = computed(() => channels.value.length == 0);
-let _embeddedWalletNeedsFunding = computed(() =>
-  Lovelace.ord.isLessThan(walletBalance.value, Lovelace.fromAda(Ada.fromDigits(3)))
-);
 </script>
 
 <template>
