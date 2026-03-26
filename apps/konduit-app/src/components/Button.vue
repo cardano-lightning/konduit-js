@@ -2,7 +2,7 @@
 import { useRouter, type RouteLocationRaw } from "vue-router";
 
 // Either a route name, a route object, or a navigation function
-export type Action = RouteLocationRaw | (() => void);
+export type Action = RouteLocationRaw | ((event: MouseEvent) => void);
 
 export type Props = {
   action: Action;
@@ -16,9 +16,9 @@ const props = defineProps<Props>();
 
 const router = useRouter();
 
-function handleClick() {
+function handleClick(event: MouseEvent) {
   if (typeof props.action === "function") {
-    props.action();
+    props.action(event);
   } else {
     router.push(props.action);
   }

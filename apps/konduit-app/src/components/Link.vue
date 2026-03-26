@@ -2,6 +2,7 @@
 export type OnClick = string | RouteLocationRaw | (() => void);
 
 export const mkClickHandler = (router: Router, action: OnClick) => (event: MouseEvent) => {
+  // No button check – mobile taps are always primary action
   event.preventDefault();
   if (typeof action === "function") {
     action();
@@ -21,22 +22,28 @@ export const mkClickHandler = (router: Router, action: OnClick) => (event: Mouse
 import { useRouter, type RouteLocationRaw, type Router } from 'vue-router';
 import { SquareArrowOutUpRight } from "lucide-vue-next";
 
-interface Props {
+const props = withDefaults(defineProps<{
   href: string;
   click?: OnClick;
-  underscore?: boolean; // default: true
-  showIcon?: boolean; // default: false
-  useBold?: boolean; // default: false
-}
+  underscore?: boolean;   // default true
+  showIcon?: boolean;     // default false
+  useBold?: boolean;      // default false
+}>(), {
+  underscore: true,
+  showIcon: false,
+  useBold: false,
+});
 
-const props = defineProps<Props>();
 const router = useRouter();
 </script>
 
 <template>
   <a
     :href="props.href"
-    :class="{ 'no-underline': props.underscore || true, 'bold': props.useBold }"
+    :class="{
+      'no-underline': !props.underscore,
+      'bold': props.useBold,
+    }"
     @click="props.click ? mkClickHandler(router, props.click)($event) : mkClickHandler(router, props.href)($event)"
   >
     <slot></slot>
@@ -49,15 +56,11 @@ a {
   font-weight: 500;
   color: inherit;
   text-decoration: underline;
+  touch-action: manipulation; /* removes click delay on mobile */
 }
 
-.bold {
-  font-weight: bold;
-}
-
-.no-underline {
-  text-decoration: none;
-}
+.bold { font-weight: bold; }
+.no-underline { text-decoration: none; }
 
 .external-icon {
   display: inline-block;

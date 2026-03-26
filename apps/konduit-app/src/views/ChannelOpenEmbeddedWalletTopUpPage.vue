@@ -13,6 +13,7 @@ import { konduitConsumer, wallet } from "../store";
 import { Ada, Lovelace } from "@konduit/konduit-consumer/cardano";
 import { useDefaultFormatters } from "../composables/l10n";
 import { useRouter } from "vue-router";
+import { useAppBack } from "../composables/history";
 
 const { walletBalance } = useEmbeddedWalletDetails(wallet);
 
@@ -33,8 +34,9 @@ type OpeningContextType = OpeningContext['type'];
 const openingContext: ComputedRef<OpeningContext> = computed(() => {
   if(konduitConsumer.value == null) return { type: 'misconfigured' };
   let walletIsEmpty = Lovelace.ord.areEqual(Lovelace.zero, walletBalance.value);
-  let walletIsNearlyEmpty = Lovelace.ord.isGreaterThan(Lovelace.fromAda(Ada.fromDigits(2)), walletBalance.value);
-  if(konduitConsumer.value.channels.length == 0)
+  let walletIsNearlyEmpty = Lovelace.ord.isGreaterThan(Lovelace.fromAda(Ada.fromDigits(3)), walletBalance.value);
+  let isFirstOpening = konduitConsumer.value.channels.length == 0;
+  if(isFirstOpening)
     if(walletIsEmpty) return { type: 'first-opening-balance-is-zero' };
     else if(walletIsNearlyEmpty) return { type: 'first-opening-balance-too-low' };
     else return { type: 'first-opening-ready' };
@@ -70,8 +72,7 @@ const calloutSetup: ComputedRef<CalloutSetup | null> = computed(() => {
       message: [
         `Copy or scan the address below and send at least ${formatters.formatAda({ ada: Ada.fromSmallNumber(10) })} to it.`,
         '',
-        `There is on an operational margin associtated with channel maintainance which is around ${formatters.formatAda({ ada: Ada.fromSmallNumber(5) })}.`,
-        'Once funded, you\'re all set to proceed!',
+        `Note that an operational margin of approximately ${formatters.formatAda({ ada: Ada.fromSmallNumber(5) })} is required for channel maintenance.`,
       ]
     }
     case 'first-opening-balance-too-low': return {
@@ -104,11 +105,22 @@ const calloutSetup: ComputedRef<CalloutSetup | null> = computed(() => {
         variant: 'success' as const,
         message: `Your embedded wallet has been topped up with ${lovelaceDifferenceFormatted}! You can proceed to open a channel.`,
       }
-    case 'ready': return null;
+    case 'ready':
+      return {
+        title: 'Wallet funded',
+        variant: 'hint' as const,
+        message: [
+          'If you think that\'s enough to open a channel, please proceed.',
+          '',
+          'Otherwise, feel free to top up your embedded wallet first.',
+        ]
+      }
   }
 });
 
 const router = useRouter();
+
+const appBack = useAppBack();
 
 const backRoute = computed(() => {
   return { name: 'channel-open-wallet-select', query: router.currentRoute.value.query.redirectTo ? { redirectTo: router.currentRoute.value.query.redirectTo } : undefined };
@@ -119,7 +131,7 @@ const buttons: ComputedRef<ButtonProps[]> = computed(() => {
   return [
     {
       label: 'Go back',
-      action: backRoute.value,
+      action: appBack.handleClick,
     },
     {
       label: 'Open channel',

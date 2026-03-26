@@ -15,6 +15,7 @@ import { FieldWidth } from "../components/Form/core";
 import { NetworkMagicNumber, PublicNetwork } from "@konduit/konduit-consumer/cardano";
 import { ruleFromAsyncDeserialiser } from "../utils/regle";
 import { err, ok, Result } from "neverthrow";
+import { useAppBack } from "../composables/history";
 
 type Url = string;
 
@@ -85,19 +86,21 @@ const touch = (fieldName: string) => {
   }
 };
 
+const appBack = useAppBack()
+
 const buttons: ComputedRef<ButtonProps[]> = computed(() => {
   return [
     {
       label: "Cancel",
-      action: () => { router.push({ name: 'settings' }); },
+      action: appBack.handleClick,
       primary: false,
     },
-    // {
-    //   disabled: !r$.$ready || r$.$value.url === cardanoConnector.value.baseUrl,
-    //   label: "Save",
-    //   action: handleSubmit,
-    //   primary: true,
-    // },
+    {
+      disabled: !r$.$ready || r$.$value.url === cardanoConnector.value.baseUrl,
+      label: "Save",
+      action: handleSubmit,
+      primary: true,
+    },
   ]
 });
 </script>

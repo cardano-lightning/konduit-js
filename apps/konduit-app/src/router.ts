@@ -4,9 +4,11 @@ import * as store from "./store";
 
 import ChannelDetailsPage from "./views/ChannelDetailsPage.vue";
 import ChannelListPage from "./views/ChannelListPage.vue";
+import ChannelOnChainPage from "./views/ChannelOnChainPage.vue";
+import ChannelOpenEmbeddedWalletTopUpPage from "./views/ChannelOpenEmbeddedWalletTopUpPage.vue";
 import ChannelOpenWalletSelectPage from "./views/ChannelOpenWalletSelectPage.vue";
 import ChannelOpenWithEmbeddedWalletPage from "./views/ChannelOpenWithEmbeddedWalletPage.vue";
-import ChannelOpenEmbeddedWalletTopUpPage from "./views/ChannelOpenEmbeddedWalletTopUpPage.vue";
+import ChannelPaymentsPage from "./views/ChannelPaymentsPage.vue";
 import CreatePage from "./views/CreatePage.vue";
 import EditCardanoConnectorURLPage from "./views/EditCardanoConnectorURLPage.vue";
 import HomePage from "./views/HomePage.vue";
@@ -16,6 +18,36 @@ import SettingsPage from "./views/SettingsPage.vue";
 import WalletPage from "./views/WalletPage.vue";
 import { Channel, ChannelTag } from "@konduit/konduit-consumer/channel";
 import { err, ok } from "neverthrow";
+
+const channelRouteProps = (route: RouteLocationNormalized) => ({
+  channel: route.meta.channel as Channel,
+});
+
+const resolveChannelFromTag = async (to: RouteLocationNormalized) => {
+  const urlTag: string | string[] | undefined = to.params.tag;
+  const possibleChannel: Channel | null = typeof urlTag !== "string"
+    ? null
+    : ChannelTag.jsonCodec
+        .deserialise(urlTag)
+        .andThen((channelTag) => {
+          const possibleChannel = store.channels.value.find((c: Channel) =>
+            ChannelTag.ord.areEqual(c.channelTag, channelTag),
+          );
+          if (!possibleChannel) return err(`No channel found with tag ${urlTag}`);
+          return ok(possibleChannel);
+        })
+        .match(
+          (channel) => channel,
+          (_err) => null,
+        );
+
+  if (possibleChannel === null)
+    return "/channels"; // or { name: 'channels-list' }
+
+  // Attach the fully resolved object — view will receive it directly
+  to.meta.channel = possibleChannel;
+  return true;
+};
 
 const routes = [
   {
@@ -39,36 +71,29 @@ const routes = [
     component: ChannelOpenWithEmbeddedWalletPage,
     meta: { title: "Open channel" },
   },
-  { name: "channel-details",
+  {
+    name: "channel-details",
     path: "/channels/:tag",
-    props: (route: RouteLocationNormalized) => ({
-      channel: route.meta.channel as Channel
-    }),
-    beforeEnter: async (to: RouteLocationNormalized) => {
-      const urlTag: string | string[] | undefined = to.params.tag;
-      const possibleChannel: Channel | null = typeof urlTag !== 'string'?
-        null
-        : ChannelTag.jsonCodec.deserialise(urlTag)
-          .andThen(channelTag => {
-            const possibleChannel = store.channels.value.find(
-              (c: Channel) => ChannelTag.ord.areEqual(c.channelTag, channelTag)
-            );
-            if (!possibleChannel) return err(`No channel found with tag ${urlTag}`);
-            return ok(possibleChannel);
-          })
-          .match(
-            channel => channel,
-            _err => null,
-          );
-      if(possibleChannel === null)
-        return '/channels' // or { name: 'channels-list' }
-
-      // Attach the fully resolved object — view will receive it directly
-      to.meta.channel = possibleChannel;
-      return true;
-    },
+    props: channelRouteProps,
+    beforeEnter: resolveChannelFromTag,
     component: ChannelDetailsPage,
     meta: { title: "Channel" },
+  },
+  {
+    name: "channel-payments",
+    path: "/channels/:tag/payments",
+    props: channelRouteProps,
+    beforeEnter: resolveChannelFromTag,
+    component: ChannelPaymentsPage,
+    meta: { title: "History" },
+  },
+  {
+    name: "channel-on-chain",
+    path: "/channels/:tag/on-chain",
+    props: channelRouteProps,
+    beforeEnter: resolveChannelFromTag,
+    component: ChannelOnChainPage,
+    meta: { title: "On-chain" },
   },
   {
     name: "create",

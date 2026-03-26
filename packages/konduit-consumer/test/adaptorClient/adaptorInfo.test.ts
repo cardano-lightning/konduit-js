@@ -21,13 +21,13 @@ describe("AdaptorInfo serialization/deserialization", () => {
     const fee = Lovelace.fromAda(Ada.fromSmallNumber(1));
     const maxTagLength = NonNegativeInt.fromSmallNumber(64);
     const deployerVkey = (await mkEd25519SigningKey()).toVerificationKey();
-    const deployerAddress = {
+    const deployerAddress: Address = {
       network: Network.TESTNET,
       paymentCredential: {
         type: "PubKeyHash",
         hash: PubKeyHash.fromPubKey(deployerVkey.key),
       },
-    } as Address;
+    };
     const scriptHash = new Uint8Array(28).fill(3) as ScriptHash;
     return new AdaptorInfo(
       adaptorEd25519VerificationKey,

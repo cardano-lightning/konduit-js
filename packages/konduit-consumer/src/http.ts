@@ -115,7 +115,7 @@ export const json2RequestInfoCodec: JsonCodec<RequestInfo> = jsonCodecs.objectOf
     jsonCodecs.altJsonCodecs(
       [hexString.jsonCodec, json2StringCodec],
       (_serHex, _serString) => (value) => {
-        return value as Json;
+        return value;
       }
     )
   )
@@ -298,7 +298,7 @@ export const mkPostEndpoint = <Req, Res>(
             decodingError: stringify(String(error)),
             message: `Failed to decode response body as text (required for Json): ${error.message || String(error)}`,
             requestInfo: mkRequestInfo(url, "POST", requestHeaders, payload),
-            type: "DeserialisationError",
+            type: "DeserialisationError" as const,
           });
         }
         const possibleJson = parse(bodyText).orElse((origParsingError) => {
@@ -318,31 +318,31 @@ export const mkPostEndpoint = <Req, Res>(
               if(loopParsingError !== null) {
                 return err({
                   body: DecodedErrorBody.fromJson(result.length === 1 ? result[0]! : result, bodyBytes),
-                  decodingError: loopParsingError,
+                  decodingError: stringify(loopParsingError),
                   message: `Failed to parse the whole response body as JSON stream. Successfully parsed ${result.length} JSON line(s) before error: ${loopParsingError}`,
                   requestInfo: mkRequestInfo(url, "POST", requestHeaders, payload),
-                  type: "DeserialisationError",
-                } as HttpEndpointError);
+                  type: "DeserialisationError" as const,
+                });
               } else {
-                return ok(result as Json);
+                return ok(result);
               }
             }
             return err({
               body: DecodedErrorBody.fromText(bodyText, bodyBytes),
-              decodingError: origParsingError,
+              decodingError: stringify(origParsingError),
               message: `Failed to parse response body as JSON`,
               requestInfo: mkRequestInfo(url, "POST", requestHeaders, payload),
-              type: "DeserialisationError",
-            } as HttpEndpointError)
+              type: "DeserialisationError" as const,
+            })
           }
         );
         return possibleJson.andThen((json) => responseDeserialiser.deserialiser(json).mapErr((error) => ({
             body: DecodedErrorBody.fromJson(json, bodyBytes),
-            decodingError: error,
+            decodingError: stringify(error),
             message: `Failed to deserialise JSON response`,
             requestInfo: mkRequestInfo(url, "POST", requestHeaders, payload),
-            type: "DeserialisationError",
-          } as HttpEndpointError)),
+            type: "DeserialisationError" as const,
+          })),
         );
       }
       case "cbor": {
@@ -353,14 +353,14 @@ export const mkPostEndpoint = <Req, Res>(
             decodingError: stringify(error),
             message: `Failed to deserialise CBOR response`,
             requestInfo: mkRequestInfo(url, "POST", requestHeaders, payload),
-            type: "DeserialisationError",
+            type: "DeserialisationError" as const,
           })),
           (error) => err({
             body: DecodedErrorBody.fromBytes(bodyBytes),
             decodingError: stringify(error),
             message: `Failed to parse response body as CBOR`,
             requestInfo: mkRequestInfo(url, "POST", requestHeaders, payload),
-            type: "DeserialisationError",
+            type: "DeserialisationError" as const,
           })
         );
       }

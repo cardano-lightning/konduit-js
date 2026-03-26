@@ -63,7 +63,6 @@ label {
   display: flex;
   font-weight: normal;
   font-size: 1em;
-  line-height: 1em;
   margin-bottom: 0.5em;
   padding: 0 0.25em;
 }

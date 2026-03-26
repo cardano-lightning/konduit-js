@@ -24,7 +24,7 @@ import { Millisatoshi } from "./bitcoin";
 import type { AnyAmount, AnyAmountSymbol, Sign } from "./amounts/core";
 import { NonNegativeDecimal } from "@konduit/codec/decimals";
 import { BitcoinDecimal } from "./bitcoin/asset";
-import { stringify, type Json } from "@konduit/codec/json";
+import { stringify } from "@konduit/codec/json";
 
 export * from "./channel/l1Channel";
 export * from "./channel/core";
@@ -48,7 +48,7 @@ export namespace CriticalError {
   export const make = (type: string, info: JsonError): CriticalError => ({
     type: "CriticalError",
     message: "Failed to process the payment due to an unexpected error. This might indicate a bug in the client or the adaptor.",
-    error: { info, type } as JsonError,
+    error: { info, type },
   });
 }
 
@@ -87,7 +87,7 @@ export namespace ImmediatePaymentError {
   export const fromHttpEndpointError = (error: HttpEndpointError): ImmediatePaymentError => {
     switch(error.type) {
       case "NetworkError":
-        return error as ImmediatePaymentError;
+        return error;
       case "HttpError":
         return {
           type: "AdaptorRejection",
@@ -97,7 +97,7 @@ export namespace ImmediatePaymentError {
       case "DeserialisationError":
         return CriticalError.make("UnexpectedAdaptorResponse", json2DeserialisationErrorCodec.serialise(error));
       case "AbortedError":
-        return error as ImmediatePaymentError;
+        return error;
     }
   }
 }
@@ -184,7 +184,7 @@ export namespace PaymentBreakdown {
     f: (c: A) => Result<B, E>
   ): Result<
       PaymentBreakdown<B>,
-      { total: E | undefined; invoice: E | undefined; fee: E | undefined }
+      { total: E | null; invoice: E | null; fee: E | null }
     > => {
     const totalResult = f(breakdown.total);
     const invoiceResult = f(breakdown.invoice);
@@ -192,9 +192,9 @@ export namespace PaymentBreakdown {
     if(totalResult.isOk() && invoiceResult.isOk() && feeResult.isOk())
       return ok({ total: totalResult.value, invoice: invoiceResult.value, fee: feeResult.value });
     return err({
-      total: totalResult.isErr() ? totalResult.error : undefined,
-      invoice: invoiceResult.isErr() ? invoiceResult.error : undefined,
-      fee: feeResult.isErr() ? feeResult.error : undefined,
+      total: totalResult.isErr() ? totalResult.error : null,
+      invoice: invoiceResult.isErr() ? invoiceResult.error : null,
+      fee: feeResult.isErr() ? feeResult.error : null,
     });
   }
 }
@@ -268,7 +268,7 @@ export namespace AnyPayment {
         AmountFx.crypto2Any(fx, amount, destCurrency)).mapErr(
           // The original error is a map - possible error per field
           // TODO: We should flatten it better.
-          detailedError => stringify(detailedError as Json)
+          detailedError => stringify(detailedError)
         )
     )
   }
@@ -393,6 +393,8 @@ export class Channel {
   }
 
   public get totalApprovedCapacity(): Lovelace | null {
+    // FIXME: This is ugly shortcut. Fix this.
+    if(!this.isFullySquashed) return Lovelace.zero;
     return Lovelace.subtract(this.l1.totalApprovedCapacity, this.MIN_ADA)
       .match(
         (capacity) => capacity,
@@ -667,6 +669,10 @@ export class Channel {
       sKey,
       this.squashBody
     );
+  }
+
+  public get createdAt(): ValidDate {
+    return this.l1.openTx.created;
   }
 
   public get allPayments(): AnyPayment[] {

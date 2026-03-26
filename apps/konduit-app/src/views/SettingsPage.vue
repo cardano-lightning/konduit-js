@@ -4,11 +4,10 @@ import DataListing from "../components/DataListing.vue";
 import { useNotifications } from "../composables/notifications";
 import TheHeader from "../components/TheHeader.vue";
 import MainContainer from "../components/MainContainer.vue";
-import { cardanoConnector, wallet, type AppKonduitConsumer } from "../store";
+import { cardanoConnector, type AppKonduitConsumer } from "../store";
 import { json2KonduitConsumerCodec } from "@konduit/konduit-consumer";
 import { konduitConsumer, forget } from "../store";
 import { orPlaceholder } from "../utils/formatters";
-import { computed } from "vue";
 
 const notifications = useNotifications();
 
@@ -34,7 +33,6 @@ const writeSettings = () => {
 };
 
 const formattedConnector = orPlaceholder(cardanoConnector.value?.baseUrl);
-const formattedAddress = computed(() => orPlaceholder(wallet.value?.addressBech32));
 
 </script>
 
@@ -44,7 +42,6 @@ const formattedAddress = computed(() => orPlaceholder(wallet.value?.addressBech3
     <DataListing :rows="[
       { label: 'Cardano connector', formattedValue: formattedConnector, actions: [['edit-cardano-connector-url', 'pen']] },
       'separator',
-      { label: 'Embedded wallet address', formattedValue: formattedAddress, actions: [] },
       { label: 'Export', formattedValue: '', actions: [[writeSettings,'download']] },
       { label: 'Forget', formattedValue: '', actions: [[forgetReload, 'trash']] },
     ]" />

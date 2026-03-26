@@ -48,7 +48,14 @@ const formatLastSyncInfo = (walletBalanceInfo: Ref<BalanceInfo | null>) => {
   return "Not synced";
 };
 
-export const useEmbeddedWalletDetails = (wallet: Ref<CardanoConnectorWallet | null>) => {
+export type EmbeddedWalletDetails = {
+  formattedLastSyncInfo: Ref<string>;
+  walletBalance: Ref<Lovelace>;
+  walletBalanceInfo: Ref<BalanceInfo | null>;
+  cardanoScanLink: Ref<string | null>;
+}
+
+export const useEmbeddedWalletDetails = (wallet: Ref<CardanoConnectorWallet | null>): EmbeddedWalletDetails => {
   const walletBalanceInfo = ref(wallet.value) as Ref<BalanceInfo | null>;
   const walletBalance = computed(() => {
     return walletBalanceInfo.value?.lastValue || Lovelace.zero;

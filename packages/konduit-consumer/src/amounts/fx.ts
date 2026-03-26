@@ -11,8 +11,6 @@ import {
   bitcoin2Satoshi,
   satoshi2Millisatoshi,
 } from "../fx/core";
-import { Lovelace } from "../cardano/assets";
-import { Millisatoshi } from "../bitcoin/asset";
 import { AdaAmount, AnyAmount, BitcoinAmount, CryptoAmount } from "./core";
 import { ok, Result } from "neverthrow";
 import { FiatAmount, UsDollarAmount, EuroAmount, BritishPoundAmount } from "./core";
@@ -36,7 +34,7 @@ export namespace AmountFx {
             );
             const millicents = ExchangeRate.convertSafe(
               lovelace2UsMillicents,
-              amount.value as Lovelace,
+              amount.value,
               (dec) => {
                 const nonNegativeBigInt = NonNegativeBigInt.fromNonNegativeDecimalFloor(dec);
                 return UsMillicent.fromNonNegativeBigInt(nonNegativeBigInt);
@@ -53,7 +51,7 @@ export namespace AmountFx {
             );
             const millicents = ExchangeRate.convertSafe(
               lovelace2EuroMillicents,
-              amount.value as Lovelace,
+              amount.value,
               (dec) => {
                 const nonNegativeBigInt = NonNegativeBigInt.fromNonNegativeDecimalFloor(dec);
                 return EuroMillicent.fromNonNegativeBigInt(nonNegativeBigInt);
@@ -72,7 +70,7 @@ export namespace AmountFx {
             );
             const milli = ExchangeRate.convertSafe(
               lovelace2GbpMillipennies,
-              amount.value as Lovelace,
+              amount.value,
               (dec) => {
                 const nonNegativeBigInt = NonNegativeBigInt.fromNonNegativeDecimalFloor(dec);
                 return BritishMillipenny.fromNonNegativeBigInt(nonNegativeBigInt);
@@ -97,7 +95,7 @@ export namespace AmountFx {
             );
             const millicents = ExchangeRate.convertSafe(
               ExchangeRate.pipe(msat2Bitcoin, bitcoin2UsMillicent),
-              amount.value as Millisatoshi,
+              amount.value,
               (dec) => {
                 const nonNegativeBigInt = NonNegativeBigInt.fromNonNegativeDecimalFloor(dec);
                 return UsMillicent.fromNonNegativeBigInt(nonNegativeBigInt);
@@ -117,7 +115,7 @@ export namespace AmountFx {
             );
             const millicents = ExchangeRate.convertSafe(
               ExchangeRate.pipe(msat2Bitcoin, bitcoin2EuroMillicent),
-              amount.value as Millisatoshi,
+              amount.value,
               (dec) => {
                 const nonNegativeBigInt = NonNegativeBigInt.fromNonNegativeDecimalFloor(dec);
                 return EuroMillicent.fromNonNegativeBigInt(nonNegativeBigInt);
@@ -140,7 +138,7 @@ export namespace AmountFx {
             );
             const milli = ExchangeRate.convertSafe(
               ExchangeRate.pipe(msat2Bitcoin, bitcoin2GbpMilli),
-              amount.value as Millisatoshi,
+              amount.value,
               (dec) => {
                 const nonNegativeBigInt = NonNegativeBigInt.fromNonNegativeDecimalFloor(dec);
                 return BritishMillipenny.fromNonNegativeBigInt(nonNegativeBigInt);

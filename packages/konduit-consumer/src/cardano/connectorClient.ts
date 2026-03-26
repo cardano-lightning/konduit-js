@@ -35,7 +35,6 @@ import {
   TxOut,
   type TxOutInfo,
   DatumOption,
-  InlineDatum,
   ReferenceScript,
 } from "./tx";
 import { HexString } from "@konduit/codec/hexString";
@@ -136,6 +135,9 @@ export const json2ValueCodec: JsonCodec<Value> = codec.pipe(
       if (Lovelace.ord.isGreaterThan(value.lovelace, Lovelace.zero)) {
         valueRecords.push({
           unit: "lovelace",
+          // This is dishonest casting! :-(
+          // We could fix it in theory by introducing `PositiveLovelace`
+          // and use that on the `Value` level.
           quantity: (value.lovelace as bigint) as PositiveCoin,
         });
       }
@@ -254,9 +256,9 @@ export namespace OutputWithInfo {
 
       const datumOption: DatumOption | null =
         u.datum_inline !== null
-          ? ({ plutusData: u.datum_inline } as InlineDatum)
+          ? ({ plutusData: u.datum_inline })
           : u.datum_hash !== null
-          ? (u.datum_hash as DatumHash)
+          ? u.datum_hash
           : null;
 
       const output: TxOut = {
@@ -264,7 +266,7 @@ export namespace OutputWithInfo {
         value: u.value,
         datumOption,
         scriptRef: u.reference_script,
-      } as TxOut;
+      };
 
       const txInTxOut: TransactionUnspentOutput = { input, output };
 
@@ -282,7 +284,7 @@ export namespace OutputWithInfo {
         referenceScript,
       };
 
-      return ok({ txInTxOut, txInfo }) as Result<OutputWithInfo, JsonError>;
+      return ok({ txInTxOut, txInfo });
     },
     serialise: ({ txInTxOut, txInfo }: OutputWithInfo) => {
       const {
@@ -402,11 +404,11 @@ export const mkConnectorClient = (
         (networkResponse) => {
           switch (networkResponse.network) {
             case "mainnet":
-              return ok("Mainnet" as PublicNetwork);
+              return ok(PublicNetwork.MAINNET);
             case "preprod":
-              return ok("Preprod" as PublicNetwork);
+              return ok(PublicNetwork.PREPROD);
             case "preview":
-              return ok("Preview" as PublicNetwork);
+              return ok(PublicNetwork.PREVIEW);
             default:
               return err(`Unknown network: ${networkResponse.network}`);
           }

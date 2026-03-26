@@ -29,7 +29,7 @@ const json2PayBodyDeserialiser: jsonCodecs.JsonDeserialiser<PayBody> = (() => {
             chequeBody: j.cheque_body,
             signature: j.signature,
             invoice,
-          } as PayBody;
+          };
     })
   );
 })();

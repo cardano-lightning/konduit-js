@@ -51,21 +51,20 @@ useTheme();
 
   /* Inputs, frames, hrs around qr codes, video preview etc. */
   /* TODO: rename this to primary-border-color? */
-  --frame-border-color: var(--colar-gray-6);
-
+  --frame-border-color: var(--colar-blue-10);
   --separator-color: var(--frame-border-color);
-  --separator-subtle-color: var(--colar-gray-6);
+  --separator-subtle-color: var(--colar-blue-11);
 
   /* TODO: Drop "secondary color" - use more semantically named colors instead. */
-  --secondary-background-color: var(--colar-blue-10);
+  /* --secondary-background-color: var(--colar-blue-10); */
   --secondary-color: var(--colar-blue-0);
 
-  --error-color: #ffe2e2;
-  --error-background-color: #4b0e0e;
-  --error-border-color: var(--error-color);
+  --error-background-color: var(--colar-pink-11);
+  --error-color: var(--colar-pink-1);
+  --error-border-color: var(--colar-pink-10);
 
   --hint-background-color: var(--colar-blue-11);
-  --hint-border-color: var(--colar-blue-8);
+  --hint-border-color: var(--colar-blue-10);
   --hint-color: var(--colar-blue-0);
 
   /* A bit less muted than the hint, to be used for "card buttons" etc. */
@@ -74,9 +73,9 @@ useTheme();
   --focus-color: var(--colar-blue-0);
 
   /* Nice green but doesn't necessarily play nicely with our background. */
-  --success-background-color: var(--colar-green-11);
-  --success-border-color: var(--colar-green-8);
-  --success-color: var(--colar-green-1);
+  --success-background-color: var(--colar-cyan-10);
+  --success-border-color: var(--colar-cyan-9);
+  --success-color: var(--colar-cyan-0);
 
   --warning-background-color: var(--colar-pink-10);
   --warning-border-color: var(--colar-orange-10);
@@ -89,30 +88,33 @@ useTheme();
 :root[data-theme="system"][data-prefers-color="light"] {
   --primary-background-color: var(--colar-pink-0);
   --primary-color: var(--colar-blue-12);
-  --frame-border-color: #d1d5db;
 
-  --secondary-background-color: var(--colar-gray-0);
-  --secondary-color: var(--colar-gray-9);
+  /* --secondary-background-color: var(--colar-gray-0); */
+  --secondary-color: var(--colar-pink-12);
 
   --hint-background-color: var(--colar-gray-1);
-  --hint-border-color: var(--frame-border-color);
+  --hint-border-color: var(--colar-gray-3);
   --hint-color: var(--colar-gray-10);
 
   --focus-background-color: var(--colar-gray-0);
   --focus-border-color: var(--frame-border-color);
   --focus-color: var(--colar-gray-10);
 
-  --error-background-color: #ffe2e2;
-  --error-color: #e57373;
-  --error-border-color: var(--error-color);
+  --error-background-color: var(--colar-red-1);
+  --error-color: var(--colar-red-11);
+  --error-border-color: var(--colar-red-2);
 
   --success-background-color: var(--colar-blue-0);
-  --success-border-color: var(--colar-blue-8);
+  --success-border-color: var(--colar-blue-1);
   --success-color: var(--colar-blue-9);
 
   --warning-background-color: #fdeee0;
   --warning-color: #c3630a;
   --warning-border-color: #fac798;
+
+  --frame-border-color: var(--colar-pink-2);
+  --separator-color: var(--frame-border-color);
+  --separator-subtle-color: var(--colar-pink-1);
 
   --missing-data-color: var(--colar-gray-7);
 }
@@ -168,6 +170,11 @@ body {
 
   padding-top: 0;
   top: 0 !important;
+}
+
+.Vue-Toastification__container.top-center .Vue-Toastification__close-button {
+  color: var(--primary-color) !important;
+  opacity: 0.6;
 }
 .Vue-Toastification__container.top-center .Vue-Toastification__toast.cl-toast.Vue-Toastification__toast--error,
 .Vue-Toastification__container.top-center .Vue-Toastification__toast.cl-toast.Vue-Toastification__toast--success,

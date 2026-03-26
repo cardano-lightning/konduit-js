@@ -193,7 +193,7 @@ const handleSubmit = async () => {
     return openningResult.match(
       (_channel) => {
         const redirectTo = router.currentRoute.value.query.redirectTo ? String(router.currentRoute.value.query.redirectTo) : { name: 'home' }
-        notifications.redirectSuccess("Channel opening transaction was just submitted. It may take some time to confirm on the blockchain and be accepted and fully trusted by the adaptor.", redirectTo);
+        router.push(redirectTo);
       },
       (error) => {
           notifications.error(`Failed to open channel. Please try again or contact support if the problem persists.`);

@@ -16,10 +16,11 @@ const formatters = useDefaultFormatters();
 const rows = computed((): RowConfig[] => {
   const channelRows: RowConfig[] = ((): RowConfig[] => {
     if(channels.value === null) return [] as RowConfig[];
+
     return channels.value.map((channel: Channel) => {
       return {
-        label: `Channel: ${abbreviateHex(channel.channelTag, 10, 0)}`,
-        formattedValue: `initial: ${formatters.formatAda(channel.totalEffectiveSubmittedCapacity)}, available: ${formatters.formatAda(channel.availableApprovedCapacity)}`,
+        label: channel.adaptorUrl,
+        formattedValue: `${formatters.formatShortDate(channel.createdAt)} • ${formatters.formatAda(channel.availableApprovedCapacity)}`,
         actions: {
           rowAction: [{ name: 'channel-details', params: { tag: hex(channel.channelTag, '') }}, 'chevron-right'] as [OnClick, ActionIcon]
         }
@@ -27,10 +28,10 @@ const rows = computed((): RowConfig[] => {
     });
   })();
   const addAnotherChannelRow: RowConfig = {
-    label: 'Add another channel',
+    label: 'Open new channel',
     formattedValue: '',
     actions: [
-      [{ name: 'open-channel' }, 'square-plus']
+      [{ name: 'channel-open-wallet-select' }, 'circle-plus']
     ],
   };
   return [...channelRows, "separator", addAnotherChannelRow] as RowConfig[];
@@ -41,6 +42,5 @@ const rows = computed((): RowConfig[] => {
   <MainContainer>
   <TheHeader />
   <DataListing :rows="rows" />
-
   </MainContainer>
 </template>

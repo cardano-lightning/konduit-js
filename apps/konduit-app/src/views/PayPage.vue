@@ -8,8 +8,8 @@ import { Invoice } from "@konduit/konduit-consumer/bitcoin/bolt11";
 import { onMounted, ref } from "vue";
 import { invoice as previousStoreInvoice } from "../store";
 import { konduitConsumer, type AppKonduitConsumer } from "../store";
-import type { RouteLocationRaw } from "vue-router";
 import { useNotifications } from "../composables/notifications";
+import { useAppBack } from "../composables/history";
 
 // The flow is as follows:
 // * If we are initializing we check the store invoice and load it
@@ -45,11 +45,14 @@ const onBackToScanning = () => {
 
 const notifications = useNotifications();
 
-const onResetRedirect = (route: RouteLocationRaw) => {
+const appBack = useAppBack({ name: "home" });
+
+const onResetRedirectBack = () => {
   previousInvoice.value = null;
   invoice.value = null;
   previousStoreInvoice.value = null;
-  notifications.redirectSuccess("Invoice dropped", route);
+  appBack.goBack();
+  // notifications.redirectSuccess("Invoice dropped", route);
 }
 const onResetScan = () => {
   previousInvoice.value = null;
@@ -69,8 +72,8 @@ const onResetScan = () => {
     v-else-if="konduitConsumer && invoice"
     :invoice="invoice"
     :consumer="konduitConsumer as AppKonduitConsumer"
-    @back="onBackToScanning"
-    @reset-redirect="onResetRedirect"
+    @scan="onBackToScanning"
+    @reset-redirect-back="onResetRedirectBack"
     @reset-scan="onResetScan"
   />
   <div v-else>

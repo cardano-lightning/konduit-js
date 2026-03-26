@@ -55,25 +55,19 @@ export namespace CryptoAmount {
     amount.symbol === "BTC";
 
   export const areEqual = (a: CryptoAmount, b: CryptoAmount): boolean | "unknown" => {
-    if (a.symbol !== b.symbol) return "unknown";
-    switch (a.symbol) {
-      case "ADA":
-        return AdaAmount.areEqual(a as AdaAmount, b as AdaAmount);
-      case "BTC":
-        return BitcoinAmount.areEqual(a as BitcoinAmount, b as BitcoinAmount);
-    }
+    if (a.symbol === "ADA" && b.symbol === "ADA")
+      return AdaAmount.areEqual(a, b);
+    if (a.symbol === "BTC" && b.symbol === "BTC")
+      return BitcoinAmount.areEqual(a, b);
+    return "unknown";
   };
 
   export const difference = (a: CryptoAmount, b: CryptoAmount): Result<CryptoAmount, string> => {
-    if (a.symbol !== b.symbol) {
-      return err("Cannot subtract amounts of different currencies");
-    }
-    switch (a.symbol) {
-      case "ADA":
-        return AdaAmount.difference(a as AdaAmount, b as AdaAmount);
-      case "BTC":
-        return BitcoinAmount.difference(a as BitcoinAmount, b as BitcoinAmount);
-    }
+    if (a.symbol === "ADA" && b.symbol === "ADA")
+      return AdaAmount.difference(a, b);
+    if (a.symbol === "BTC" && b.symbol === "BTC")
+      return BitcoinAmount.difference(a, b);
+    return err("Cannot subtract amounts of different currencies");
   };
 }
 
@@ -148,13 +142,15 @@ export namespace FiatAmount {
 
   export const areEqual = (a: FiatAmount, b: FiatAmount): boolean | "unknown" => {
     if (a.symbol !== b.symbol) return "unknown";
+    // FIXME: I prefer `switch` because it checks for partiality
+    // but I'm not able to avoid casting `b` :-(
     switch (a.symbol) {
       case "EUR":
-        return EuroAmount.areEqual(a as EuroAmount, b as EuroAmount);
+        return EuroAmount.areEqual(a, b as EuroAmount);
       case "GBP":
-        return BritishPoundAmount.areEqual(a as BritishPoundAmount, b as BritishPoundAmount);
+        return BritishPoundAmount.areEqual(a, b as BritishPoundAmount);
       case "USD":
-        return UsDollarAmount.areEqual(a as UsDollarAmount, b as UsDollarAmount);
+        return UsDollarAmount.areEqual(a, b as UsDollarAmount);
     }
   };
 
@@ -164,11 +160,11 @@ export namespace FiatAmount {
     }
     switch (a.symbol) {
       case "EUR":
-        return EuroAmount.difference(a as EuroAmount, b as EuroAmount);
+        return EuroAmount.difference(a, b as EuroAmount);
       case "GBP":
-        return BritishPoundAmount.difference(a as BritishPoundAmount, b as BritishPoundAmount);
+        return BritishPoundAmount.difference(a, b as BritishPoundAmount);
       case "USD":
-        return UsDollarAmount.difference(a as UsDollarAmount, b as UsDollarAmount);
+        return UsDollarAmount.difference(a, b as UsDollarAmount);
     }
   };
 }

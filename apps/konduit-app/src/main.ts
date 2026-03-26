@@ -4,12 +4,14 @@ import router from "./router";
 import App from "./App.vue";
 import Toastification from "vue-toastification";
 import { Notifications } from "./composables/notifications";
+import { appBackPlugin } from "./composables/history";
 
 Decimal.set({ precision: 50 });
 
 // Application level styles are defined in the `App.vue` file
 createApp(App)
   .use(router)
+  .use(appBackPlugin)
   .use(Toastification, {
     maxToasts: 1,
     newestOnTop: true,

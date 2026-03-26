@@ -6,15 +6,27 @@ import Card from "../components/Card.vue";
 import MainContainer from "../components/MainContainer.vue";
 import TheHeader from "../components/TheHeader.vue";
 import { useRouter } from "vue-router";
+import { channels, wallet } from "../store";
+import { computed } from "vue";
+import { useEmbeddedWalletDetails } from "../composables/walletDetails";
+import { Ada, Lovelace } from "@konduit/konduit-consumer/cardano";
+
+const { walletBalance } = useEmbeddedWalletDetails(wallet);
 
 const router = useRouter();
+let isFirstOpening = computed(() => channels.value.length == 0);
+let embeddedWalletNeedsFunding = computed(() =>
+  Lovelace.ord.isLessThan(walletBalance.value, Lovelace.fromAda(Ada.fromDigits(3)))
+);
 </script>
 
 <template>
   <MainContainer>
     <TheHeader />
     <div id="cards">
-      <div id="preamble">Choose how to fund your channel—let's get you set up!</div>
+      <div id="preamble">
+        Choose how to fund your channel—let's get you set up!
+      </div>
       <Hr />
       <Card
         :action="() => router.push({
@@ -27,7 +39,10 @@ const router = useRouter();
         <template #icon>
           <SquareArrowInUpRight />
         </template>
-        A handy in-app wallet for quick channel management.<br />One extra top up needed and you're ready!
+        A handy in-app wallet for quick channel management.
+        <template v-if="isFirstOpening">
+          <br />One extra top up needed and you're ready!
+        </template>
       </Card>
       <Card
         :title="'Browser wallet'"

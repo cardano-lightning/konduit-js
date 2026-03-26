@@ -32,17 +32,19 @@ type CryptoCurrencyUnit = ADAUnit | BTCUnit;
 // And we do not want to overcomplicate the typing here.
 export type CurrencyUnit = FiatCurrencyUnit | CryptoCurrencyUnit;
 
+export type ExchangeRateBody = { numerator: PositiveDecimal; denominator: PositiveDecimal };
 export type ExchangeRate<U1 extends CurrencyUnit, U2 extends CurrencyUnit> = Tagged<
-  { numerator: PositiveDecimal, denominator: PositiveDecimal },
+  ExchangeRateBody,
   "ExchangeRate",
   { unit1: U1; unit2: U2 }
 >;
 
 export namespace ExchangeRate {
+  export const cast = <U1 extends CurrencyUnit, U2 extends CurrencyUnit>(body: ExchangeRateBody): ExchangeRate<U1, U2> => body as any as ExchangeRate<U1, U2>;
   export const fromPositiveDecimal = <U1 extends CurrencyUnit, U2 extends CurrencyUnit>(
     decimal: PositiveDecimal,
   ): ExchangeRate<U1, U2> => {
-    return { numerator: decimal, denominator: PositiveDecimal.one } as ExchangeRate<U1, U2>;
+    return  cast<U1, U2>({ numerator: decimal, denominator: PositiveDecimal.one });
   }
   export const jsonCodec = codec.rmap(
     PositiveDecimal.jsonCodec,
@@ -52,7 +54,7 @@ export namespace ExchangeRate {
   export const reverse = <U1 extends CurrencyUnit, U2 extends CurrencyUnit>(
     rate: ExchangeRate<U1, U2>,
   ): ExchangeRate<U2, U1> => {
-    return { denominator: rate.numerator, numerator: rate.denominator } as ExchangeRate<U2, U1>;
+    return cast<U2, U1>({ numerator: rate.denominator, denominator: rate.numerator, });
   }
   export const pipe = <
     U1 extends CurrencyUnit,
@@ -62,9 +64,12 @@ export namespace ExchangeRate {
     price1: ExchangeRate<U1, U2>,
     price2: ExchangeRate<U2, U3>,
   ) => {
-    const numerator = price1.numerator.mul(price2.numerator);
-    const denominator = price1.denominator.mul(price2.denominator);
-    return { numerator, denominator } as ExchangeRate<U1, U3>;
+    const numerator: Decimal = price1.numerator.mul(price2.numerator);
+    const denominator: Decimal = price1.denominator.mul(price2.denominator);
+    return ExchangeRate.cast<U1, U3>({
+      numerator: numerator as PositiveDecimal,
+      denominator: denominator as PositiveDecimal
+    });
   }
   export const convert2Any = <
     U1 extends CurrencyUnit,
@@ -100,17 +105,17 @@ export namespace ExchangeRate {
 const hundred = PositiveDecimal.fromDigits(1, 0, 0);
 const tousand = PositiveDecimal.fromDigits(1, 0, 0, 0);
 const million = PositiveDecimal.multiply(tousand, tousand);
-export const usDollar2UsCent = ExchangeRate.fromPositiveDecimal(hundred) as ExchangeRate<UsDollar, UsCent>;
-export const usCent2UsMillicent = ExchangeRate.fromPositiveDecimal(tousand) as ExchangeRate<UsCent, UsMillicent>;
-export const euro2EuroCent = ExchangeRate.fromPositiveDecimal(hundred) as ExchangeRate<Euro, EuroCent>;
-export const euroCent2EuroMillicent = ExchangeRate.fromPositiveDecimal(tousand) as ExchangeRate<EuroCent, EuroMillicent>;
-export const britishPound2BritishPenny = ExchangeRate.fromPositiveDecimal(hundred) as ExchangeRate<BritishPound, BritishPenny>;
-export const britishPenny2BritishMillipenny = ExchangeRate.fromPositiveDecimal(tousand) as ExchangeRate<BritishPenny, BritishMillipenny>;
-export const bitcoin2Satoshi = ExchangeRate.fromPositiveDecimal(
+export const usDollar2UsCent = ExchangeRate.fromPositiveDecimal<UsDollar, UsCent>(hundred);
+export const usCent2UsMillicent = ExchangeRate.fromPositiveDecimal<UsCent, UsMillicent>(tousand);
+export const euro2EuroCent = ExchangeRate.fromPositiveDecimal<Euro, EuroCent>(hundred);
+export const euroCent2EuroMillicent = ExchangeRate.fromPositiveDecimal<EuroCent, EuroMillicent>(tousand);
+export const britishPound2BritishPenny = ExchangeRate.fromPositiveDecimal<BritishPound, BritishPenny>(hundred);
+export const britishPenny2BritishMillipenny = ExchangeRate.fromPositiveDecimal<BritishPenny, BritishMillipenny>(tousand);
+export const bitcoin2Satoshi = ExchangeRate.fromPositiveDecimal<Bitcoin, Satoshi>(
   PositiveDecimal.multiply(hundred, million)
-) as ExchangeRate<Bitcoin, Satoshi>;
-export const satoshi2Millisatoshi = ExchangeRate.fromPositiveDecimal(tousand) as ExchangeRate<Satoshi, Millisatoshi>;
-export const ada2Lovelace = ExchangeRate.fromPositiveDecimal(million) as ExchangeRate<Ada, Lovelace>;
+);
+export const satoshi2Millisatoshi = ExchangeRate.fromPositiveDecimal<Satoshi, Millisatoshi>(tousand);
+export const ada2Lovelace = ExchangeRate.fromPositiveDecimal<Ada, Lovelace>(million);
 
 export type Fx = {
   createdAt: ValidDate;

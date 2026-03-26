@@ -1,5 +1,5 @@
 <script lang="ts">
-export type ActionIcon = "pen" | "download" | "trash" | "copy" | "external-link" | "loading" | "info" | "wallet" | "konduit" | "share" | "chevron-right" | "square-plus" ;
+export type ActionIcon = "pen" | "download" | "trash" | "copy" | "external-link" | "loading" | "info" | "wallet" | "konduit" | "share" | "chevron-right" | "chevron-down" | "square-plus" | "circle-plus" | "circle-x";
 
 export type Href = string;
 export type Action =
@@ -33,17 +33,14 @@ async function doShare(action: { value: string, title?: string }) {
 </script>
 
 <script setup lang="ts">
-import { ChevronRight, SquarePlus } from "lucide-vue-next";
+import { ChevronDown, ChevronRight, CirclePlus, Copy, Download, CircleX, SquarePlus, Trash } from "lucide-vue-next";
 import ClockThrobber from "../ClockThrobber.vue";
-import Copy from "../icons/Copy.vue";
-import Download from "../icons/Download.vue";
 import { SquareArrowOutUpRight } from "lucide-vue-next";
 import Info from "../icons/Info.vue";
 import Konduit from "../icons/Konduit.vue";
 import Link from "../Link.vue";
 import { mkClickHandler } from "../Link.vue";
 import Pen from "../icons/Pen.vue";
-import Trash from "../icons/Trash.vue";
 import WalletMinimal from "../icons/WalletMinimal.vue";
 import { Share2 } from "lucide-vue-next";
 import type { OnClick } from "../Link.vue";
@@ -132,7 +129,9 @@ const rowOnClick = computed(() => {
               :click="action[0]"
             >
               <Copy v-if="action[2] === 'copy'" />
+              <ChevronDown v-else-if="action[2] === 'chevron-down'" />
               <ChevronRight v-else-if="action[2] === 'chevron-right'" />
+              <CircleX v-else-if="action[2] === 'circle-x'" />
               <Download v-else-if="action[2] === 'download'" />
               <SquareArrowOutUpRight v-else-if="action[2] === 'external-link'" />
               <Info v-else-if="action[2] === 'info'" />
@@ -140,6 +139,7 @@ const rowOnClick = computed(() => {
               <Pen v-else-if="action[2] === 'pen' || !action[2]" />
               <Share2 v-else-if="action[2] === 'share' && shareSupported" />
               <SquarePlus v-else-if="action[2] === 'square-plus'" />
+              <CirclePlus v-else-if="action[2] === 'circle-plus'" />
               <Trash v-else-if="action[2] === 'trash'" />
               <WalletMinimal v-else-if="action[2] === 'wallet'" />
             </Link>
@@ -159,8 +159,8 @@ const rowOnClick = computed(() => {
 .data-pair {
   align-items: left;
   display: flex;
-  line-height: 1.2rem;
-  gap: calc(var(--data-listing-gap) / 3);
+  line-height: 1.2em;
+  gap: calc(var(--data-listing-gap) / 4);
   overflow: hidden;
   width: 100%;
 }
@@ -190,9 +190,9 @@ const rowOnClick = computed(() => {
      */
     .data-pair dt .actions {
       display: flex;
-      gap: 0.38rem;
+      gap: 0.28em;
       flex: 0 0 auto;
-      height: 1.2rem;
+      height: 1.2em;
       text-align: right;
     }
 
@@ -200,7 +200,7 @@ const rowOnClick = computed(() => {
         align-items: center;
         display: inline-block;
         justify-content: center;
-        line-height: 1.2rem;
+        line-height: 1.2em;
       }
 
       .data-pair dt .actions a.edit {
@@ -210,13 +210,11 @@ const rowOnClick = computed(() => {
         .data-pair dt .actions .edit svg {
           color: var(--primary-color);
           stroke-width: 1.5;
-          height: 1.2rem;
+          height: 1.2em;
         }
 
   .data-pair dd {
     color: var(--secondary-color);
-    font-size: 1.0rem;
-    line-height: 1.2rem;
     overflow: hidden;
     margin-left: 0;
     text-overflow: ellipsis;
@@ -234,7 +232,6 @@ const rowOnClick = computed(() => {
     font-style: italic;
   }
   .data-pair dd.important {
-    font-size: 1rem;
     font-weight: 600;
   }
   .data-pair dd.very-important {

@@ -157,7 +157,7 @@ export function useDefaultFormatters() {
   const euroFormatter = useCurrencyFormatter({ currency: 'EUR' });
   const britishPoundFormatter = useCurrencyFormatter({ currency: 'GBP' });
 
-  const shortDateFormatter = useDateFormatter({ dateStyle: 'short' });
+  const shortDateFormatter = useDateFormatter({ dateStyle: 'short', timeStyle: undefined });
 
   const durationShortFormatter = useDurationFormatter({ style: 'short' });
   const durationLongFormatter = useDurationFormatter({ style: 'long' });

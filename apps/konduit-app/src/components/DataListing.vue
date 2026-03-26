@@ -21,7 +21,7 @@ const props = defineProps<Props>();
         :formatted-value="row.formattedValue"
         :actions="row.actions"
       />
-      <Hr v-else class="separator" />
+      <Hr v-else class="separator" :subtle="true" />
     </template>
   </dl>
   <slot v-else name="empty"><MissingDataPlaceholder>Nothing to show yet.</MissingDataPlaceholder></slot>

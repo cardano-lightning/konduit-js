@@ -48,8 +48,6 @@ const renderingContext: ComputedRef<RenderingContext> = computed(() => {
       return { type: 'no-channels-wallet-empty' };
     else
       return { type: 'no-channels-wallet-funded' };
-  console.log("Channels:", channels.value);
-  console.log("First channel payments:", channels.value[0]!.allPayments);
   if(channels.value.length == 1 && channels.value[0]!.allPayments.length == 0)
     if(channels.value[0]!.wasApproved)
       return { type: 'first-channel-ready-no-payments' };
@@ -65,7 +63,7 @@ const renderingContext: ComputedRef<RenderingContext> = computed(() => {
 });
 
 type CalloutSetup = {
-  icon: 'ada' | 'battery-low' | 'blocked' | 'hand-raised' | 'konduit' | 'wallet' | 'zap';
+  icon: 'ada' | 'battery-low' | 'blocked' | 'hand-raised' | 'clock-throbber' | 'wallet' | 'zap';
   title: string;
   variant: CalloutVariant;
   message: string | string[];
@@ -111,7 +109,7 @@ const calloutSetup: ComputedRef<CalloutSetup | null> = computed(() => {
         case 'error':
           return {
             // FIXME:
-            icon: 'konduit',
+            icon: 'blocked',
             title: 'Issue while opening channel',
             variant: 'error',
             message: [
@@ -124,7 +122,7 @@ const calloutSetup: ComputedRef<CalloutSetup | null> = computed(() => {
         case 'submitted':
           return {
             // FIXME:
-            icon: 'konduit',
+            icon: 'clock-throbber',
             title: 'Channel opening in progress',
             variant: 'hint',
             message: [
@@ -136,21 +134,6 @@ const calloutSetup: ComputedRef<CalloutSetup | null> = computed(() => {
           };
       }
     }
-    case 'first-channel-ready-no-payments':
-      return {
-        buttons: [{
-          label: 'Scan an invoice',
-          action: { name: 'pay' },
-          primary: true,
-        }],
-        icon: 'zap',
-        message: [
-          'Your first channel is open and ready.',
-          'Make your first payment to see it in action.',
-        ],
-        title: 'Channel ready',
-        variant: 'success',
-      };
     case 'channel-charging':
       return {
         buttons: [],
@@ -169,6 +152,16 @@ const calloutSetup: ComputedRef<CalloutSetup | null> = computed(() => {
         variant: 'error',
       };
 
+    case 'first-channel-ready-no-payments':
+      return {
+        buttons: [],
+        icon: 'zap',
+        message: [
+          'Make your first payment to see it in action.',
+        ],
+        title: 'Channel ready',
+        variant: 'hint',
+      };
     case 'regular-use':
       return null;
   }
@@ -176,13 +169,26 @@ const calloutSetup: ComputedRef<CalloutSetup | null> = computed(() => {
 
 const fx = useFx();
 
+const channelsSummary = computed(() => {
+  if(channels.value.length === 0) return "No channels yet";
+  const totalChannels = channels.value.length;
+  if(totalChannels === 1) return `1 channel`; // • ${totalSpendableFormatted} spendable`;
+  const totalSpendable: AdaAmount = (() => {
+    const lovelaceSpendable = channels.value.reduce((sum, channel) =>
+      Lovelace.unsafeAdd(sum, channel.availableApprovedCapacity || Lovelace.zero),
+      Lovelace.zero
+    );
+    return AdaAmount.fromLovelace(lovelaceSpendable);
+  })();
+  const totalSpendableFormatted = fx.formatCryptoInCurrent(totalSpendable).value;
+  return `${totalChannels} channels • ${totalSpendableFormatted} spendable`;
+});
+
 const infoRows = computed((): (DataRowProps | "separator")[] => {
-  // console.log("current currency:", fx.currentCurrency.value);
-  // console.log(fx.formatAmount.value(mkLovelaceAmount(walletBalance.value)));
   return [
     {
       label: 'Channels',
-      formattedValue: channels.value? channels.value.length.toString() : "0",
+      formattedValue: channelsSummary.value,
       actions: { rowAction: ["channel-list", "chevron-right"] as [OnClick, ActionIcon] }
     },
     {
@@ -195,7 +201,6 @@ const infoRows = computed((): (DataRowProps | "separator")[] => {
 const showCurrencySwitcher = computed(() =>
   ( renderingContext.value.type != 'no-channels-wallet-empty'
     && renderingContext.value.type != 'no-channels-wallet-funded'
-    && renderingContext.value.type != 'first-channel-opening-in-progress'
   )
 );
 
@@ -204,6 +209,13 @@ const headerStyling = computed(() => {
     noMarginBottom: renderingContext.value.type === 'no-channels-wallet-empty' || renderingContext.value.type === 'no-channels-wallet-funded',
     noBorderBottom: renderingContext.value.type === 'no-channels-wallet-empty' || renderingContext.value.type === 'no-channels-wallet-funded',
   }
+});
+
+const showChannelAndWalletLinks = computed(() => {
+  return renderingContext.value.type === 'regular-use'
+    || renderingContext.value.type === 'channel-charging'
+    || renderingContext.value.type === 'first-channel-opening-in-progress'
+    || renderingContext.value.type === 'first-channel-ready-no-payments';
 });
 
 </script>
@@ -216,7 +228,6 @@ const headerStyling = computed(() => {
     <div id="body">
       <template v-if="renderingContext.type !== 'no-channels-wallet-empty' && renderingContext.type !== 'no-channels-wallet-funded'" >
         <ChannelsMax />
-        <Hr v-if="renderingContext.type === 'regular-use'" />
       </template>
 
       <template v-if="calloutSetup">
@@ -229,7 +240,7 @@ const headerStyling = computed(() => {
             <component
               :is="{
                 'hand-raised': HandRaised,
-                'konduit': ClockThrobber,
+                'clock-throbber': ClockThrobber,
                 'zap': Zap,
                 'battery-low': BatteryLow,
                 'blocked': Ban,
@@ -249,7 +260,8 @@ const headerStyling = computed(() => {
         </Callout>
         <ButtonGroup id="welcome-buttons" v-if="calloutSetup && calloutSetup.buttons.length > 0" :buttons="calloutSetup.buttons" />
       </template>
-      <template v-else>
+      <Hr v-else :subtle="true" />
+      <template v-if="showChannelAndWalletLinks">
         <DataListing :rows="infoRows" />
       </template>
     </div>

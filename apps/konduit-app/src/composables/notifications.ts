@@ -3,6 +3,8 @@ import { useRouter, type RouteLocationRaw, type Router } from "vue-router";
 import { type Plugin, type App } from "vue";
 import { useToast, TYPE, type ToastInterface } from "vue-toastification";
 
+// FIXME: We recently transitioned to `composable/history` and `appBack` approach to the navigation.
+// This module sholud be adjusted to that approach.
 export function useNotifications(_router: Router | null = null, _toast: ToastInterface | null = null) {
   const router: Router = (() => {
     if(_router) return _router;

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import DataListing, { type RowConfig } from "../components/DataListing.vue";
-import FancyAmount from "../components/FancyAmount.vue";
 import MainContainer from "../components/MainContainer.vue";
 import TheHeader from "../components/TheHeader.vue";
 import type { Channel } from "@konduit/konduit-consumer/channel";
@@ -51,7 +50,7 @@ const rows = computed((): RowConfig[] => {
     { label: 'On-chain',
       formattedValue: '1 transaction',
       actions: {
-        rowAction: [{ name: 'channel-on-chain', params: { tag: hex(channel.channelTag, '') }}, 'chevron-right'] as [OnClick, ActionIcon]
+        rowAction: [{ name: 'channel-payments', params: { tag: hex(channel.channelTag, '') }}, 'chevron-right'] as [OnClick, ActionIcon]
       }
     },
     "separator",

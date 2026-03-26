@@ -33,10 +33,10 @@ type Props = {
 };
 
 const emit: (
-  ((event: "back", value: null) => void) &
-  ((event: 'reset-redirect', value: RouteLocationRaw) => void) &
+  ((event: "scan", value: null) => void) &
+  ((event: 'reset-redirect-back', value: null) => void) &
   ((event: 'reset-scan', value: null) => void)
-) = defineEmits(["back", "reset-redirect", "reset-scan"]);
+) = defineEmits(["scan", "reset-redirect-back", "reset-scan"]);
 
 const props = defineProps<Props>();
 
@@ -158,7 +158,7 @@ const pageSetup = computed((): PageSetup => {
   const mkButtons = (mainButton: ButtonProps | null) => {
     const backButton: ButtonProps = {
       label: 'Scan another invoice',
-      action: () => emit('back', null),
+      action: () => emit('scan', null),
       primary: false,
     };
     return mainButton ? [backButton, mainButton] : [backButton];
@@ -174,7 +174,7 @@ const pageSetup = computed((): PageSetup => {
   const resetButtons = [
     {
       label: 'Cancel',
-      action: () => emit('reset-redirect', { name: 'home' }),
+      action: () => emit('reset-redirect-back'),
       primary: false,
     },
     {
@@ -350,10 +350,11 @@ const pageSetup = computed((): PageSetup => {
         buttons: mkPayButtons(processingProgress.value.pay),
         callout: {
           icon: 'zap',
-          title: 'Route is ready!',
+          title: 'Route is ready',
           variant: 'success',
           message: [
             'We found a good route for your payment.',
+            '',
             'You can proceed to pay the invoice.'
           ]
         }
@@ -427,64 +428,66 @@ const pageSetup = computed((): PageSetup => {
 <template>
   <MainContainer :buttons="pageSetup.buttons">
     <TheHeader
-      :back="() => emit('back', null)"
+      :back="[{ name: 'pay' }, () => emit('back', null)]"
       :title="'Payment'"
       id="header"
       :show-fx-currency-switcher="true"
     />
-    <div id="invoice-amount">
-      <span class="amount">
-        <FancyAmount
-          v-if="totalAmount"
-          :amount="totalAmount"
-        >
-        <template #subscript>
-          <MissingDataPlaceholder v-if="invoice.description">
-            No description provided.
-          </MissingDataPlaceholder>
-          <span v-else>{{ invoice.description }}</span>
+    <div id="invoice-container">
+      <div id="invoice-amount">
+        <span class="amount">
+          <FancyAmount
+            v-if="totalAmount"
+            :amount="totalAmount"
+          >
+          <template #subscript>
+            <MissingDataPlaceholder v-if="invoice.description">
+              No description provided.
+            </MissingDataPlaceholder>
+            <span v-else>{{ invoice.description }}</span>
+          </template>
+          </FancyAmount>
+        </span>
+      </div>
+      <Callout
+        v-if="pageSetup.callout !== 'charging-callout'"
+        :title="pageSetup.callout.title"
+        :variant="pageSetup.callout.variant"
+      >
+        <template #icon>
+          <component :is="{
+            'alert-triangle': AlertTriangle,
+            'ada': CircleAdaSign,
+            'ban': Ban,
+            'battery-low': BatteryLow,
+            'battery-throbber': BatteryThrobber,
+            'blocked': HandCoins,
+            'bug': Bug,
+            'clock-throbber': ClockThrobber,
+            'hand-coins': HandCoins,
+            'hand-raised': HandCoins,
+            'home': Home,
+            'wallet': WalletMinimal,
+            'zap': Zap,
+          }[pageSetup.callout.icon]" />
         </template>
-        </FancyAmount>
-      </span>
+        <template v-if="typeof pageSetup.callout.message === 'string'">
+          {{ pageSetup.callout.message }}
+        </template>
+        <!-- br in between -->
+        <template v-else>
+          <template v-for="(message, index) in pageSetup.callout.message" :key="index">
+            {{ message }}<br v-if="index < pageSetup.callout.message.length - 1" />
+          </template>
+        </template>
+        <template v-if="pageSetup.callout.debug">
+          <hr />
+          <pre class="debug-info">{{ pageSetup.callout.debug }}</pre>
+        </template>
+      </Callout>
+      <ChargingInProgressCallout v-else :progress="{ type: 'submitted' }" />
+      <DataListing :rows="invoiceRows" />
     </div>
-    <Callout
-      v-if="pageSetup.callout !== 'charging-callout'"
-      :title="pageSetup.callout.title"
-      :variant="pageSetup.callout.variant"
-    >
-      <template #icon>
-        <component :is="{
-          'alert-triangle': AlertTriangle,
-          'ada': CircleAdaSign,
-          'ban': Ban,
-          'battery-low': BatteryLow,
-          'battery-throbber': BatteryThrobber,
-          'blocked': HandCoins,
-          'bug': Bug,
-          'clock-throbber': ClockThrobber,
-          'hand-coins': HandCoins,
-          'hand-raised': HandCoins,
-          'home': Home,
-          'wallet': WalletMinimal,
-          'zap': Zap,
-        }[pageSetup.callout.icon]" />
-      </template>
-      <template v-if="typeof pageSetup.callout.message === 'string'">
-        {{ pageSetup.callout.message }}
-      </template>
-      <!-- br in between -->
-      <template v-else>
-        <template v-for="(message, index) in pageSetup.callout.message" :key="index">
-          {{ message }}<br v-if="index < pageSetup.callout.message.length - 1" />
-        </template>
-      </template>
-      <template v-if="pageSetup.callout.debug">
-        <hr />
-        <pre class="debug-info">{{ pageSetup.callout.debug }}</pre>
-      </template>
-    </Callout>
-    <ChargingInProgressCallout v-else :progress="{ type: 'submitted' }" />
-    <DataListing :rows="invoiceRows" />
   </MainContainer>
 </template>
 
@@ -495,12 +498,14 @@ header :deep(.header-right) svg {
   width: auto !important;
 }
 
-.buttons {
-  margin-top: calc(var(--data-listing-gap) * 2);
+#invoice-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--data-listing-gap);
 }
 
-.callout {
-  margin-bottom: calc(var(--data-listing-gap));
+.buttons {
+  margin-top: calc(var(--data-listing-gap) * 2);
 }
 
 #opening-steps {
@@ -525,7 +530,6 @@ header :deep(.header-right) svg {
     }
 
 #invoice-amount {
-  margin-bottom: calc(var(--data-listing-gap) * 2);
   text-align: center;
 }
   #invoice-amount .amount {

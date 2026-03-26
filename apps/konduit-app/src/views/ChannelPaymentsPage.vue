@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import DataListing, { type RowConfig } from "../components/DataListing.vue";
-import FancyAmount from "../components/FancyAmount.vue";
 import MainContainer from "../components/MainContainer.vue";
 import TheHeader from "../components/TheHeader.vue";
 import type { Channel } from "@konduit/konduit-consumer/channel";
@@ -34,40 +33,56 @@ const formatters = useDefaultFormatters();
 const rows = computed((): RowConfig[] => {
   const channel = props.channel;
   return [
-    "separator",
     { label: 'Adaptor', formattedValue: channel.adaptorUrl, actions: [] },
-    { label: 'Tag', formattedValue: hex(channel.channelTag), actions: [] },
+    { label: 'Channel tag', formattedValue: hex(channel.channelTag), actions: [] },
     "separator",
-    { label: 'Created at', formattedValue: formatters.formatShortDate(channel.createdAt) },
-    { label: 'Total', formattedValue: formatAdaInCurrent(channel.totalSubmittedCapacity).value },
-    { label: 'Available', formattedValue: formatAdaInCurrent(channel.availableApprovedCapacity).value },
-    "separator",
-    { label: 'History',
-      formattedValue: '10 payments',
-      actions: {
-        rowAction: [{ name: 'channel-payments', params: { tag: hex(channel.channelTag, '') }}, 'chevron-right'] as [OnClick, ActionIcon]
-      }
-    },
-    { label: 'On-chain',
-      formattedValue: '1 transaction',
-      actions: {
-        rowAction: [{ name: 'channel-on-chain', params: { tag: hex(channel.channelTag, '') }}, 'chevron-right'] as [OnClick, ActionIcon]
-      }
-    },
-    "separator",
-    { label: 'Top up channel',
-      formattedValue: '',
-      actions: {
-        rowAction: [{ name: 'channel-details', params: { tag: hex(channel.channelTag, '') }}, 'circle-plus'] as [OnClick, ActionIcon]
-      }
-    },
-    { label: 'Close channel',
-      formattedValue: ' ',
-      actions: {
-        rowAction: [{ name: 'channel-details', params: { tag: hex(channel.channelTag, '') }}, 'circle-x'] as [OnClick, ActionIcon]
-      }
-    },
+    // { label: 'Created at', formattedValue: formatters.formatShortDate(channel.createdAt) },
+    // { label: 'Total', formattedValue: formatAdaInCurrent(channel.totalSubmittedCapacity).value },
+    // { label: 'Available', formattedValue: formatAdaInCurrent(channel.availableApprovedCapacity).value },
   ];
+});
+
+// export type ExpiredPayment = {
+//   cheque: LockedCheque;
+//   expiredAt: ValidDate;
+//   info: ({
+//     error: ImmediatePaymentError;
+//     invoice: Invoice;
+//   });
+// }
+// export type ConfirmedPayment = {
+//   cheque: UnlockedCheque;
+//   // If we recover payments from the adaptor
+//   // we won't get the full invoice back.
+//   // We don't not yet implement that flow.
+//   invoice: Invoice | null;
+// };
+// export type FailedPayment = {
+//   cheque: LockedCheque;
+//   info: {
+//     error: ImmediatePaymentError | null;
+//     invoice: Invoice;
+//   } | null;
+// };
+// export type AnyPayment = FailedPayment | ConfirmedPayment | ExpiredPayment;
+// export type PaymentBreakdown<T> = {
+//   total: T;
+//   invoice: T;
+//   fee: T;
+// };
+
+const payments = computed(() => {
+  const payments = props.channel.allPayments;
+  if(!payments) return [];
+  return payments.map(payment => {
+    return {
+      label: payment.paymentId,
+      formattedValue: `${formatters.formatShortDate(payment.createdAt)} • ${formatAdaInCurrent(payment.amount).value}`,
+      actions: {
+        rowAction: [{ name: 'payment-details', params: { id: hex(payment.paymentId, '') }}, 'chevron-right'] as [OnClick, ActionIcon]
+      }
+    } as RowConfig;
+  });
 });
 
 </script>
@@ -78,11 +93,6 @@ const rows = computed((): RowConfig[] => {
       :show-fx-currency-switcher="true"
     />
     <div id="body">
-      <div class="available">
-        <FancyAmount :amount="amount">
-          <template #subscript>Available capacity</template>
-        </FancyAmount>
-      </div>
       <DataListing :rows="rows" />
     </div>
   </MainContainer>
@@ -94,8 +104,5 @@ const rows = computed((): RowConfig[] => {
   display: flex;
   flex-direction: column;
   gap: var(--data-listing-gap);
-}
-.available {
-  font-size: 1.5em;
 }
 </style>

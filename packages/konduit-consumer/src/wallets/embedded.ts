@@ -2,7 +2,7 @@ import type { Json } from "@konduit/codec/json";
 import type { JsonCodec, JsonError } from "@konduit/codec/json/codecs";
 import { err, ok, type Result } from "neverthrow";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
-import { Address, AddressBech32, type Credential, Lovelace, Network, PubKeyHash, TransactionUnspentOutput, TxHash } from "../cardano";
+import { Address, AddressBech32, Lovelace, Network, PubKeyHash, TransactionUnspentOutput, TxHash } from "../cardano";
 import * as codec from "@konduit/codec";
 import { NetworkMagicNumber } from "../cardano";
 import type { Mnemonic, Ed25519VerificationKey } from "@konduit/cardano-keys";
@@ -87,7 +87,7 @@ export const BalanceInfo = PollingInfo;
 export const json2BalanceInfoCodec: JsonCodec<BalanceInfo> = mkJson2PollingInfoCodec(Lovelace.jsonCodec);
 
 export type SelectUtxosError =
-  | { queryError: JsonError }
+  | { queryError: HttpEndpointError }
   | { insufficientFunds: { available: Lovelace; required: Lovelace } };
 
 /* A simple, single-address, no staking wallet implementation */
@@ -167,8 +167,8 @@ export class Wallet<WalletBackend extends WalletBackendBase> {
 
   public async selectUtxos(minLovelace: Lovelace): Promise<Result<Array<TransactionUnspentOutput>, SelectUtxosError>> {
     return (await this.walletBackend.utxosAtAddress(this.address))
-      .mapErr((error) => {
-        return { queryError: error } as SelectUtxosError;
+      .mapErr((error: HttpEndpointError) => {
+        return { queryError: error };
       })
       .andThen((result) => {
         const reduced = result.reduce((acc, utxo) => {
@@ -310,13 +310,13 @@ export namespace CardanoConnectorWallet {
     return {
       connector,
       getBalance: async (vKey: Ed25519VerificationKey) => {
-        const address = {
+        const address: Address = {
           network: Network.fromNetworkMagicNumber(networkMagicNumber),
           paymentCredential: {
             type: "PubKeyHash",
             hash: PubKeyHash.fromPubKey(vKey.key),
-          } as Credential,
-        } as Address;
+          }
+        };
         return (await connector.balance(address)).mapErr((error) => {
           return json2HttpEndpointErrorCodec.serialise(error);
         });
@@ -416,7 +416,11 @@ export namespace BlockfrostWallet {
             },
           };
           let addressBech32 = AddressBech32.fromAddress(address);
-          return (await blockfrostClient.getAddressInfo(addressBech32)).map(addressInfo => addressInfo.lovelace);
+          return (await blockfrostClient.getAddressInfo(addressBech32))
+            .map(addressInfo => addressInfo.lovelace)
+            .mapErr((error) => {
+              return json2HttpEndpointErrorCodec.serialise(error);
+            });
         },
         submit: async (tx: Transaction) => {
           const txCbor = tx.toCbor();
@@ -427,7 +431,7 @@ export namespace BlockfrostWallet {
           return utxosWithExtraInfo;
         },
         networkMagicNumber: blockfrostClient.networkMagicNumber,
-      } as WalletBackend;
+      };
     });
   };
 

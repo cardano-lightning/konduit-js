@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import KonduitLogo from "./KonduitLogo.vue";
 import { computed } from "vue";
-import { useRoute, useRouter, type RouteLocationRaw } from "vue-router";
+import { useRoute, type RouteLocationRaw } from "vue-router";
 import ChevronLeft from "./icons/ChevronLeft.vue";
 import CurrencySwitch from "./CurrencySwitch.vue";
 import { useFx } from "../composables/fx";
+import { useAppBack } from "../composables/history";
 
 // Define props
 const props = defineProps<{
-  back?: string | (() => void) | RouteLocationRaw;
+  back?: string | RouteLocationRaw | [string | RouteLocationRaw, (event: MouseEvent) => void];
   title?: string;
   showFxCurrencySwitcher?: boolean;
   styling?: {
@@ -20,7 +21,6 @@ const props = defineProps<{
 
 // Get the current route and router instances
 const route = useRoute();
-const router = useRouter();
 const isIndex = computed(() => route.path === "/");
 const currentPageName = computed(() => {
   return props.title || route.meta.title || route.name || "Page";
@@ -28,22 +28,27 @@ const currentPageName = computed(() => {
 
 const fx = useFx();
 
-const goBack = () => {
-  if (props.back) {
-    if (typeof props.back === "function") {
-      props.back();
-      return;
-    } else if (typeof props.back === "string") {
-      router.push({ name: props.back });
-      return;
-    } else {
-      router.push(props.back);
-      return;
-    }
-  } else {
-    router.back();
+const backTarget = computed((): RouteLocationRaw | null => {
+  if (!props.back) return null
+  if (typeof props.back === 'string') return props.back
+  if (Array.isArray(props.back)) return props.back[0];
+  return null
+})
+
+const appBack = useAppBack(backTarget)
+
+const handleBackClick = (e: MouseEvent) => {
+  if (Array.isArray(props.back)) {
+    props.back[1]?.(e)          // extra handler
   }
-};
+  appBack.handleClick(e)
+}
+
+const back = {
+  href: appBack.href,
+  handleClick: handleBackClick
+} as const
+
 const headerClasses = computed(() => {
   return {
     'index-header': isIndex.value,
@@ -69,9 +74,9 @@ const headerClasses = computed(() => {
     </div>
   </header>
   <header v-else class="regular-header" aria-label="Go back">
-    <div class="header-left" @click="goBack">
+    <a class="header-left" @click="back.handleClick" href="back.href">
       <ChevronLeft />
-    </div>
+    </a>
     <h1>
       <span>{{ currentPageName }}</span>
       <template v-if="subsection">
@@ -143,6 +148,12 @@ header.index-header h1 :deep(svg.konduit-logo) {
 }
 header.index-header .header-left,
 header.index-header .header-right {
-  min-width: 1rem;
+  min-width: 1.5rem;
+}
+header.index-header .header-right {
+  text-align: right;
+}
+header.index-header .header-left {
+  text-align: left;
 }
 </style>

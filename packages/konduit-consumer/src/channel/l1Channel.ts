@@ -139,8 +139,13 @@ export namespace TxBase {
 
 export type OpenTx = TxBase & {
   adaptor: AdaptorEd25519VerificationKey;
-  adaptorApproved: boolean;
+  // adaptorApproved: boolean;
   amount: Lovelace;
+  // This is in app creation time
+  // In the case of recovering should be set
+  // to on-chain settlement time so
+  // the app can still approximate the
+  // original value.
   created: ValidDate;
   closePeriod: Seconds;
   consumer: Ed25519VerificationKey;
@@ -152,27 +157,33 @@ export type OpenTx = TxBase & {
 export const json2OpenTxCodec: JsonCodec<OpenTx> = codec.rmap(
   jsonCodecs.objectOf({
     adaptor: json2AdaptorEd25519VerificationKeyCodec,
+    // adaptor_approved: jsonCodecs.constant(false), // FIXME: we do not have this info in the openning tx record, we should probably add it there as well
     amount: Lovelace.jsonCodec,
     channel_tag: ChannelTag.jsonCodec,
     close_period: json2SecondsCodec,
     consumer: json2Ed25519VerificationKeyCodec,
+    created: jsonCodecs.nullable(json2ValidDateCodec),
     last_submitted: jsonCodecs.nullable(json2ValidDateCodec),
     tx_cbor: jsonCodecs.nullable(codec.rmap(uint8Array.jsonCodec, unsafeTxCborBytes, (bytes) => bytes)),
     tx_hash: TxHash.jsonCodec,
+    tx_ix: jsonCodecs.nullable(TxIx.jsonCodec),
     type: jsonCodecs.constant("OpenTx" as const),
   }),
   (r) => {
     return {
       adaptor: r.adaptor,
+      // adaptorApproved: false, // FIXME: we do not have this info in the openning tx record, we should probably add it there as well
       amount: r.amount,
       closePeriod: r.close_period,
+      created: r.created || r.last_submitted || ValidDate.now(),
       consumer: r.consumer,
       lastSubmitted: r.last_submitted,
       tag: r.channel_tag,
       txCbor: r.tx_cbor,
       txHash: r.tx_hash,
+      txIx: r.tx_ix || TxIx.fromDigits(0),
       type: "OpenTx",
-    } as OpenTx;
+    };
   },
   (openTx: OpenTx) => {
     return {
@@ -180,10 +191,12 @@ export const json2OpenTxCodec: JsonCodec<OpenTx> = codec.rmap(
       amount: openTx.amount,
       channel_tag: openTx.tag,
       close_period: openTx.closePeriod,
+      created: openTx.created,
       consumer: openTx.consumer,
       last_submitted: openTx.lastSubmitted,
       tx_cbor: openTx.txCbor,
       tx_hash: openTx.txHash,
+      tx_ix: openTx.txIx,
       type: "OpenTx" as const,
     };
   },
@@ -191,7 +204,7 @@ export const json2OpenTxCodec: JsonCodec<OpenTx> = codec.rmap(
 
 export type AddTx = TxBase & {
   type: "AddTx";
-  adaptorApproved: boolean;
+  // adaptorApproved: boolean;
   amount: Lovelace;
   lastSubmitted: ValidDate | null;
 };
@@ -206,6 +219,7 @@ export const json2AddTxCodec: JsonCodec<AddTx> = codec.rmap(
     last_submitted: jsonCodecs.nullable(json2ValidDateCodec),
     tx_cbor: jsonCodecs.nullable(codec.rmap(uint8Array.jsonCodec, unsafeTxCborBytes, (bytes) => bytes)),
     tx_hash: TxHash.jsonCodec,
+    tx_ix: jsonCodecs.nullable(TxIx.jsonCodec),
     type: jsonCodecs.constant("AddTx" as const),
   }),
   (r) => {
@@ -214,8 +228,9 @@ export const json2AddTxCodec: JsonCodec<AddTx> = codec.rmap(
       lastSubmitted: r.last_submitted,
       txCbor: r.tx_cbor,
       txHash: r.tx_hash,
+      txIx: r.tx_ix || TxIx.fromDigits(0),
       type: "AddTx",
-    } as AddTx;
+    };
   },
   (addTx: AddTx) => {
     return {
@@ -224,6 +239,7 @@ export const json2AddTxCodec: JsonCodec<AddTx> = codec.rmap(
       tx_block_no: jsonCodecs.nullable(json2BlockNoCodec),
       tx_cbor: addTx.txCbor,
       tx_hash: addTx.txHash,
+      tx_ix: addTx.txIx,
       type: "AddTx" as const,
     };
   },
@@ -247,6 +263,7 @@ export const json2CloseTxCodec: JsonCodec<CloseTx> = codec.rmap(
     last_submitted: jsonCodecs.nullable(json2ValidDateCodec),
     tx_cbor: jsonCodecs.nullable(codec.rmap(uint8Array.jsonCodec, unsafeTxCborBytes, (bytes) => bytes)),
     tx_hash: TxHash.jsonCodec,
+    tx_ix: jsonCodecs.nullable(TxIx.jsonCodec),
     type: jsonCodecs.constant("CloseTx" as const),
   }),
   (r) => {
@@ -254,14 +271,16 @@ export const json2CloseTxCodec: JsonCodec<CloseTx> = codec.rmap(
       lastSubmitted: r.last_submitted,
       txCbor: r.tx_cbor,
       txHash: r.tx_hash,
+      txIx: r.tx_ix || TxIx.fromDigits(0),
       type: "CloseTx",
-    } as CloseTx;
+    };
   },
   (closeTx: CloseTx) => {
     return {
       last_submitted: closeTx.lastSubmitted,
       tx_cbor: closeTx.txCbor,
       tx_hash: closeTx.txHash,
+      tx_ix: closeTx.txIx,
       type: "CloseTx" as const,
     };
   },

@@ -111,6 +111,11 @@ export namespace BlockDepth {
 }
 
 export type PublicNetwork = "Mainnet" | "Preprod" | "Preview";
+export namespace PublicNetwork {
+  export const MAINNET: PublicNetwork = "Mainnet";
+  export const PREPROD: PublicNetwork = "Preprod";
+  export const PREVIEW: PublicNetwork = "Preview";
+}
 export type NetworkMagicNumber = Tagged<PositiveBigInt, "NetworkMagicNumber">;
 export namespace NetworkMagicNumber {
   export const fromPositiveBigInt = (v: PositiveBigInt): NetworkMagicNumber => v as NetworkMagicNumber;

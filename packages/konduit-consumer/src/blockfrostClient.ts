@@ -30,14 +30,13 @@ import {
 } from "@konduit/codec/json/codecs";
 import type { JsonDeserialiser } from "@konduit/codec/json/codecs";
 export type { SquashResponse } from "./adaptorClient/squash";
-import { type PositiveBigInt } from "@konduit/codec/integers/big";
+import { bigInt2PositiveBigIntCodec, PositiveBigInt } from "@konduit/codec/integers/big";
 import { DatumHash, DatumOption, InlineDatum, PlutusData, ScriptHash, TransactionUnspentOutput, TxInput } from "./cardano/tx";
 import {
   json2ValueCodec,
 } from "./cardano/connectorClient";
 import { json2CborCodec } from "@konduit/codec/cbor/codecs/sync";
 import type { Cbor } from "@konduit/codec/cbor/core";
-import { HexString } from "@konduit/codec/hexString";
 
 export type BlockfrostAddressInfo = {
   address: AddressBech32;
@@ -55,7 +54,7 @@ export const blockfrostAddressInfoCodec = (() => {
     amount: jsonCodecs.arrayOf(
       jsonCodecs.objectOf({
         unit: json2StringCodec,
-        quantity: json2BigIntThroughStringCodec,
+        quantity: codec.pipe(json2BigIntThroughStringCodec, bigInt2PositiveBigIntCodec),
       }),
     ),
     stake_address: nullable(json2StringCodec),
@@ -78,13 +77,22 @@ export const blockfrostAddressInfoCodec = (() => {
           (e) => `Invalid lovelace amount: ${e}`,
         ),
       ]).map(
+        //export type BlockfrostAddressInfo = {
+        //  address: AddressBech32;
+        //  lovelace: Lovelace;
+        //  otherAssets: {
+        //    unit: string;
+        //    quantity: PositiveBigInt;
+        //  }[];
+        //  type: string;
+        //};
         ([address, lovelace]) =>
           ({
             address,
             lovelace,
             otherAssets,
             type: apiResponse.type,
-          } as BlockfrostAddressInfo),
+          }),
       );
     },
     // Serialisation part is not needed but the current
@@ -93,7 +101,10 @@ export const blockfrostAddressInfoCodec = (() => {
     serialise: (info: BlockfrostAddressInfo) => {
       const address = address2AddressBech32Iso.from(info.address);
       const amount = [
-        { unit: "lovelace", quantity: info.lovelace },
+        // We are casting here from NonNegativeBigInt to PositiveBigInt... which in theory is unsafe.
+        // It means that we can serialise a value which contains `0` lovelace
+        // and then we will have a problem when deserialising it back :-(
+        { unit: "lovelace", quantity: info.lovelace as bigint as PositiveBigInt },
         ...info.otherAssets,
       ];
       return {
@@ -222,20 +233,10 @@ export const mkBlockfrostClient = (projectId: string): neverthrow.Result<Blockfr
       `${baseUrl}/tx/submit`,
       RequestSerialiser.fromOtherSerialiser(
         "application/cbor",
-        (data: ArrayBuffer) => {
-          console.debug("TRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR");
-          console.debug("TRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR");
-          console.debug("TRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR");
-          console.debug(HexString.fromUint8Array(new Uint8Array(data)));
-          return data;
-        }
+        (data: ArrayBuffer) => data
       ),
       ResponseDeserialiser.fromJsonDeserialiser(
         (txHash) => {
-          console.debug("TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT");
-          console.debug("TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT");
-          console.debug("TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT");
-          console.debug(`Received tx hash from submit endpoint: ${txHash}`);
           return TxHash.jsonCodec.deserialise(txHash);
         }
       )
