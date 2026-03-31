@@ -68,7 +68,7 @@ export function getEnv(): Env {
     const nodeType = kjs[`${prefix}_${NODE_TYPE}`] as NodeType;
     if (!NODE_TYPES.includes(nodeType))
       throw new Error(`Unknown node type ${nodeType}`);
-    const baseUrl = kjs[`${prefix}_${NODE_BASE_URL}`];
+    const baseUrl = kjs[`${prefix}_${NODE_BASE_URL}`]!;
     const credentials = kjs[`${prefix}_${NODE_CREDENTIALS}`];
     const tlsCertificates = kjs[`${prefix}_${NODE_TLS_CERTIFICATES}`];
     env.nodes[name] = {

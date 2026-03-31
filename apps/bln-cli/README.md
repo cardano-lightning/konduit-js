@@ -4,7 +4,7 @@
 
 ## Setup
 
-Expects a `.env` file with node configuration.
+Expects a `.env` file with node configuration. An .env-example can be found here [.env-example](./.env-example)..
 
 ## Example commands
 

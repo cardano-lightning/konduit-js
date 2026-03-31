@@ -6,8 +6,7 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "vue-tsc --build && vite build apps/konduit-app",
-    "dev": "vite dev konduit-app"
+    "build": "vue-tsc --build && vite build apps/konduit-app"
   },
   "devDependencies": {
     "@vtsls/language-server": "^0.2.9",
@@ -15,5 +14,8 @@
     "typescript": "^5.9.3",
     "vite": "^7.3.0",
     "vue-tsc": "^3.1.8"
+  },
+  "dependencies": {
+    "zod": "^4.3.5"
   }
 }

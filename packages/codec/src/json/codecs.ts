@@ -1,8 +1,8 @@
 import { err, ok, type Result } from "neverthrow";
 import type { Json } from "../json";
-import { onBigInt, onBoolean, onArray, onObject, onNull, nullJson, onString, stringify } from "../json";
+import { onBigInt, onBoolean, onArray, onObject, onNull, nullJson, onString, stringify, onNumber } from "../json";
 import * as json from "../json";
-import { altCodecs, type Codec, type Deserialiser, type ExtractCodecInput, type Serialiser, type UnionOfCodecsOutputs } from "../codec";
+import { altCodecs, mkIdentityCodec, pipe, type Codec, type Deserialiser, type ExtractCodecInput, type Serialiser, type UnionOfCodecsOutputs } from "../codec";
 
 // We actually represent parsing errors as JSON too :-P
 export type JsonError = Json;
@@ -33,34 +33,66 @@ export const mkStringifier = <T>(codec: JsonCodec<T>): (value: T) => string => {
   }
 }
 
-// Codec for bigint
+// Codec for string
+export const json2StringCodec: JsonCodec<string> = {
+  deserialise: onString(val => err(`Expected string but got: ${String(val)}`) as Result<string, JsonError>)(ok),
+  serialise: (value: string) => value
+};
+
+// Default codec for bigint
 export const json2BigIntCodec: JsonCodec<bigint> = {
-  deserialise: onBigInt(val => err(`Expected bigint but got: ${String(val)}`) as Result<bigint, string>)(ok),
+  deserialise: (val) => {
+    const handleNumber = onNumber(val => err(`Expected either number or bigint but got: ${String(val)}`) as Result<bigint, JsonError>)(num => {
+      if (Number.isSafeInteger(num)) {
+        return ok(BigInt(num));
+      } else {
+        return err(`Number value ${num} is outside safe integer range [${Number.MIN_SAFE_INTEGER}, ${Number.MAX_SAFE_INTEGER}]`);
+      }
+    });
+    return onBigInt(handleNumber)(ok)(val);
+  },
   serialise: (value: bigint) => value as Json
 };
 
-// Codec for number (checks safe integer range during deserialisation)
+// Codec for bigint which is provided as a string
+export const json2BigIntThroughStringCodec = pipe(
+  json2StringCodec, {
+    deserialise: (str: string) => {
+      try {
+        return ok(BigInt(str));
+      } catch (e) {
+        return err(`Invalid BigInt string: ${str}`);
+      }
+    },
+    serialise: (bigInt: bigint) => bigInt.toString(),
+  }
+);
+
 export const json2NumberCodec: JsonCodec<number> = {
-  deserialise: onBigInt(val => err(`Expected bigint (for number) but got: ${String(val)}`) as Result<number, string>)((value: bigint) => {
-    const num = Number(value);
-    if (num > Number.MAX_SAFE_INTEGER || num < Number.MIN_SAFE_INTEGER) {
-      return err(`BigInt value ${value} is outside safe integer range [${Number.MIN_SAFE_INTEGER}, ${Number.MAX_SAFE_INTEGER}]`);
-    }
-    return ok(num);
-  }),
-  serialise: (value: number) => BigInt(Math.round(value))
+  deserialise: onNumber(val => err(`Expected number but got: ${String(val)}`) as Result<number, JsonError>)(ok),
+  serialise: (value: number) => value
 };
+
+export const json2NumberThroughStringCodec = pipe(
+  json2StringCodec, {
+    deserialise: (str: string) => {
+      const num = Number(str);
+      if (isNaN(num)) {
+        return err(`Invalid number string: ${str}`);
+      }
+      if (num > Number.MAX_SAFE_INTEGER || num < Number.MIN_SAFE_INTEGER) {
+        return err(`Number value ${num} is outside safe integer range [${Number.MIN_SAFE_INTEGER}, ${Number.MAX_SAFE_INTEGER}]`);
+      }
+      return ok(num);
+    },
+    serialise: (num: number) => num.toString(),
+  }
+);
 
 // Codec for boolean
 export const json2BooleanCodec: JsonCodec<boolean> = {
   deserialise: onBoolean(val => err(`Expected boolean but got: ${String(val)}`) as Result<boolean, JsonError>)(ok),
   serialise: (value: boolean) => value
-};
-
-// Codec for string
-export const json2StringCodec: JsonCodec<string> = {
-  deserialise: onString(val => err(`Expected string but got: ${String(val)}`) as Result<string, JsonError>)(ok),
-  serialise: (value: string) => value
 };
 
 // Codec for null
@@ -69,19 +101,19 @@ export const json2NullCodec: JsonCodec<null> = {
   serialise: () => nullJson
 };
 
-// Codec for array (identity - keeps Json[] as is)
 export const json2ArrayCodec: JsonCodec<Json[]> = {
   deserialise: onArray(err("Expected array") as Result<Json[], JsonError>)(ok),
   serialise: (value: Json[]) => value
 };
 
-// Codec for object (identity - keeps object as is)
 export const json2ObjectCodec: JsonCodec<{ [key: string]: Json }> = {
   deserialise: onObject(
       (value: Json) => err(`Expected object but got ${stringify(value)}`) as Result<{ [key: string]: Json }, JsonError>
     )(ok),
   serialise: (value: { [key: string]: Json }) => value as Json
 };
+
+export const identityCodec: JsonCodec<Json> = mkIdentityCodec()
 
 // I'm not sure why but some parts of the original altCodecs type can be be unified with concrete parts of
 // the JsonCodec, but some not. So I'm leaving this mutant here to help the TS compiler a bit :-P
@@ -171,7 +203,7 @@ export const objectOf = <T extends Record<string, JsonCodec<any>>>(
           let hasErrors = false;
 
           for (const fieldName in fieldCodecs) {
-            const fieldCodec = fieldCodecs[fieldName];
+            const fieldCodec = fieldCodecs[fieldName]!;
             const fieldValue = obj[fieldName];
 
             // If field is missing, pass undefined to the codec
@@ -195,7 +227,7 @@ export const objectOf = <T extends Record<string, JsonCodec<any>>>(
     serialise: (value: CodecsToObject<T>): Json => {
       const result: { [key: string]: Json } = {};
       for (const fieldName in fieldCodecs) {
-        const fieldCodec = fieldCodecs[fieldName];
+        const fieldCodec = fieldCodecs[fieldName]!;
         const fieldValue = (value as any)[fieldName];
         if (fieldValue !== undefined) {
           result[fieldName] = fieldCodec.serialise(fieldValue);
@@ -206,36 +238,139 @@ export const objectOf = <T extends Record<string, JsonCodec<any>>>(
   };
 };
 
+export const dictOf = <O>(codec: JsonCodec<O>): JsonCodec<{ [key: string]: O }> => {
+  return {
+    deserialise: (data: Json): Result<{ [key: string]: O }, JsonError> => {
+      return onObject(
+        (value: Json) => err(`Expected object but got ${stringify(value)}`) as Result<{ [key: string]: O }, JsonError>
+      )(obj => {
+        const result: { [key: string]: O } = {};
+        const errors: { [key: string]: Json } = {};
+        let hasErrors = false;
+
+        for (const key in obj) {
+          const value = obj[key]!;
+          const decoded = codec.deserialise(value);
+
+          if (decoded.isOk()) {
+            result[key] = decoded.value;
+          } else {
+            errors[key] = decoded.error;
+            hasErrors = true;
+          }
+        }
+
+        if (hasErrors) {
+          // Collect per-field errors as a JSON object
+          return err(errors);
+        }
+
+        return ok(result);
+      })(data);
+    },
+    serialise: (value: { [key: string]: O }): Json => {
+      const result: { [key: string]: Json } = {};
+      for (const key in value) {
+        const v = value[key]!;
+        result[key] = codec.serialise(v);
+      }
+      return result;
+    },
+  };
+}
+
+export const arrayOfDeserialiser = <O>(deserialiser: JsonDeserialiser<O>): JsonDeserialiser<O[]> => {
+  return (data: Json): Result<O[], JsonError> => {
+    return onArray(
+      (value: Json) => err(`Expected array but got ${stringify(value)}`) as Result<O[], JsonError>
+    )(items => {
+      const result: O[] = [];
+      const errors: JsonError[] = [];
+      let hasErrors = false;
+
+      for (const item of items) {
+        const decoded = deserialiser(item);
+        if (decoded.isOk()) {
+          result.push(decoded.value);
+        } else {
+          errors.push(decoded.error);
+          hasErrors = true;
+        }
+      }
+
+      if (hasErrors) {
+        // Collect per-element errors as a JSON array
+        return err(errors as unknown as JsonError);
+      }
+
+      return ok(result);
+    })(data);
+  };
+}
+
 export const arrayOf = <O>(codec: JsonCodec<O>): JsonCodec<O[]> => {
   return {
-    deserialise: (data: Json): Result<O[], JsonError> => {
+    deserialise: arrayOfDeserialiser(codec.deserialise),
+    serialise: (value: O[]): Json => {
+      return value.map(v => codec.serialise(v)) as Json;
+    },
+  };
+};
+
+export const tupleOf = <Codecs extends readonly JsonCodec<any>[]>(
+  ...codecs: Codecs
+): Codec<
+  Json, // input: must be a Json array, enforced at runtime
+  { [K in keyof Codecs]: Codecs[K] extends JsonCodec<infer O> ? O : never },
+  JsonError
+> => {
+  type TupleOut = { [K in keyof Codecs]: Codecs[K] extends JsonCodec<infer O> ? O : never };
+
+  return {
+    deserialise: (data: Json): Result<TupleOut, JsonError> => {
       return onArray(
-        (value: Json) => err(`Expected array but got ${stringify(value)}`) as Result<O[], JsonError>
+        (value: Json) =>
+          err(`Expected array (for tupleOf) but got ${stringify(value)}`) as Result<TupleOut, JsonError>
       )(items => {
-        const result: O[] = [];
+        if (items.length !== codecs.length) {
+          return err(
+            `Expected tuple of length ${codecs.length} but got array of length ${items.length}`
+          );
+        }
+
+        const result: any[] = [];
         const errors: JsonError[] = [];
         let hasErrors = false;
 
-        for (const item of items) {
-          const decoded = codec.deserialise(item);
+        codecs.forEach((codec, index) => {
+          const value = items[index]!;
+          const decoded = codec.deserialise(value);
           if (decoded.isOk()) {
-            result.push(decoded.value);
+            result[index] = decoded.value;
           } else {
             errors.push(decoded.error);
             hasErrors = true;
           }
-        }
+        });
 
         if (hasErrors) {
           // Collect per-element errors as a JSON array
           return err(errors as unknown as JsonError);
         }
 
-        return ok(result);
+        return ok(result as TupleOut);
       })(data);
     },
-    serialise: (value: O[]): Json => {
-      return value.map(v => codec.serialise(v)) as Json;
+
+    serialise: (value: TupleOut): Json => {
+      const arr: Json[] = [];
+
+      codecs.forEach((codec, index) => {
+        const v = (value as any)[index];
+        arr.push(codec.serialise(v));
+      });
+
+      return arr as Json;
     },
   };
 };

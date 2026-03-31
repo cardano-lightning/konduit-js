@@ -133,7 +133,13 @@ export const altCodecs = <Codecs extends readonly Codec<any, any, any>[]>(
   caseSerialisers: (
     ...serialisers: { [K in keyof Codecs]: Codecs[K] extends Codec<infer I, infer O, any> ? Serialiser<O, I> : never }
   ) => Serialiser<UnionOfCodecsOutputs<Codecs>, ExtractCodecInput<Codecs[number]>>,
-  combineErrs: (...errors: ExtractCodecError<Codecs[number]>[]) => ExtractCodecError<Codecs[number]> = (...errs) => errs[errs.length - 1]
+  combineErrs: (...errors: ExtractCodecError<Codecs[number]>[]) => ExtractCodecError<Codecs[number]> = (...errs) => {
+    const err = errs[errs.length - 1];
+    if (err === undefined) {
+      throw new Error("PANIC: combineErrs called with no errors, this should be impossible");
+    }
+    return err;
+  }
 ): Codec<ExtractCodecInput<Codecs[number]>, UnionOfCodecsOutputs<Codecs>, ExtractCodecError<Codecs[number]>> => {
   return {
     deserialise: (input: ExtractCodecInput<Codecs[number]>): Result<UnionOfCodecsOutputs<Codecs>, ExtractCodecError<Codecs[number]>> => {
@@ -153,5 +159,61 @@ export const altCodecs = <Codecs extends readonly Codec<any, any, any>[]>(
       const ser = caseSerialisers(...serialisers);
       return ser(output);
     }
+  };
+};
+
+export const tupleOf = <
+  Codecs extends readonly Codec<any, any, any>[]
+>(
+  ...codecs: Codecs & {
+    // ensure all error types are the same
+    [K in keyof Codecs]: Codecs[K] extends Codec<any, any, infer E>
+      ? Codec<any, any, E>
+      : never;
+  }
+): Codec<
+  { [K in keyof Codecs]: Codecs[K] extends Codec<infer I, any, any> ? I : never }, // input tuple
+  { [K in keyof Codecs]: Codecs[K] extends Codec<any, infer O, any> ? O : never }, // output tuple
+  Codecs[number] extends Codec<any, any, infer E> ? E : never                       // common error
+> => {
+  type TupleIn = { [K in keyof Codecs]: Codecs[K] extends Codec<infer I, any, any> ? I : never };
+  type TupleOut = { [K in keyof Codecs]: Codecs[K] extends Codec<any, infer O, any> ? O : never };
+  type Err = Codecs[number] extends Codec<any, any, infer E> ? E : never;
+
+  return {
+    deserialise: (input: TupleIn): Result<TupleOut, Err> => {
+      const result: any[] = [];
+      const errors: Err[] = [];
+      let hasErrors = false;
+
+      codecs.forEach((codec, index) => {
+        const value = (input as any)[index];
+        const decoded = codec.deserialise(value);
+        if (decoded.isOk()) {
+          result[index] = decoded.value;
+        } else {
+          errors[index] = decoded.error as Err;
+          hasErrors = true;
+        }
+      });
+
+      if (hasErrors) {
+        const lastError = errors[errors.length - 1]!;
+        return err(lastError);
+      }
+
+      return ok(result as TupleOut);
+    },
+
+    serialise: (value: TupleOut): TupleIn => {
+      const inputs: any[] = [];
+
+      codecs.forEach((codec, index) => {
+        const v = (value as any)[index];
+        inputs[index] = codec.serialise(v);
+      });
+
+      return inputs as TupleIn;
+    },
   };
 };

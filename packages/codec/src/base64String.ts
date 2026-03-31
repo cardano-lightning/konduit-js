@@ -13,7 +13,7 @@ export namespace Base64String {
 
     if (!base64Regex.test(str)) {
       for (let i = 0; i < str.length; i++) {
-        const char = str[i];
+        const char = str[i]!;
         if (!/[A-Za-z0-9+/=]/.test(char)) {
           return err(`Invalid character '${char}' at position ${i}`);
         }

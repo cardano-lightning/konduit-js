@@ -1,0 +1,67 @@
+<template>
+<svg
+   class="konduit-logo"
+   fill="currentColor"
+   viewBox="0 0 22.410405 4.0157758"
+   version="1.1"
+   id="svg1"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <g
+     id="layer1"
+     transform="translate(71.947136,-44.12783)">
+    <g
+       id="g192"
+       transform="matrix(0.7720481,0,0,1,-126.94906,31.829122)">
+      <g
+         id="g190"
+         transform="matrix(-1,0,0,1,129.09921,-0.093545)">
+        <path
+           id="path189"
+           style="font-size:5.77018px;line-height:0.7;font-family:'Major Mono Display';-inkscape-font-specification:'Major Mono Display, Normal';font-variant-ligatures:none;text-align:center;text-anchor:middle;stroke-width:0.255963"
+           d="m 54.421727,12.392252 v 0.148697 h -4.536835 v -0.148697 z" />
+        <path
+           id="path190"
+           style="font-size:5.77018px;line-height:0.7;font-family:'Major Mono Display';-inkscape-font-specification:'Major Mono Display, Normal';font-variant-ligatures:none;text-align:center;text-anchor:middle;stroke-width:0.258817"
+           d="m 54.487958,16.253485 v 0.154542 h -4.603066 v -0.154542 z" />
+      </g>
+      <g
+         id="g191"
+         transform="matrix(-1,0,0,1,127.51171,-0.093545)" />
+    </g>
+    <path
+       d="m -65.395247,47.672816 v -3.141911 h 0.176055 l 2.193921,2.130721 v -2.130721 h 0.167027 v 3.141911 h -0.167027 v -0.77645 l -2.202949,-2.148778 v 2.925228 z m 4.53681,-3.141911 q 0.343082,0 0.631993,0.17154 0.293426,0.171541 0.464967,0.464968 0.171541,0.28891 0.171541,0.631993 v 0.604908 q 0,0.343083 -0.171541,0.636508 -0.171541,0.288911 -0.464967,0.460453 -0.288911,0.171541 -0.631993,0.171541 h -1.16016 v -3.141911 z m 1.101474,1.268501 q 0,-0.29794 -0.14897,-0.550737 -0.14897,-0.252798 -0.406281,-0.401767 -0.252798,-0.14897 -0.550738,-0.14897 h -0.988618 v 2.807857 h 0.988618 q 0.29794,0 0.550738,-0.14897 0.257311,-0.14897 0.406281,-0.401767 0.14897,-0.252798 0.14897,-0.550738 z m 1.00216,-1.268501 h 0.167027 v 1.941122 q 0,0.29794 0.14897,0.550737 0.14897,0.252798 0.401767,0.401767 0.252798,0.14897 0.550738,0.14897 0.29794,0 0.550737,-0.14897 0.252797,-0.148969 0.401767,-0.401767 0.14897,-0.252797 0.14897,-0.550737 v -1.941122 h 0.167027 v 1.941122 q 0,0.343083 -0.171541,0.636508 -0.171541,0.288911 -0.464967,0.460452 -0.288911,0.171541 -0.631993,0.171541 -0.343083,0 -0.636508,-0.171541 -0.288911,-0.171541 -0.460453,-0.460452 -0.171541,-0.293425 -0.171541,-0.636508 z m 5.629257,0 v 0.167026 h -0.938962 v 2.807857 h 0.938962 v 0.167027 h -2.035923 v -0.167027 h 0.934448 v -2.807857 h -0.934448 v -0.167026 z m 3.588819,0 v 0.167026 h -1.187245 v 2.974885 h -0.162513 v -2.974885 h -1.187245 v -0.167026 z"
+       id="text192"
+       style="font-size:4.51424px;line-height:0.7;font-family:'Major Mono Display';-inkscape-font-specification:'Major Mono Display, Normal';font-variant-ligatures:none;text-align:center;text-anchor:middle;stroke-width:0.188093"
+       aria-label="nduit" />
+    <path
+       style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill-opacity:1;stroke:none;enable-background:accumulate;stop-color:#000000"
+       d="m -67.568661,44.567381 c -0.864638,-1.16e-4 -1.568177,0.703721 -1.568359,1.568359 -1.16e-4,0.864849 0.703511,1.568475 1.568359,1.56836 0.864848,1.15e-4 1.568475,-0.703511 1.568359,-1.56836 -1.82e-4,-0.864638 -0.703721,-1.568475 -1.568359,-1.568359 z m 0,0.171995 c 0.775046,-1.04e-4 1.402063,0.627179 1.402226,1.402225 1.04e-4,0.775238 -0.626989,1.40034 -1.402226,1.400235 -0.775237,1.05e-4 -1.40233,-0.624997 -1.402226,-1.400235 1.63e-4,-0.775046 0.62718,-1.402329 1.402226,-1.402225 z"
+       id="path193" />
+    <path
+       d="m -71.78066,44.569953 v 2.119179 l 2.123679,-2.119179 h 0.233965 l -1.309302,1.304802 1.304803,1.826724 h -0.19797 l -1.223815,-1.709741 -0.93136,0.931359 v 0.778382 h -0.166475 v -3.131526 z"
+       id="text193"
+       style="font-size:4.49932px;line-height:0.7;font-family:'Major Mono Display';-inkscape-font-specification:'Major Mono Display, Normal';font-variant-ligatures:none;text-align:center;text-anchor:middle;stroke:none;stroke-width:0.187472"
+       aria-label="k" />
+  </g>
+</svg>
+</template>
+
+
+<style scoped>
+/*
+@media (prefers-color-scheme: light) {
+  svg.konduit-logo {
+    color: var(--primary-color);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  svg.konduit-logo.dark {
+    display: none;
+  }
+}
+*/
+</style>

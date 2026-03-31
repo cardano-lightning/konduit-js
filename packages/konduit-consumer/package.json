@@ -5,6 +5,9 @@
     "@konduit/codec": "workspace:^",
     "@noble/hashes": "^2.0.1",
     "@scure/base": "^2.0.0",
+    "decimal.js": "^10.6.0",
+    "decimal.js-i18n": "^0.3.1",
+    "neverthrow": "^8.2.0",
     "type-fest": "^5.4.3"
   },
   "devDependencies": {
@@ -33,9 +36,9 @@
       "types": "./dist/cardano.d.ts",
       "default": "./dist/cardano.js"
     },
-    "./cardano/connector": {
-      "types": "./dist/cardano/connector.d.ts",
-      "default": "./dist/cardano/connector.js"
+    "./cardano/connectorClient": {
+      "types": "./dist/cardano/connectorClient.d.ts",
+      "default": "./dist/cardano/connectorClient.js"
     },
     "./adaptorClient": {
       "types": "./dist/adaptorClient.d.ts",
@@ -44,6 +47,42 @@
     "./channel": {
       "types": "./dist/channel.d.ts",
       "default": "./dist/channel.js"
+    },
+    "./bitcoin": {
+      "types": "./dist/bitcoin.d.ts",
+      "default": "./dist/bitcoin.js"
+    },
+    "./bitcoin/bolt11": {
+      "types": "./dist/bitcoin/bolt11.d.ts",
+      "default": "./dist/bitcoin/bolt11.js"
+    },
+    "./neverthrow": {
+      "types": "./dist/neverthrow.d.ts",
+      "default": "./dist/neverthrow.js"
+    },
+    "./http": {
+      "types": "./dist/http.d.ts",
+      "default": "./dist/http.js"
+    },
+    "./polling": {
+      "types": "./dist/polling.d.ts",
+      "default": "./dist/polling.js"
+    },
+    "./kraken": {
+      "types": "./dist/fx/kraken.d.ts",
+      "default": "./dist/fx/kraken.js"
+    },
+    "./fx": {
+      "types": "./dist/fx.d.ts",
+      "default": "./dist/fx.js"
+    },
+    "./amounts": {
+      "types": "./dist/amounts.d.ts",
+      "default": "./dist/amounts.js"
+    },
+    "./txBuilder": {
+      "types": "./dist/txBuilder.d.ts",
+      "default": "./dist/txBuilder.js"
     }
   },
   "files": [

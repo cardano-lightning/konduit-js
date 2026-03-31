@@ -2,6 +2,23 @@
 
 import { err, errAsync, ok, okAsync, Result, ResultAsync } from "neverthrow";
 
+export const wrapThrowable = <T>(fn: () => T): Result<T, unknown> => {
+  try {
+    return ok(fn());
+  } catch (e) {
+    return err(e);
+  }
+}
+
+export const wrapAsyncThrowable = async <T>(fn: () => Promise<T>): Promise<Result<T, unknown>> => {
+  try {
+    const result = await fn();
+    return ok(result);
+  } catch (e) {
+    return err(e);
+  }
+}
+
 // Try to stringify the exception and append that to the message if provided
 export const stringifyThrowable = <T>(fn: () => T, message: string = ""): Result<T, string> => {
   try {
@@ -12,6 +29,7 @@ export const stringifyThrowable = <T>(fn: () => T, message: string = ""): Result
     return err(fullMessage);
   }
 }
+
 
 export const stringifyAsyncThrowable = async <T>(fn: () => Promise<T>, message: string = ""): Promise<Result<T, string>> => {
   try {
@@ -40,3 +58,12 @@ export const unsafeUnwrap = <T, E>(result: Result<T, E>): T => {
   );
 }
 
+export const unwrapOrPanic = <T, E>(result: Result<T, E>, message: string = "PANIC - unwrapped an Err result"): T => {
+  return result.match(
+    (value) => value,
+    (error) => {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`${message}: ${errorMessage}`);
+    }
+  );
+}

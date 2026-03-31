@@ -18,7 +18,7 @@ describe('Async Codecs', () => {
     it('should preserve serialization', () => {
       const asyncNumberCodec = fromSync(json2NumberCodec);
       const encoded = asyncNumberCodec.serialise(42);
-      expect(encoded).toBe(42n);
+      expect(encoded).toBe(42);
     });
   });
 
@@ -68,12 +68,12 @@ describe('Async Codecs', () => {
         (n) => n / 2
       );
 
-      const result = await doubled.deserialise(21n);
+      const result = await doubled.deserialise(21);
       const decoded = unwrapOk(result);
       expect(decoded).toBe(42);
 
       const encoded = doubled.serialise(100);
-      expect(encoded).toBe(50n);
+      expect(encoded).toBe(50);
     });
   });
 
@@ -82,7 +82,7 @@ describe('Async Codecs', () => {
       const asyncNumberCodec = fromSync(json2NumberCodec);
       const stringInput = lmapSync(
         asyncNumberCodec,
-        (s: string) => BigInt(s) as Json,
+        (s: string) => Number(s),
         (n: Json) => String(n)
       );
 
@@ -107,12 +107,12 @@ describe('Async Codecs', () => {
         (n) => n / 2
       );
 
-      const result = await asyncDoubled.deserialise(21n);
+      const result = await asyncDoubled.deserialise(21);
       const decoded = unwrapOk(result);
       expect(decoded).toBe(42);
 
       const encoded = asyncDoubled.serialise(100);
-      expect(encoded).toBe(50n);
+      expect(encoded).toBe(50);
     });
   });
 
@@ -145,7 +145,7 @@ describe('Async Codecs', () => {
       const strDecoded = unwrapOk(strResult);
       expect(strDecoded).toBe("hello");
 
-      const numResult = await stringOrNumber.deserialise(42n);
+      const numResult = await stringOrNumber.deserialise(42);
       const numDecoded = unwrapOk(numResult);
       expect(numDecoded).toBe(42);
 
@@ -167,7 +167,7 @@ describe('Async Codecs', () => {
       expect(strEncoded).toBe("test");
 
       const numEncoded = stringOrNumber.serialise(99);
-      expect(numEncoded).toBe(99n);
+      expect(numEncoded).toBe(99);
     });
   });
 });

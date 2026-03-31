@@ -3,9 +3,8 @@ import type { HexString } from "./hexString";
 import type { JsonCodec, JsonError } from "./json/codecs";
 import { lmap, pipe, rmap, type Codec } from "./codec";
 import { err, ok, Result } from "neverthrow";
-import type { Cbor } from "./cbor/core";
-import { cbor2ByteStringCodec } from "./cbor/codecs/sync";
 import * as base64String from "./base64String";
+import type { Json } from "./json";
 
 // Uint8Array to Tagged Uint8Array Codec with validation. The tag is optional and only used for error messages.
 export const mkTaggedUint8ArrayCodec = <T>(tag: string, validate: (arr: Uint8Array) => boolean): Codec<Uint8Array, T, JsonError> => {
@@ -33,7 +32,9 @@ export const mkTaggedHexStringCodec = <T>(tag: string, validate: (arr: Uint8Arra
   );
 }
 
-export const jsonCodec: JsonCodec<Uint8Array> = rmap(hexString.jsonCodec, hexString.toUint8Array, hexString.fromUint8Array);
+// Narrower typing
+export const stringCodec: Codec<string, Uint8Array, JsonError> = rmap(hexString.stringCodec, hexString.toUint8Array, hexString.fromUint8Array);
+export const jsonCodec: JsonCodec<Uint8Array> = stringCodec as JsonCodec<Uint8Array>;
 
 export const mkTaggedJsonCodec = <T>(tag: string, validate: (arr: Uint8Array) => boolean): JsonCodec<T> => {
   return pipe(
@@ -48,13 +49,6 @@ export const json2Uint8ArrayThroughBase64Codec = rmap(
   base64String.toUint8Array,
   base64String.fromUint8Array,
 );
-
-export const mkTaggedCborCodec = <T>(tag: string, validate: (arr: Uint8Array) => boolean): Codec<Cbor, T, JsonError> => {
-  return pipe(
-    cbor2ByteStringCodec,
-    mkTaggedUint8ArrayCodec<T>(tag, validate),
-  );
-}
 
 export const concat = (arrays: Uint8Array[]): Uint8Array => {
   let total = 0;
@@ -82,7 +76,7 @@ export const equal = (a: Uint8Array, b: Uint8Array): boolean => {
       return false;
     }
   }
-  return (a.length !== b.length);
+  return (a.length === b.length);
 }
 
 export const alloc = (size: number): Uint8Array => {
@@ -128,3 +122,34 @@ export const readFloat64BE = (arr: Uint8Array, offset: number): number => {
 export const writeFloat64BE = (arr: Uint8Array, value: number, offset: number): void => {
   new DataView(arr.buffer, arr.byteOffset + offset, 8).setFloat64(0, value, false);
 };
+
+export const toArrayBuffer = (uint8Array: Uint8Array): ArrayBuffer => {
+  return uint8Array.buffer.slice(
+    uint8Array.byteOffset,
+    uint8Array.byteOffset + uint8Array.byteLength,
+  ) as ArrayBuffer;
+}
+
+
+// Friendly helper for debugging.
+//
+// FIXME: It should be moved to a json module but it requires some
+// rearrangement to avoid circular dependencies which we avoid.
+export type Jsonifable = Json | Uint8Array ;
+
+export const jsonify  = (data: Jsonifable): Json => {
+  if (data instanceof Uint8Array) {
+    return hexString.fromUint8Array(data);
+  }
+  if(Array.isArray(data)) {
+    return data.map(jsonify);
+  }
+  if(typeof data === "object" && data !== null) {
+    const result: { [key: string]: Json } = {};
+    for (const key in data) {
+      result[key] = jsonify(data[key]!);
+    }
+    return result;
+  }
+  return data;
+}

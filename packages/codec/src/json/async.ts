@@ -31,7 +31,7 @@ export const objectOf = <T extends Record<string, JsonAsyncCodec<any>>>(
           let hasErrors = false;
 
           for (const fieldName in fieldCodecs) {
-            const fieldCodec = fieldCodecs[fieldName];
+            const fieldCodec = fieldCodecs[fieldName]!;
             const fieldValue = obj[fieldName];
 
             // If field is missing, pass undefined to the codec
@@ -56,7 +56,7 @@ export const objectOf = <T extends Record<string, JsonAsyncCodec<any>>>(
     serialise: (value: CodecsToObject<T>): Json => {
       const result: { [key: string]: Json } = {};
       for (const fieldName in fieldCodecs) {
-        const fieldCodec = fieldCodecs[fieldName];
+        const fieldCodec = fieldCodecs[fieldName]!;
         const fieldValue = (value as any)[fieldName];
         if (fieldValue !== undefined) {
           result[fieldName] = fieldCodec.serialise(fieldValue);

@@ -22,8 +22,8 @@ function strengthWordsToBits(strength: MnemonicStrength = "24-words"): MnemomicS
 
 // We can not really avoid using string here (which is impossible to wipe out from memory on demand)
 // because the bip39 library works with strings only.
-type _Mnemonic = { mnemonicWords: string, wordlist: string[] };
-export type Mnemonic = Tagged<_Mnemonic, "Mnemonic">;
+export type MnemonicContent = { mnemonicWords: string, wordlist: string[] };
+export type Mnemonic = Tagged<MnemonicContent, "Mnemonic">;
 export namespace Mnemonic {
   export function fromString(mnemonic: string, wordlist: string[] = english.wordlist): Result<Mnemonic, string> {
     return bip39.validateMnemonic(mnemonic, wordlist)

@@ -1,42 +1,103 @@
 import _JSONBig from 'json-bigint';
-// import type { Tagged } from 'type-fest';
+import type { Tagged } from 'type-fest';
 import { err, ok, type Result } from 'neverthrow';
-import { stringifyThrowable } from './neverthrow';
+import { stringifyThrowable, unsafeUnwrap } from './neverthrow';
 
-const JSONBig = _JSONBig({ useNativeBigInt: true, alwaysParseAsBig: true });
+const JSONBig = _JSONBig({ useNativeBigInt: true, alwaysParseAsBig: false });
 
 /* `Json` type is not pleasant to work with directly because
  * the compiler can be puzzled by the recurssion AFAIK.
  * Please rather rely on the matchJson function and the onType helpers
  */
-export type JsonPrimitive = string | bigint | boolean | null;
+export type JsonPrimitive = number | string | bigint | boolean | null;
 export type JsonObject = { [key: string]: Json };
 export type JsonArray = Json[];
 export type Json = JsonPrimitive | JsonObject | JsonArray;
+
+export namespace Json {
+  export const areEqual = (a: Json, b: Json): boolean => {
+    if (a === b) {
+      // Covers primitives except NaN and also exact same object/array reference
+      // Note: bigint, string, boolean, null, and equal numbers are handled here.
+      return true;
+    }
+
+    // Different primitive types or one primitive vs non-primitive
+    const typeA = typeof a;
+    const typeB = typeof b;
+    if (typeA !== typeB) {
+      return false;
+    }
+
+    // At this point, types are equal and both are "object"
+    if (a === null || b === null) {
+      // previous a === b check already handled both null, here it's one null vs non-null
+      return false;
+    }
+
+    // Arrays
+    const isArrayA = Array.isArray(a);
+    const isArrayB = Array.isArray(b);
+    if (isArrayA || isArrayB) {
+      if (!isArrayA || !isArrayB) return false;
+      const arrA = a as JsonArray;
+      const arrB = b as JsonArray;
+      if (arrA.length !== arrB.length) return false;
+      for (let i = 0; i < arrA.length; i++) {
+        if (!areEqual(arrA[i]!, arrB[i]!)) return false;
+      }
+      return true;
+    }
+
+    // Objects
+    const objA = a as JsonObject;
+    const objB = b as JsonObject;
+    const keysA = Object.keys(objA);
+    const keysB = Object.keys(objB);
+    if (keysA.length !== keysB.length) return false;
+
+    // Keys might be in different order, so we check by key name
+    for (const key of keysA) {
+      if (!(key in objB)) return false;
+      if (!areEqual(objA[key]!, objB[key]!)) return false;
+    }
+
+    return true;
+  };
+}
 
 export const parse = (text: string): Result<Json, string> => {
   return stringifyThrowable(() => JSONBig.parse(text), "Invalid JSON format");
 }
 
+// A valid Json string which can be safely parsed.
+// Useful for back and forth conversions, debugging etc.
+export type JsonString = Tagged<string, "JsonString">;
+
+export const unstringify = (jsonStr: JsonString) => unsafeUnwrap(parse(jsonStr));
+
 export const stringify = (
   json: Json,
   replacer?: (this: any, key: string, value: any) => any,
   space?: string | number
-): string => {
-  return JSONBig.stringify(json, replacer, space);
+): JsonString => {
+  return JSONBig.stringify(json, replacer, space) as JsonString;
 }
 
 export type JsonMacher<T> = {
+  onArray: (value: Json[]) => T;
   onBigInt: (value: bigint) => T;
   onBoolean: (value: boolean) => T;
   onNull: () => T;
-  onString: (value: string) => T;
-  onArray: (value: Json[]) => T;
+  onNumber: (value: number) => T;
   onObject: (value: { [key: string]: Json }) => T;
+  onString: (value: string) => T;
 };
 
 export const matchJson = <T>(json: Json, matcher: JsonMacher<T>): T => {
   switch (typeof json) {
+    case "number":
+      return matcher.onNumber(json as number);
     case "bigint":
       return matcher.onBigInt(json as bigint);
     case "boolean":
@@ -66,7 +127,10 @@ const onType = <T>(typeCheck: (json: Json) => boolean, def: T | ((json: Json) =>
   }
   return def;
 }
-// Helpers usage: onBigInt(defaultValueOrFallbackFunction)(handlerFunction)
+
+export const onNumber = <T>(def: T | ((json: Json) => T)) => (handle: ((value: number) => T)) =>
+  onType((j) => typeof j === "number", def, handle);
+
 export const onBigInt = <T>(def: T | ((json: Json) => T)) => (handle: ((value: bigint) => T)) =>
   onType((j) => typeof j === "bigint", def, handle);
 
@@ -128,4 +192,3 @@ export const isJson = (data: any): data is Json => {
       return false;
   }
 }
-

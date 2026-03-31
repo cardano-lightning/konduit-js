@@ -13,12 +13,12 @@ class ClientInner {
   // Credentials is the macaroon
   private readonly credentials: string | null;
   // FIXME :: do something with this
-  private readonly _tlsCertificate: string | null;
+  // private readonly _tlsCertificate: string | null;
 
   constructor(config: LndConfig) {
     this.baseUrl = config.baseUrl;
     this.credentials = config.credentials ? config.credentials : null;
-    this._tlsCertificate = config.tlsCertificate ? config.tlsCertificate : null;
+    // this._tlsCertificate = config.tlsCertificate ? config.tlsCertificate : null;
   }
 
   public async request<T>(
@@ -59,7 +59,7 @@ class ClientInner {
       }
       const text = await response
         .text()
-        .then((r) => r.trim().split("\n").reverse()[0]);
+        .then((r) => r.trim().split("\n").reverse()[0]!);
       return JSON.parse(text);
     } catch (error) {
       console.error("REST Request Failed:", error);

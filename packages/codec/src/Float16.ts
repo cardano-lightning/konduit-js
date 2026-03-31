@@ -7,7 +7,10 @@ import type { Tagged } from "type-fest";
 import type { Result } from "neverthrow";
 import { ok, err } from "neverthrow";
 import type { Codec } from "./codec";
+import * as uint8Array from "./uint8Array";
 
+// TODO: This should be migrated to `[Byte, Byte]` representation.
+// We don't have Byte yet so it is what it is.
 export type Float16 = Tagged<Uint8Array<ArrayBuffer>, 'Float16'>;
 
 const LOSS_OF_PRECISION_MSG = 'Invalid conversion. Loss of precision';
@@ -45,7 +48,7 @@ const ldexp = (mantissa: number, exponent: number) => {
  * https://www.rfc-editor.org/rfc/rfc7049#appendix-D
  */
 export const toNumber = (data: Float16): number => {
-  const half = (data[0] << 8) + data[1];
+  const half = (data[0]! << 8) + data[1]!;
   const exp = (half >> 10) & 0x1f;
   const mant = half & 0x3_ff;
 
@@ -75,9 +78,10 @@ export const toNumber = (data: Float16): number => {
  * @returns A Uint8Array containing the 16-bit half-precision floating-point number in big-endian format.
  */
 export const fromNumber = (value: number): Result<Float16, string> => {
-  const u32 = Buffer.allocUnsafe(4);
-  u32.writeFloatBE(value, 0);
-  const u = u32.readUInt32BE(0);
+  // const u32 = Buffer.allocUnsafe(4);
+  const u32 = new Uint8Array(4);
+  uint8Array.writeFloat32BE(u32, value, 0);
+  const u = uint8Array.readUInt32BE(u32, 0);
 
   if ((u & 0x1f_ff) !== 0) {
     return err(LOSS_OF_PRECISION_MSG);

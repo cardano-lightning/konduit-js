@@ -3,8 +3,8 @@ import type { Result } from "neverthrow";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import { json2SecondsCodec, Seconds } from "../time/duration";
 import type { Ed25519VerificationKey } from "@konduit/cardano-keys";
-import { Address, json2AddressCodec, json2LovelaceCodec, json2ScriptHashCodec, type Lovelace, type ScriptHash } from "../cardano";
-import { json2NonNegativeIntCodec, type NonNegativeInt } from "@konduit/codec/integers/smallish";
+import { Address, Lovelace, ScriptHash } from "../cardano";
+import { NonNegativeInt } from "@konduit/codec/integers/smallish";
 import { json2Ed25519VerificationKeyCodec } from "../cardano";
 import type { Json } from "@konduit/codec/json";
 import type { Tagged } from "type-fest";
@@ -54,18 +54,18 @@ export class AdaptorInfo {
 export const json2AdaptorInfoCodec: jsonCodecs.JsonCodec<AdaptorInfo> = (() => {
   let adaptorRecordCodec = jsonCodecs.objectOf({
     "tos": jsonCodecs.objectOf({
-      "flat_fee": json2LovelaceCodec,
+      "flat_fee": Lovelace.jsonCodec,
     }),
     "channel_parameters": jsonCodecs.objectOf({
       adaptor_key: json2AdaptorEd25519VerificationKeyCodec,
       close_period: jsonCodecs.objectOf({
         secs: json2SecondsCodec,
       }),
-      tag_length: json2NonNegativeIntCodec,
+      tag_length: NonNegativeInt.jsonCodec,
     }),
     "tx_help": jsonCodecs.objectOf({
-      host_address: json2AddressCodec,
-      validator: json2ScriptHashCodec,
+      host_address: Address.jsonCodec,
+      validator: ScriptHash.jsonCodec,
     }),
   });
 

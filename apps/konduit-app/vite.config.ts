@@ -1,20 +1,23 @@
 import { VitePWA } from "vite-plugin-pwa";
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
+import wasm from "vite-plugin-wasm";
+import topLevelAwait from "vite-plugin-top-level-await";
+
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     vue(),
+    wasm(),
+    topLevelAwait(),
     VitePWA({
       registerType: "prompt",
       injectRegister: false,
-
       pwaAssets: {
         disabled: false,
         config: true,
       },
-
       manifest: {
         name: "konduit-app",
         short_name: "konduit-app",
@@ -26,6 +29,7 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,svg,png,ico}"],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
 
       devOptions: {

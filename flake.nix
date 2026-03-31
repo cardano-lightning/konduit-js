@@ -47,11 +47,25 @@
           treefmt.enable = true;
         };
         devShells.default = let
+          vite = pkgs.writeShellScriptBin "vite"
+            ''
+              #!/usr/bin/env bash
+              root=$(git rev-parse --show-toplevel)
+              node $root/node_modules/vite/bin/vite.js $@
+            '';
           vitest = pkgs.writeShellScriptBin "vitest"
             ''
               #!/usr/bin/env bash
               root=$(git rev-parse --show-toplevel)
               node $root/node_modules/vitest/vitest.mjs $@
+            '';
+          vue-language-server =
+            pkgs.writeShellScriptBin "vue-language-server"
+            ''
+              #!/usr/bin/env bash
+              # This expects @vue/language-server to be installed via yarn or otherwise
+              root=$(git rev-parse --show-toplevel)
+              node $root/node_modules/@vue/language-server/index.js $@
             '';
           vtsls =
             pkgs.writeShellScriptBin "vtsls"
@@ -68,14 +82,6 @@
               # This expects vue-tsc to be installed via yarn or otherwise
               root=$(git rev-parse --show-toplevel)
               node $root/node_modules/vue-tsc/bin/vue-tsc.js $@
-            '';
-          vue-language-server =
-            pkgs.writeShellScriptBin "vue-language-server"
-            ''
-              #!/usr/bin/env bash
-              # This expects @vue/language-server to be installed via yarn or otherwise
-              root=$(git rev-parse --show-toplevel)
-              node $root/node_modules/@vue/language-server/index.js $@
             '';
         in
           pkgs.mkShell
@@ -94,15 +100,18 @@
               pkgs.yarn-bash-completion
               pkgs.nodePackages_latest.nodejs
               pkgs.typescript-language-server
+              vite
               vitest
               vtsls
               vue-language-server
+              vue-tsc
+              vtsls
               vue-tsc
             ];
           };
       };
       flake = {
-        nixosModules.default = import ./flake/nixos.nix inputs.self;
+        nixosModules.default = import ./nix/nixos.nix inputs.self;
       };
     };
 }
