@@ -164,6 +164,16 @@ describe('Cardano Addresses', () => {
   });
 
   describe('Address.stringCodec error cases', () => {
+    it('should decode the address string', () => {
+      const addrStr = "addr_test1qp2l7afky3eqfkrht5f3qgy7x2yek5dejcnpnuqlwywz9twr7cz4mu6gh005gdck67p7y9d8s8zsfgjkcdy75mrjh6jqp8jwfw"
+      const result = addresses.Address.stringCodec.deserialise(addrStr);
+      const address = expectOk(result);
+      expect(address.network).toBe(Network.TESTNET);
+      const paymentHash = new Uint8Array([85, 255, 117, 54, 36, 114, 4, 216, 119, 93, 19, 16, 32, 158, 50, 137, 155, 81, 185, 150, 38, 25, 240, 31, 113, 28, 34, 173]) as addresses.PubKeyHash;
+      expect(address.paymentCredential).toEqual({ type: "PubKeyHash", hash: paymentHash });
+      const stakingHash = new Uint8Array([195, 246, 5, 93, 243, 72, 187, 223, 68, 55, 22, 215, 131, 226, 21, 167, 129, 197, 4, 162, 86, 195, 73, 234, 108, 114, 190, 164]) as addresses.PubKeyHash;
+      expect(address.stakingCredential).toEqual({ type: "PubKeyHash", hash: stakingHash });
+    });
     it('should reject invalid bech32 string', () => {
       const invalid = "not-a-valid-bech32-address";
       const result = addresses.Address.stringCodec.deserialise(invalid);
@@ -172,7 +182,7 @@ describe('Cardano Addresses', () => {
 
     it('should reject mismatched prefix for network', () => {
       const pubKeyHash = new Uint8Array(28).fill(0x11) as addresses.PubKeyHash;
-      const mainnetBytes = new Uint8Array([0x01, ...pubKeyHash]);
+      const mainnetBytes = new Uint8Array([0x71, ...pubKeyHash]);
       const words = bech32.toWords(mainnetBytes);
       const invalid = bech32.encode('addr_test', words, 90);
       const result = addresses.Address.stringCodec.deserialise(invalid);
