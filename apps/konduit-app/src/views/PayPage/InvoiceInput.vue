@@ -251,6 +251,7 @@ const manualButtons: ButtonProps[] = [{
 
 <style scoped>
 #input-container {
+  align-items: center;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -258,6 +259,7 @@ const manualButtons: ButtonProps[] = [{
   #input-container #qr-input, #input-container #manual-input {
     flex-grow: 1;
     max-width: 70vh;
+    width: 100%;
   }
 
 .alternative {

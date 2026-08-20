@@ -3,6 +3,7 @@
 
   inputs = {
     flake-parts.url = "github:hercules-ci/flake-parts";
+    jailed-agents.url = "github:andersonjoseph/jailed-agents";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     git-hooks-nix.url = "github:cachix/git-hooks.nix";
     git-hooks-nix.inputs.nixpkgs.follows = "nixpkgs";
@@ -83,30 +84,77 @@
               root=$(git rev-parse --show-toplevel)
               node $root/node_modules/vue-tsc/bin/vue-tsc.js $@
             '';
+          ld-library-path = pkgs.lib.makeLibraryPath [
+            pkgs.stdenv.cc.cc.lib
+            pkgs.bzip2
+            # add more only if you hit further .so errors (e.g. pkgs.zlib)
+          ];
+          commonPackages = [
+            pkgs.nodePackages_latest.nodejs
+            pkgs.typescript-language-server
+            pkgs.yarn-bash-completion
+            pkgs.yarn-berry
+            pkgs.yarn-berry_4.yarn-berry-fetcher
+            vite
+            vitest
+            vtsls
+            vue-language-server
+            vue-tsc
+          ];
+          commonJail = {
+            baseJailOptions =
+              let
+                jail = inputs.jailed-agents.lib.${pkgs.system}.internals.jail;
+              in [
+                jail.combinators.network
+                jail.combinators.time-zone
+                jail.combinators.no-new-session
+                jail.combinators.mount-cwd
+                (jail.combinators.try-fwd-env "PKG_CONFIG_PATH")
+                (jail.combinators.try-fwd-env "LD_LIBRARY_PATH")
+                (jail.combinators.try-fwd-env "CARDANO_NODE_NETWORK_ID")
+                (jail.combinators.try-fwd-env "CARDANO_NODE_SOCKET_PATH")
+              ];
+            extraReadwriteDirs = [
+              "/home/paluh/.config/cabal"   # exactly the path it complains about
+              "/home/paluh/.cache/cabal"          # also include the classic cabal dir (safe)
+              "/home/paluh/.cabal-devx"          # also include the classic cabal dir (safe)
+              "/home/paluh/.local/state/cabal"          # also include the classic cabal dir (safe)
+              "/home/paluh/.local/bin/cabal-plan"          # also include the classic cabal dir (safe)
+              "/home/paluh/.local/bin/ghcid"          # also include the classic cabal dir (safe)
+              "/home/paluh/.config/opencode"
+              "/home/paluh/.local/share/opencode"
+              "/home/paluh/.cache/opencode"
+              "/home/paluh/projects/cl/"
+              "/home/paluh/programming/cardano/mgdoc"
+            ];
+            extraPkgs = commonPackages ++ [
+              pkgs.stdenv.cc.cc.lib
+            ];
+          };
         in
           pkgs.mkShell
           {
             nativeBuildInputs = [
               config.treefmt.build.wrapper
+              (inputs.jailed-agents.lib.${pkgs.system}.makeJailedOpencode {
+                inherit (commonJail) baseJailOptions extraPkgs extraReadwriteDirs;
+                env = {
+                  LD_LIBRARY_PATH = ld-library-path;
+                };
+              })
+              (inputs.jailed-agents.lib.${pkgs.system}.makeJailedOpencode {
+                name = "jailed-bash";
+                pkg = pkgs.bashInteractive;
+                inherit (commonJail) baseJailOptions extraPkgs extraReadwriteDirs;
+              })
             ];
             shellHook = ''
                 ${config.pre-commit.installationScript}
               echo 1>&2 "Welcome to the development shell!"
             '';
             name = "konduit-js-shell";
-            packages = [
-              pkgs.yarn-berry
-              pkgs.yarn-berry_4.yarn-berry-fetcher
-              pkgs.yarn-bash-completion
-              pkgs.nodePackages_latest.nodejs
-              pkgs.typescript-language-server
-              vite
-              vitest
-              vtsls
-              vue-language-server
-              vue-tsc
-              vtsls
-              vue-tsc
+            packages = commonPackages ++ [
             ];
           };
       };

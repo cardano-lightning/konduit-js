@@ -114,6 +114,9 @@ export namespace Lovelace {
 
 // We use ledger spec naming convention so aliasing script hash
 export type PolicyId = ScriptHash;
+export namespace PolicyId {
+  export const jsonCodec:JsonCodec<PolicyId> = ScriptHash.jsonCodec;
+}
 export type AssetName = Tagged<Uint8Array, "AssetName">;
 
 export namespace AssetName {
@@ -214,6 +217,8 @@ export class Value {
     return ok(new Value(lovelace, sortedAssets));
   }
 
+  // We use here our own format - not compatible with blockfrost or cardano-cli :-P
+  // Clients should define their own encodings separately.
   public static jsonCodec: JsonCodec<Value> = codec.pipe(
     jsonCodecs.objectOf({
       lovelace: Lovelace.jsonCodec,

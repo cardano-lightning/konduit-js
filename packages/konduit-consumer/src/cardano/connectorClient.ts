@@ -107,49 +107,53 @@ export namespace ValueRecord {
   });
 }
 
+// This intermediate codec is actually useful in other context because
+// flattening to ValueRecords can be a common ground.
+export const valueRecords2ValueCodec: Codec<ValueRecord[], Value, JsonError> = {
+  deserialise: (valueRecords: ValueRecord[]) => {
+    let lovelace = Lovelace.zero;
+    //export type ValueEntry = [AssetId, PositiveCoin];
+    const assets: ValueEntry[] = [];
+    let error: { lovelace: Lovelace; err: string } | null = null;
+    for (const record of valueRecords) {
+      if (record.unit === "lovelace") {
+        Lovelace.fromBigInt(record.quantity as bigint).match(
+          (l) => (lovelace = l),
+          (e) => (error = { lovelace, err: e }),
+        );
+      } else {
+        assets.push([record.unit, record.quantity]);
+      }
+    }
+    if (error) {
+      return err(error);
+    }
+    return Value.load(lovelace, assets);
+  },
+  serialise: (value: Value) => {
+    const valueRecords: ValueRecord[] = [];
+    if (Lovelace.ord.isGreaterThan(value.lovelace, Lovelace.zero)) {
+      valueRecords.push({
+        unit: "lovelace",
+        // This is dishonest casting! :-(
+        // We could fix it in theory by introducing `PositiveLovelace`
+        // and use that on the `Value` level.
+        quantity: (value.lovelace as bigint) as PositiveCoin,
+      });
+    }
+    for (const [assetId, quantity] of value.assets) {
+      valueRecords.push({
+        unit: assetId,
+        quantity,
+      });
+    }
+    return valueRecords;
+  }
+};
+
 export const json2ValueCodec: JsonCodec<Value> = codec.pipe(
   jsonCodecs.arrayOf(ValueRecord.jsonCodec),
-  {
-    deserialise: (valueRecords: ValueRecord[]) => {
-      let lovelace = Lovelace.zero;
-      //export type ValueEntry = [AssetId, PositiveCoin];
-      const assets: ValueEntry[] = [];
-      let error: { lovelace: Lovelace; err: string } | null = null;
-      for (const record of valueRecords) {
-        if (record.unit === "lovelace") {
-          Lovelace.fromBigInt(record.quantity as bigint).match(
-            (l) => (lovelace = l),
-            (e) => (error = { lovelace, err: e }),
-          );
-        } else {
-          assets.push([record.unit, record.quantity]);
-        }
-      }
-      if (error) {
-        return err(error);
-      }
-      return Value.load(lovelace, assets);
-    },
-    serialise: (value: Value) => {
-      const valueRecords: ValueRecord[] = [];
-      if (Lovelace.ord.isGreaterThan(value.lovelace, Lovelace.zero)) {
-        valueRecords.push({
-          unit: "lovelace",
-          // This is dishonest casting! :-(
-          // We could fix it in theory by introducing `PositiveLovelace`
-          // and use that on the `Value` level.
-          quantity: (value.lovelace as bigint) as PositiveCoin,
-        });
-      }
-      for (const [assetId, quantity] of value.assets) {
-        valueRecords.push({
-          unit: assetId,
-          quantity,
-        });
-      }
-      return valueRecords;
-    },
-  },
+  valueRecords2ValueCodec
 );
 
 export type TxInRecord = {

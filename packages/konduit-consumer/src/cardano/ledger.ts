@@ -208,3 +208,27 @@ export namespace PlutusVersion {
   )
 }
 
+export type Era = "Byron" | "Shelley" | "Allegra" | "Mary" | "Alonzo" | "Babbage" | "Conway" | "Dijkstra";
+
+export namespace Era {
+  export const stringCodec: Codec<string, Era, string> = {
+    deserialise: (s) => {
+      switch (s) {
+        case "Byron":
+        case "Shelley":
+        case "Allegra":
+        case "Mary":
+        case "Alonzo":
+        case "Babbage":
+        case "Conway":
+        case "Dijkstra":
+          return ok(s);
+        default:
+          return err(`Unknown era: ${s}, expected one of "Byron", "Shelley", "Allegra", "Mary", "Alonzo", "Babbage", "Conway" or "Dijkstra"`);
+      }
+    },
+    serialise: (era) => era,
+  };
+  export const jsonCodec = codec.pipe(json2StringCodec, stringCodec);
+}
+

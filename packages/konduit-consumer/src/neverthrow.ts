@@ -26,8 +26,16 @@ export const promiseToAsync = <T, E>(promise: Promise<Result<T, E>>): ResultAsyn
   return new ResultAsync(promise);
 }
 
-export const okAsyncPromise = <T, E>(value: Promise<T>): ResultAsync<T, E> => {
-  return promiseToAsync(value.then(v => ok(v) as Result<T, E>));
+export const fromSafePromiseResultFn = <A extends readonly any[], T, E>(fn: (...args: A) => Promise<Result<T, E>>,) => (...args: A): ResultAsync<T, E> => {
+  return ResultAsync.fromThrowable(
+    fn, (e) => { throw new Error(`Should be impossible  - error in fromSafePromiseResultFn: ${String(e)}`) }
+  )(...args).andThen((x) => x)
+}
+
+export const fromPromiseResultFn = <A extends readonly any[], T, E>(fn: (...args: A) => Promise<Result<T, E>>, onError: (e: unknown) => E) => (...args: A): ResultAsync<T, E> => {
+  return ResultAsync.fromThrowable(
+    fn, onError
+  )(...args).andThen((x) => x)
 }
 
 // DEPRECATED: Use shorter toAsync instead

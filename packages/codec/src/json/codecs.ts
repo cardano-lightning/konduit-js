@@ -132,14 +132,16 @@ export const altJsonCodecs = <Codecs extends readonly JsonCodec<any>[]>(
   );
 };
 
+export const optionalDeserialiser = <O>(deserialise: JsonDeserialiser<O>): JsonDeserialiser<O | undefined> => (data: Json): Result<O | undefined, JsonError> => {
+  if (data === null) {
+    return ok(undefined);
+  }
+  return deserialise(data).map(value => value as O | undefined);
+}
+
 export const optional = <O>(codec: JsonCodec<O>): JsonCodec<O | undefined> => {
   return {
-    deserialise: (data: Json): Result<O | undefined, JsonError> => {
-      if (data === null) {
-        return ok(undefined);
-      }
-      return codec.deserialise(data).map(value => value as O | undefined);
-    },
+    deserialise: optionalDeserialiser(codec.deserialise),
     serialise: (value: O | undefined): Json => {
       if (value === undefined) {
         return nullJson;
@@ -149,14 +151,16 @@ export const optional = <O>(codec: JsonCodec<O>): JsonCodec<O | undefined> => {
   };
 };
 
+export const nullableDeserialiser = <O>(deserialise: JsonDeserialiser<O>): JsonDeserialiser<O | null> => (data: Json): Result<O | null, JsonError> => {
+  if (data === null) {
+    return ok(null);
+  }
+  return deserialise(data).map(value => value as O | null);
+}
+
 export const nullable = <O>(codec: JsonCodec<O>): JsonCodec<O | null> => {
   return {
-    deserialise: (data: Json): Result<O | null, JsonError> => {
-      if (data === null) {
-        return ok(null);
-      }
-      return codec.deserialise(data).map(value => value as O | null);
-    },
+    deserialise: nullableDeserialiser(codec.deserialise),
     serialise: (value: O | null): Json => {
       if (value === null) {
         return nullJson;
@@ -179,6 +183,46 @@ export const constant = <C extends string | number | boolean | bigint>(constant:
     }
   };
 }
+
+// Type to extract the output type from a codec
+type DeserialiserOutput<D> = D extends JsonDeserialiser<infer O> ? O : never;
+
+type DeserialisersToObject<T extends Record<string, JsonDeserialiser<any>>> = {
+  [K in keyof T]: DeserialiserOutput<T[K]>;
+};
+
+export const objectOfDeserialiser = <T extends Record<string, JsonDeserialiser<any>>>(fieldDeserialisers: T) => (data: Json): Result<DeserialisersToObject<T>, JsonError> => {
+  // Check if input is an object
+  return onObject(
+      (value: Json) => err(`Expected object but got ${stringify(value)}`) as Result<{ [key: string]: Json }, JsonError>
+    )(ok)(data).match(
+    (obj) => {
+      const result: any = {};
+      const errors: { [key: string]: Json } = {};
+      let hasErrors = false;
+
+      for (const fieldName in fieldDeserialisers) {
+        const fieldDeserialise = fieldDeserialisers[fieldName]!;
+        const fieldValue = obj[fieldName];
+
+        // If field is missing, pass undefined to the codec
+        const valueToDeserialise = fieldValue === undefined ? nullJson : fieldValue;
+        fieldDeserialise(valueToDeserialise).match(
+          (res) => result[fieldName] = res,
+          (error) => {
+            errors[fieldName] = error;
+            hasErrors = true;
+          }
+        );
+      }
+      if (hasErrors) {
+        return err(errors);
+      }
+      return ok(result as DeserialisersToObject<T>);
+    },
+    (error) => err(error)
+  );
+};
 
 // Type to extract the output type from a codec
 type CodecOutput<C> = C extends JsonCodec<infer O> ? O : never;
@@ -237,6 +281,37 @@ export const objectOf = <T extends Record<string, JsonCodec<any>>>(
     }
   };
 };
+
+export const dictOfDeserialiser = <O>(deserialise: JsonDeserialiser<O>): JsonDeserialiser<{ [key: string]: O }> => {
+  return (data: Json): Result<{ [key: string]: O }, JsonError> => {
+    return onObject(
+      (value: Json) => err(`Expected object but got ${stringify(value)}`) as Result<{ [key: string]: O }, JsonError>
+    )(obj => {
+      const result: { [key: string]: O } = {};
+      const errors: { [key: string]: Json } = {};
+      let hasErrors = false;
+
+      for (const key in obj) {
+        const value = obj[key]!;
+        const decoded = deserialise(value);
+
+        if (decoded.isOk()) {
+          result[key] = decoded.value;
+        } else {
+          errors[key] = decoded.error;
+          hasErrors = true;
+        }
+      }
+
+      if (hasErrors) {
+        // Collect per-field errors as a JSON object
+        return err(errors);
+      }
+
+      return ok(result);
+    })(data);
+  };
+}
 
 export const dictOf = <O>(codec: JsonCodec<O>): JsonCodec<{ [key: string]: O }> => {
   return {

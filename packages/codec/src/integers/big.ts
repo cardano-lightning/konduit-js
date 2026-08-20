@@ -36,6 +36,14 @@ export namespace PositiveBigInt {
     return value as PositiveBigInt;
   }
   export const fromBigInt = (n: bigint) => bigInt2PositiveBigIntCodec.deserialise(n);
+  export const fromString = (s: string) => {
+    try {
+      const n = BigInt(s);
+      return fromBigInt(n);
+    } catch (e) {
+      return err(`Invalid string for PositiveBigInt: ${s}`);
+    }
+  }
   // This can fail as the floor of a fraction can be zero.
   export const fromPositiveDecimalFloor = (d: PositiveDecimal) => fromBigInt(BigInt(d.floor().toString()));
   export const fromJson = (n: Json) => json2PositiveBigIntCodec.deserialise(n);

@@ -21,17 +21,19 @@ import type { Cbor } from "@konduit/codec/cbor/core";
 import { Value } from "./assets";
 import { mkOrdForScalar, mkOrdForUint8Array } from "@konduit/codec/tagged";
 import type { PlutusVersion } from "./ledger";
+import { unwrapOrPanic } from "@konduit/codec/neverthrow";
 
 // We do not provide validation for TxCborBytes and TxBodyCborBytes here. Please use it when you can trust the source of the CBOR.
 export type TxCborBytes = typeFest.Tagged<Uint8Array, "TxCborBytes">;
+export const unsafeTxCborBytes = (cbor: Uint8Array): TxCborBytes => cbor as TxCborBytes;
+
 export namespace TxCborBytes {
   export const fromTxReadyForSigning = (txReadyForSigning: TransactionReadyForSigning) => txReadyForSigning.toCbor() as TxCborBytes;
+  export const unsafeFromBytes = unsafeTxCborBytes;
 }
-export const unsafeTxCborBytes = (cbor: Uint8Array): TxCborBytes => cbor as TxCborBytes;
 
 export type TxBodyCborBytes = typeFest.Tagged<Uint8Array, "TxBodyCborBytes">;
 export const unsafeTxBodyCborBytes = (cbor: Uint8Array): TxBodyCborBytes => cbor as TxBodyCborBytes;
-
 
 export type DatumHash = Tagged<Uint8Array, "DatumHash">;
 export namespace DatumHash {
@@ -319,7 +321,6 @@ export namespace TxIx {
   export const ord = mkOrdForScalar<TxIx>();
 }
 
-
 export type TxHash = Tagged<Uint8Array, "TxHash">;
 export type TxId = TxHash;
 
@@ -344,7 +345,29 @@ export namespace TxHash {
   export const ord = mkOrdForUint8Array<TxHash>();
 }
 
-// TODO: Redundant - we have TxOutRef in the ledger module.
+export type TxIdHex = Tagged<HexString, "TxIdHex">;
+export namespace TxIdHex {
+  export const fromString = (str: string): Result<TxIdHex, string> => {
+    if (!/^[0-9a-fA-F]+$/.test(str) || str.length !== 64) {
+      return err(`Invalid TxIdHexStr: ${str}`);
+    }
+    return ok(str as TxIdHex);
+  }
+  export const toString = (txIdHex: TxIdHex): string => txIdHex as string;
+  export const strCodec = {
+    deserialise: fromString,
+    serialise: toString
+  };
+  export const jsonCodec = codec.pipe(jsonCodecs.json2StringCodec, strCodec);
+  export const fromTxId = (txId: TxId): TxIdHex => {
+    return TxHash.hexStringCodec.serialise(txId) as TxIdHex;
+  }
+
+  export const toTxId = (txIdHex: TxIdHex): TxId => {
+    return unwrapOrPanic(TxHash.hexStringCodec.deserialise(txIdHex), `Impossible: Invalid TxIdHex: ${txIdHex}`);
+  }
+}
+
 export type TxInput = Tagged<[TxId, TxIx], "TxInput">;
 export namespace TxInput {
   export const fromComponents = (txId: TxId, txIx: TxIx): TxInput => [txId, txIx] as TxInput;
@@ -372,6 +395,51 @@ export namespace TxInput {
     (val) => val as TxInput,
     (txInput) => txInput
   );
+}
+
+// TODO: should we drop that one?
+export type TxOutRef = { txId: TxHash, txIx: TxIx };
+
+export const json2TxOutRefCodec: JsonCodec<TxOutRef> = jsonCodecs.objectOf({
+  txId: TxHash.jsonCodec,
+  txIx: TxIx.jsonCodec,
+});
+export namespace TxOutRef {
+  export const jsonCodec = json2TxOutRefCodec;
+}
+
+export type TxOutRefHex = Tagged<string, "TxOutRefHex">;
+export namespace TxOutRefHex {
+  export const fromString = (str: string): Result<TxOutRefHex, string> => {
+    const [txId, indexStr] = str.split("#");
+    if (!txId || !indexStr) {
+      return err(`Invalid TxOutRefHexStr: ${str}`);
+    }
+    if (!/^[0-9a-fA-F]+$/.test(txId) || txId.length !== 64) {
+      return err(`Invalid TxIdHex in TxOutRefHexStr: ${txId}`);
+    }
+    if (!/^\d+$/.test(indexStr)) {
+      return err(`Invalid index in TxOutRefHexStr: ${indexStr}`);
+    }
+    return ok(str as TxOutRefHex);
+  }
+
+  export const jsonDeserialiser = codec.pipeDeserialisers(
+      jsonCodecs.json2StringCodec.deserialise,
+      fromString
+  )
+
+  export const fromTxOutRef = (txOutRef: TxOutRef): TxOutRefHex => {
+    return `${txOutRef.txId}#${txOutRef.txIx}` as TxOutRefHex;
+  }
+
+  export const toTxOutRef = (txOutRefHex: TxOutRefHex): TxOutRef => {
+    const [txIdStr, txIxStr] = txOutRefHex.split("#");
+    if(!txIdStr || !txIxStr) throw new Error(`Impossible: Invalid TxOutRefHex: ${txOutRefHex}`);
+    const txHash = unwrapOrPanic(TxHash.fromHexString(txIdStr as HexString), `Impossible: Invalid TxIdHex in TxOutRefHex: ${txIdStr}`);
+    const txIx = unwrapOrPanic(TxIx.jsonCodec.deserialise(txIxStr), `Impossible: Invalid TxIx in TxOutRefHex: ${txIxStr}`);
+    return { txId: txHash, txIx: txIx }
+  }
 }
 
 // At some point we will transform this in
@@ -428,10 +496,4 @@ export namespace TransactionUnspentOutput {
       [txUnspentOutput.input, txUnspentOutput.output] as [TxInput, TxOut]
   );
 }
-
-export type TxOutRef = { txId: TxHash, txIx: TxIx };
-export const json2TxOutRefCodec: JsonCodec<TxOutRef> = jsonCodecs.objectOf({
-  txId: TxHash.jsonCodec,
-  txIx: TxIx.jsonCodec,
-});
 

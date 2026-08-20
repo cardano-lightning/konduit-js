@@ -5,23 +5,23 @@ import { stringifyThrowable, unsafeUnwrap } from './neverthrow';
 
 const JSONBig = _JSONBig({ useNativeBigInt: true, alwaysParseAsBig: false });
 
-/* `Json` type is not pleasant to work with directly because
- * the compiler can be puzzled by the recurssion AFAIK.
- * Please rather rely on the matchJson function and the onType helpers
- */
 export type JsonPrimitive = number | string | bigint | boolean | null;
 export type JsonObject = { [key: string]: Json };
 export type JsonArray = Json[];
 export type Json = JsonPrimitive | JsonObject | JsonArray;
 
+export const parse = (text: string): Result<Json, string> => {
+  return stringifyThrowable(() => JSONBig.parse(text), "Invalid JSON format");
+}
+
 export namespace Json {
+  export const fromString = (text: string): Result<Json, string> => parse(text);
   export const areEqual = (a: Json, b: Json): boolean => {
     if (a === b) {
       // Covers primitives except NaN and also exact same object/array reference
       // Note: bigint, string, boolean, null, and equal numbers are handled here.
       return true;
     }
-
     // Different primitive types or one primitive vs non-primitive
     const typeA = typeof a;
     const typeB = typeof b;
@@ -29,11 +29,13 @@ export namespace Json {
       return false;
     }
 
-    // At this point, types are equal and both are "object"
+    // At this point, types are equal and both are "object" which means either arrays or objects or null.
+    // Equal nulls are already handled by the a === b check above, so we only need to check for one null vs non-null.
     if (a === null || b === null) {
       // previous a === b check already handled both null, here it's one null vs non-null
       return false;
     }
+    // Both are non-null objects now and we can move to array or object comparison.
 
     // Arrays
     const isArrayA = Array.isArray(a);
@@ -64,10 +66,6 @@ export namespace Json {
 
     return true;
   };
-}
-
-export const parse = (text: string): Result<Json, string> => {
-  return stringifyThrowable(() => JSONBig.parse(text), "Invalid JSON format");
 }
 
 // A valid Json string which can be safely parsed.
