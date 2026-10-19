@@ -20,6 +20,7 @@
   "include": [],
   "references": [
     { "path": "./packages/bln" },
+    { "path": "./packages/cardano-cli" },
     { "path": "./packages/cardano-keys" },
     { "path": "./packages/codec" },
     { "path": "./packages/currency-format" },
