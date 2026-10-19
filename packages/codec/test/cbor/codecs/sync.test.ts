@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import type { CborCodec } from "../../../src/cbor/codecs/sync";
 import {
   altCborCodecs,
   arrayOf,
@@ -9,7 +10,6 @@ import {
   cbor2NullCodec,
   cbor2StringCodec,
   cbor2UndefinedCodec,
-  CborCodec,
   definiteLength,
   deserialiseCbor,
   dictOf,

@@ -27,22 +27,22 @@ export const mkParser = <T>(codec: JsonCodec<T>): (jsonStr: string) => Result<T,
 };
 
 export const mkStringifier = <T>(codec: JsonCodec<T>): (value: T) => string => {
-  return (value: T): string => {
+  return (value: T, indent = 2): string => {
     const jsonValue = codec.serialise(value);
-    return json.stringify(jsonValue);
+    return json.stringify(jsonValue, undefined, indent);
   }
 }
 
 // Codec for string
 export const json2StringCodec: JsonCodec<string> = {
-  deserialise: onString(val => err(`Expected string but got: ${String(val)}`) as Result<string, JsonError>)(ok),
+  deserialise: onString(val => err(`Expected string but got: ${stringify(val)}`) as Result<string, JsonError>)(ok),
   serialise: (value: string) => value
 };
 
 // Default codec for bigint
 export const json2BigIntCodec: JsonCodec<bigint> = {
   deserialise: (val) => {
-    const handleNumber = onNumber(val => err(`Expected either number or bigint but got: ${String(val)}`) as Result<bigint, JsonError>)(num => {
+    const handleNumber = onNumber(val => err(`Expected either number or bigint but got: ${stringify(val)}`) as Result<bigint, JsonError>)(num => {
       if (Number.isSafeInteger(num)) {
         return ok(BigInt(num));
       } else {
@@ -69,7 +69,7 @@ export const json2BigIntThroughStringCodec = pipe(
 );
 
 export const json2NumberCodec: JsonCodec<number> = {
-  deserialise: onNumber(val => err(`Expected number but got: ${String(val)}`) as Result<number, JsonError>)(ok),
+  deserialise: onNumber(val => err(`Expected number but got: ${stringify(val)}`) as Result<number, JsonError>)(ok),
   serialise: (value: number) => value
 };
 
@@ -91,13 +91,13 @@ export const json2NumberThroughStringCodec = pipe(
 
 // Codec for boolean
 export const json2BooleanCodec: JsonCodec<boolean> = {
-  deserialise: onBoolean(val => err(`Expected boolean but got: ${String(val)}`) as Result<boolean, JsonError>)(ok),
+  deserialise: onBoolean(val => err(`Expected boolean but got: ${stringify(val)}`) as Result<boolean, JsonError>)(ok),
   serialise: (value: boolean) => value
 };
 
 // Codec for null
 export const json2NullCodec: JsonCodec<null> = {
-  deserialise: onNull(val => err(`Expected null but got: ${String(val)}`) as Result<null, JsonError>)(() => ok(null)),
+  deserialise: onNull(val => err(`Expected null but got: ${stringify(val)}`) as Result<null, JsonError>)(() => ok(null)),
   serialise: () => nullJson
 };
 
@@ -449,3 +449,4 @@ export const tupleOf = <Codecs extends readonly JsonCodec<any>[]>(
     },
   };
 };
+

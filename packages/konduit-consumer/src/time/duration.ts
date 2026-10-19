@@ -2,6 +2,7 @@ import * as codec from "@konduit/codec";
 import type { Tagged } from "type-fest";
 import type { Small } from "@konduit/codec/integers/smallish";
 import { NonNegativeInt } from "@konduit/codec/integers/smallish";
+import { NonNegativeBigInt } from "@konduit/codec/integers/big";
 import { POSIXSeconds, type POSIXMilliseconds, type ValidDate } from "./absolute";
 import { altJsonCodecs, type JsonCodec } from "@konduit/codec/json/codecs";
 import { ok, err } from "neverthrow";
@@ -40,8 +41,13 @@ export namespace Milliseconds {
   }
   export const add = (duration1: Milliseconds, duration2: Milliseconds): Result<Milliseconds, string> =>
     NonNegativeInt.add(duration1, duration2).map(fromNonNegativeInt);
-  export const scale = (duration: Milliseconds, factor: NonNegativeInt): Result<Milliseconds, string> =>
-    NonNegativeInt.scale(duration, factor).map(fromNonNegativeInt);
+  export const scale = (duration: Milliseconds, factor: NonNegativeInt | NonNegativeBigInt): Result<Milliseconds, string> => {
+    if (typeof factor === "bigint") {
+      const product = BigInt(duration) * factor;
+      return NonNegativeInt.fromNumber(Number(product)).map(fromNonNegativeInt);
+    }
+    return NonNegativeInt.scale(duration, factor).map(fromNonNegativeInt);
+  }
   export const ord = mkOrdForScalar<Milliseconds>();
 }
 export const json2MillisecondsCodec = codec.rmap(NonNegativeInt.jsonCodec, (n) => Milliseconds.fromNonNegativeInt(n), (ms) => ms);

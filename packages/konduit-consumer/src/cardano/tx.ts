@@ -430,7 +430,8 @@ export namespace TxOutRefHex {
   )
 
   export const fromTxOutRef = (txOutRef: TxOutRef): TxOutRefHex => {
-    return `${txOutRef.txId}#${txOutRef.txIx}` as TxOutRefHex;
+    const txIdHex = TxIdHex.fromTxId(txOutRef.txId);
+    return `${txIdHex}#${txOutRef.txIx}` as TxOutRefHex;
   }
 
   export const toTxOutRef = (txOutRefHex: TxOutRefHex): TxOutRef => {

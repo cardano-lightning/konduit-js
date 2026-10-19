@@ -245,6 +245,23 @@ export namespace AddressBech32 {
     const humanReadablePart = address.network === Network.MAINNET ? "addr" : "addr_test";
     return bech32.encode(humanReadablePart, dataPartWords, Address.MAX_BECH32_LEN) as AddressBech32;
   }
+  export const isTestnetAddress = (address: AddressBech32): boolean => {
+    return address.startsWith("addr_test");
+  }
+  export const toTestnetAddress = (address: AddressBech32): AddressBech32 => {
+    if(isTestnetAddress(address)) return address;
+    const addr = Address.stringCodec.deserialise(address as string);
+    if(addr.isErr()) throw new Error(`Invalid address: ${address}`);
+    const testnetAddr = { ...addr.value, network: Network.TESTNET };
+    return AddressBech32.fromAddress(testnetAddr);
+  }
+  export const toMainnetAddress = (address: AddressBech32): AddressBech32 => {
+    if(!isTestnetAddress(address)) return address;
+    const addr = Address.stringCodec.deserialise(address as string);
+    if(addr.isErr()) throw new Error(`Invalid address: ${address}`);
+    const mainnetAddr = { ...addr.value, network: Network.MAINNET };
+    return AddressBech32.fromAddress(mainnetAddr);
+  }
 }
 
 export const address2AddressBech32Iso: Iso<Address, AddressBech32> = {

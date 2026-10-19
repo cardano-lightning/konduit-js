@@ -217,3 +217,49 @@ export const tupleOf = <
     },
   };
 };
+
+
+// A simple lazy evaluation wrapper which allows us to create recursive codecs.
+// Please check the details below.
+class Thunk<T> {
+  private _value?: T;
+  private _thunk: () => T;
+
+  constructor(thunk: () => T) {
+    this._thunk = thunk;
+  }
+
+  get value(): T {
+    if (this._value === undefined) {
+      this._value = this._thunk();
+    }
+    return this._value;
+  }
+}
+
+// A helper which allows us to create recursive codecs - I'm using JsonCodec as an example to 
+// shorten the code below:
+//
+// export type Tree = { value: bigint; children: Tree[] };
+// const treeCodec: JsonCodec<Tree> = fromCodecThunk(new Thunk(() => objectOf({
+//   value: json2BigIntCodec,
+//   children: arrayOf(treeCodec),
+// })));
+//
+//
+export const fromCodecThunk = <I, O, E>(thunk: Thunk<Codec<I, O, E>>): Codec<I, O, E> => {
+  return {
+    deserialise: (input: I) => thunk.value.deserialise(input),
+    serialise: (value: O) => thunk.value.serialise(value),
+  };
+};
+
+// Or even shorter:
+//
+// const treeCodec: JsonCodec<Tree> = fromJsonCodecThunkFn(() => objectOf({
+//   value: json2BigIntCodec,
+//   children: arrayOf(treeCodec),
+// }));
+export const fromCodecThunkFn = <I, O, E>(thunkFn: () => Codec<I, O, E>): Codec<I, O, E> => {
+  return fromCodecThunk(new Thunk(thunkFn));
+}

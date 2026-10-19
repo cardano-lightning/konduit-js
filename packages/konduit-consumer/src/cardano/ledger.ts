@@ -7,18 +7,27 @@ import * as codec from "@konduit/codec";
 import { mkOrdForScalar, mkOrdForUint8Array } from "@konduit/codec/tagged";
 import { Milliseconds, Seconds } from "../time/duration";
 import { POSIXMilliseconds } from "../time/absolute";
-import { PositiveBigInt } from "@konduit/codec/integers/big";
+import { NonNegativeBigInt, PositiveBigInt } from "@konduit/codec/integers/big";
 import type { Codec } from "@konduit/codec";
 import type { HexString } from "@konduit/codec/hexString";
 import { mkHexString2HashCodec } from "./keys";
 import { mkTaggedBytesCborCodec } from "@konduit/codec/cbor/codecs/sync";
 
-export type BlockNo = Tagged<NonNegativeInt, "BlockNo">;
-export const json2BlockNoCodec = codec.rmap(
-  NonNegativeInt.jsonCodec,
-  (nonNegative) => nonNegative as BlockNo,
-  (blockNo: BlockNo): NonNegativeInt => blockNo as NonNegativeInt
-)
+export type BlockNo = Tagged<NonNegativeBigInt, "BlockNo">;
+export namespace BlockNo {
+  export const fromNonNegativeInt = (n: NonNegativeInt): BlockNo => BigInt(n) as NonNegativeBigInt as BlockNo;
+  export const fromNonNegativeBigInt = (n: NonNegativeBigInt): BlockNo => n as BlockNo;
+  export const distance = (a: BlockNo, b: BlockNo): NonNegativeBigInt => {
+    return NonNegativeBigInt.distance(a, b);
+  }
+  export const ord = mkOrdForScalar<BlockNo>();
+  export const jsonCodec = codec.rmap(
+    NonNegativeBigInt.jsonCodec,
+    (nonNegative) => nonNegative as BlockNo,
+    (blockNo: BlockNo): NonNegativeBigInt => blockNo as NonNegativeBigInt
+  )
+}
+export const json2BlockNoCodec = BlockNo.jsonCodec;
 // 5c571f83fe6c784d3fbc223792627ccf0eea96773100f9aedecf8b1eda4544d7
 export type BlockHash = Tagged<Uint8Array, "BlockHash">;
 export namespace BlockHash {
@@ -56,37 +65,38 @@ export namespace SlotConfig {
 
   export const MAINNET: SlotConfig = {
     slotLength: 1000 as Milliseconds,
-    zeroSlot: 4492800 as SlotNo,
+    zeroSlot: 4492800n as SlotNo,
     zeroTime: 1506203091000 as POSIXMilliseconds, // 2017-09-23T21:44:51Z
   } as SlotConfig;
 
   export const PREPROD: SlotConfig = {
     slotLength: 1000 as Milliseconds,
-    zeroSlot: 0 as SlotNo,
+    zeroSlot: 0n as SlotNo,
     zeroTime: 1654041600000 as POSIXMilliseconds, // 2022-06-01T00:00:00Z
   } as SlotConfig;
 
   export const PREVIEW: SlotConfig = {
     slotLength: 1000 as Milliseconds,
-    zeroSlot: 0 as SlotNo,
+    zeroSlot: 0n as SlotNo,
     zeroTime: 1666656000000 as POSIXMilliseconds, // 2022-10-25T00:00:00Z
   } as SlotConfig;
 
 }
 
-export type SlotNo = Tagged<NonNegativeInt, "SlotNo">;
+export type SlotNo = Tagged<NonNegativeBigInt, "SlotNo">;
 export namespace SlotNo {
-  export const fromNonNegativeInt = (nonNegative: NonNegativeInt): SlotNo => nonNegative as SlotNo;
-  export const distance = (slotNo1: SlotNo, slotNo2: SlotNo): NonNegativeInt => {
-    return NonNegativeInt.distance(slotNo1, slotNo2) as NonNegativeInt;
+  export const fromNonNegativeInt = (nonNegative: NonNegativeInt): SlotNo => BigInt(nonNegative) as NonNegativeBigInt as SlotNo;
+  export const fromNonNegativeBigInt = (nonNegative: NonNegativeBigInt): SlotNo => nonNegative as SlotNo;
+  export const distance = (slotNo1: SlotNo, slotNo2: SlotNo): NonNegativeBigInt => {
+    return NonNegativeBigInt.distance(slotNo1, slotNo2);
   }
   export const jsonCodec = codec.rmap(
-    NonNegativeInt.jsonCodec,
+    NonNegativeBigInt.jsonCodec,
     (nonNegative) => nonNegative as SlotNo,
-    (blockNo: SlotNo): NonNegativeInt => blockNo as NonNegativeInt
+    (slotNo: SlotNo): NonNegativeBigInt => slotNo as NonNegativeBigInt
   )
   export const toPOSIXMilliseconds = (slotNo: SlotNo, slotConfig: SlotConfig): Result<POSIXMilliseconds, string> => {
-    const shelleyDistanceInSlots = NonNegativeInt.distance(slotNo, slotConfig.zeroSlot);
+    const shelleyDistanceInSlots = NonNegativeBigInt.distance(slotNo, slotConfig.zeroSlot);
     return Milliseconds.scale(slotConfig.slotLength, shelleyDistanceInSlots)
       .andThen((shellyDistanceInMs) => Milliseconds.scale(SlotConfig.BYRON_ERA_SLOT_LENGTH, slotConfig.zeroSlot)
         .andThen((byronEraDurationInMs) => Milliseconds.add(shellyDistanceInMs, byronEraDurationInMs)))
@@ -96,17 +106,18 @@ export namespace SlotNo {
       ));
   }
 }
-export type BlockDepth = Tagged<NonNegativeInt, "BlockDepth">;
+export type BlockDepth = Tagged<NonNegativeBigInt, "BlockDepth">;
 export namespace BlockDepth {
-  export const fromNonNegativeInt = (n: NonNegativeInt): BlockDepth => n as BlockDepth;
+  export const fromNonNegativeInt = (n: NonNegativeInt): BlockDepth => BigInt(n) as NonNegativeBigInt as BlockDepth;
+  export const fromNonNegativeBigInt = (n: NonNegativeBigInt): BlockDepth => n as BlockDepth;
   export const distance = (blockNo1: BlockNo, blockNo2: BlockNo): BlockDepth => {
-    return NonNegativeInt.distance(blockNo1, blockNo2) as BlockDepth;
+    return NonNegativeBigInt.distance(blockNo1, blockNo2) as BlockDepth;
   }
   export const ord = mkOrdForScalar<BlockDepth>();
   export const jsonCodec = codec.rmap(
-    NonNegativeInt.jsonCodec,
+    NonNegativeBigInt.jsonCodec,
     (nonNegative) => nonNegative as BlockDepth,
-    (blockDepth: BlockDepth): NonNegativeInt => blockDepth,
+    (blockDepth: BlockDepth): NonNegativeBigInt => blockDepth,
   )
 }
 
