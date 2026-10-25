@@ -258,20 +258,13 @@ export namespace Tip {
   });
 }
 
-const setNetworkArg = (args: CliArgs, networkMagicNumber?: NetworkMagicNumber): void => {
-  if (networkMagicNumber) {
-    if(networkMagicNumber !== NetworkMagicNumber.MAINNET) {
-      args.push(["--testnet-magic", networkMagicNumber]);
-    } else {
-      args.push("--mainnet");
-    }
+const setNetworkArg = (args: CliArgs, networkMagicNumber: NetworkMagicNumber): void => {
+  if(networkMagicNumber !== NetworkMagicNumber.MAINNET) {
+    args.push(["--testnet-magic", networkMagicNumber]);
+  } else {
+    args.push("--mainnet");
   }
 }
-
-/** The magic number `getTip` used before it learned to take a network. */
-const PREVIEWNET_MAGIC: NetworkMagicNumber = NetworkMagicNumber.fromPositiveBigInt(
-  PositiveBigInt.fromDigits(1, 0, 9, 7, 9, 1, 1, 0, 6, 3),
-);
 
 export type TipError =
   | { type: "TipQueryFailed"; error: CommandError | JsonError }
@@ -285,14 +278,13 @@ export type TipError =
  * for a caller that polls the chain, not a programming error.
  */
 export const getTip = (
+  networkMagicNumber: NetworkMagicNumber,
   debug: boolean = false,
-  networkMagicNumber?: NetworkMagicNumber,
 ): Result<Tip, TipError> => {
   const args: CliArgs = [
     "query", "tip",
-    "--output-json",
   ];
-  setNetworkArg(args, networkMagicNumber ?? PREVIEWNET_MAGIC);
+  setNetworkArg(args, networkMagicNumber);
   return execCardanoCliJsonTyped(
     args,
     Tip.jsonDeserialiser,
@@ -308,7 +300,7 @@ export const getTip = (
     });
 };
 
-export const queryUtxosByAddress = (address: AddressBech32, networkMagicNumber?: NetworkMagicNumber, debug: boolean = false): Result<UtxoMap, CommandError | JsonError> => {
+export const queryUtxosByAddress = (address: AddressBech32, networkMagicNumber: NetworkMagicNumber, debug: boolean = false): Result<UtxoMap, CommandError | JsonError> => {
   const args: CliArgs = [
     "query", "utxo",
     ["--address", address],
@@ -727,8 +719,8 @@ export async function transferFunds(
   walletAddress: AddressBech32,
   walletSkeyFile: Path,
   recipients: Recipient[],
+  networkMagicNumber: NetworkMagicNumber,
   tmpDir: Path | null = null,
-  networkMagicNumber?: NetworkMagicNumber,
   debug = false,
 ): Promise<Result<TxIdHex, TransferFundsError>> {
   if (recipients.length > MAX_TRANSFER_RECIPIENTS) {

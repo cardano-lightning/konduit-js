@@ -5,6 +5,7 @@ import * as path from "node:path";
 import { execFileSync } from "node:child_process";
 import { Json } from "@konduit/codec/json";
 import { NetworkMagicNumber } from "@konduit/konduit-consumer/cardano";
+import { unwrapOrPanicWith } from "@konduit/konduit-consumer/neverthrow";
 import { PositiveBigInt } from "@konduit/codec/integers/big";
 import {
   createWallet,
@@ -84,12 +85,14 @@ const utxoMapOf = (lovelace: bigint[]): UtxoMap => {
     }`;
   });
   const json = `{\n${entries.join(",\n")}\n}`;
-  const parsed = Json.fromString(json);
-  if (parsed.isErr()) throw new Error(`fixture is not json: ${parsed.error}`);
-  const map = UtxoMap.jsonDeserialiser(parsed.value);
-  if (map.isErr())
-    throw new Error(`fixture does not deserialise: ${map.error}`);
-  return map.value;
+  const parsed = unwrapOrPanicWith(
+    Json.fromString(json),
+    () => "fixture is not json",
+  );
+  return unwrapOrPanicWith(
+    UtxoMap.jsonDeserialiser(parsed),
+    () => "fixture does not deserialise",
+  );
 };
 
 describe("selectUtxos", () => {
@@ -130,12 +133,14 @@ describe("UtxoMap.jsonDeserialiser", () => {
   }`;
 
   const deserialise = (json: string) => {
-    const parsed = Json.fromString(json);
-    if (parsed.isErr()) throw new Error(`fixture is not json: ${parsed.error}`);
-    const map = UtxoMap.jsonDeserialiser(parsed.value);
-    if (map.isErr())
-      throw new Error(`fixture does not deserialise: ${map.error}`);
-    return map.value;
+    const parsed = unwrapOrPanicWith(
+      Json.fromString(json),
+      () => "fixture is not json",
+    );
+    return unwrapOrPanicWith(
+      UtxoMap.jsonDeserialiser(parsed),
+      () => "fixture does not deserialise",
+    );
   };
 
   it("accepts the reference script as a hex string (cardano-cli < 10)", () => {
@@ -176,6 +181,7 @@ describe("transferFunds", () => {
       address as Recipient["address"],
       "/tmp/does-not-matter.skey",
       recipients(61),
+      TESTNET_MAGIC,
     );
     expect(result.isErr()).toBe(true);
     if (result.isErr()) {
@@ -198,8 +204,8 @@ describe("transferFunds", () => {
         address as Recipient["address"],
         "/tmp/does-not-matter.skey",
         recipients(1),
-        null,
         TESTNET_MAGIC,
+        null,
       );
       expect(result.isErr()).toBe(true);
       if (result.isErr()) expect(result.error.type).toBe("UtxoQueryFailed");
@@ -214,6 +220,24 @@ describe("transferFunds", () => {
 });
 
 describe("getTip", () => {
+  it("queries the tip without the unsupported --output-json option", () => {
+    const script = `#!/bin/sh
+for arg in "$@"; do
+  if [ "$arg" = "--output-json" ]; then
+    echo "Invalid option" >&2
+    exit 1
+  fi
+done
+cat <<'JSON'
+{ "block": 1, "epoch": 1, "era": "Conway", "hash": "aa", "slot": 2, "slotInEpoch": 1, "slotsToEpochEnd": 100, "syncProgress": "100.00" }
+JSON
+`;
+    withFakeCardanoCli(script, () => {
+      const result = getTip(TESTNET_MAGIC);
+      expect(result.isOk()).toBe(true);
+    });
+  });
+
   it("reports a failed query instead of throwing", () => {
     const originalSocket = process.env.CARDANO_NODE_SOCKET_PATH;
     process.env.CARDANO_NODE_SOCKET_PATH = path.join(
@@ -221,7 +245,7 @@ describe("getTip", () => {
       "no-such-node.sock",
     );
     try {
-      const result = getTip();
+      const result = getTip(TESTNET_MAGIC);
       expect(result.isErr()).toBe(true);
       if (result.isErr()) expect(result.error.type).toBe("TipQueryFailed");
     } finally {
@@ -240,7 +264,7 @@ cat <<'JSON'
 JSON
 `;
     withFakeCardanoCli(script, () => {
-      const result = getTip();
+      const result = getTip(TESTNET_MAGIC);
       expect(result.isErr()).toBe(true);
       if (result.isErr()) {
         expect(result.error.type).toBe("NodeNotSynchronised");

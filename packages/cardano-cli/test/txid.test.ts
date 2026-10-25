@@ -5,6 +5,7 @@ import * as path from "node:path";
 import { execFileSync } from "node:child_process";
 import type { Result } from "neverthrow";
 import type { TxIdHex } from "@konduit/konduit-consumer/cardano";
+import { unwrapOrPanicWith } from "@konduit/konduit-consumer/neverthrow";
 import {
   getTxIdFromTxBodyFile,
   getTxIdFromTxFile,
@@ -118,12 +119,11 @@ describe("getTxIdFromTxFile", () => {
     result: Result<TxIdHex, unknown>,
     expected: string,
   ): void => {
-    if (result.isErr()) {
-      throw new Error(
-        `expected a transaction id, got error: ${JSON.stringify(result.error)}`,
-      );
-    }
-    expect(result.value).toBe(expected);
+    const txId = unwrapOrPanicWith(
+      result,
+      () => "expected a transaction id",
+    );
+    expect(txId).toBe(expected);
   };
 
   beforeAll(() => {
