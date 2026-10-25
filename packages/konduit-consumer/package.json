@@ -96,6 +96,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --build",
+    "build:package": "tsc --build tsconfig.src.json",
+    "prepack": "yarn workspaces foreach -Rpt --from @konduit/konduit-consumer run build:package",
     "test": "vitest"
   },
   "type": "module",

@@ -50,7 +50,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --build",
+    "build:package": "tsc --build tsconfig.src.json",
     "extract-readme": "node scripts/extract-readme-example.js",
+    "prepack": "yarn build:package",
     "test": "yarn extract-readme && vitest run",
     "test:watch": "yarn extract-readme && vitest"
   },

@@ -2,7 +2,7 @@
 # Manual changes might be lost - proceed with caution!
 
 __metadata:
-  version: 8
+  version: 9
   cacheKey: 10c0
 
 "@apideck/better-ajv-errors@npm:^0.3.1":
@@ -1961,6 +1961,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@konduit/cardano-cli@workspace:packages/cardano-cli"
   dependencies:
+    "@konduit/codec": "workspace:^"
+    "@konduit/konduit-consumer": "workspace:^"
     "@types/node": "npm:^24.10.1"
     neverthrow: "npm:^8.2.0"
     type-fest: "npm:^5.4.3"

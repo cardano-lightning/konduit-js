@@ -1,5 +1,7 @@
 {
   "dependencies": {
+    "@konduit/codec": "workspace:^",
+    "@konduit/konduit-consumer": "workspace:^",
     "neverthrow": "^8.2.0",
     "type-fest": "^5.4.3"
   },
@@ -36,6 +38,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --build",
+    "build:package": "tsc --build tsconfig.src.json",
+    "prepack": "yarn workspaces foreach -Rpt --from @konduit/cardano-cli run build:package",
     "test": "vitest"
   },
   "type": "module",

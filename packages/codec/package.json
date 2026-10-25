@@ -95,6 +95,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --build",
+    "build:package": "tsc --build tsconfig.src.json",
+    "prepack": "yarn build:package",
     "test": "vitest"
   },
   "type": "module",
