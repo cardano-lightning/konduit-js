@@ -1,9 +1,10 @@
 import { bech32, utf8 } from "@scure/base";
-import { SHORT_LOOKUP, type Network, type Short } from "../network";
+import { SHORT_LOOKUP, type Network, type NetworkShort } from "../network";
 import { convert, type WordParser } from "./words";
 import * as uint8Array from "../uint8Array";
 import { recoverPubkey } from "../secp";
 import { Result, ok, err } from "neverthrow";
+import { Tagged } from "type-fest";
 
 export type RouteHint = {
   pubkey: Uint8Array;
@@ -53,12 +54,14 @@ export type TaggedData = {
   metadata?: number[];
 }
 
+export type InvoiceString = Tagged<string, "InvoiceString">;
+
 /**
  * Represents a decoded Lightning Network BOLT11 Invoice.
  */
 export type DecodedInvoice = {
   /** The original invoice (raw string). */
-  raw: string;
+  raw: InvoiceString;
   /** The coin network (e.g., 'btc', 'tb') derived from the 'coin_network' section. */
   network: Network;
   /** The amount of the payment in Satoshis. */
@@ -310,7 +313,7 @@ export function parsePrefix(prefix: string): ParseResult<{ network: Network; amo
   prefix = prefix.slice(2);
   const digitAt = prefix.search(/\d/);
   const short = digitAt < 0 ? prefix : prefix.slice(0, digitAt);
-  const network = SHORT_LOOKUP[short as Short];
+  const network = SHORT_LOOKUP[short as NetworkShort];
   if (typeof network === "undefined")
     return err({
       type: "UnknownNetwork",
@@ -493,7 +496,7 @@ export function parse(s: string): ParseResult<DecodedInvoice> {
           providedPayee: taggedData.payee,
         } as ParseError);
       const result: DecodedInvoice = {
-        raw: s,
+        raw: s as InvoiceString,
         network,
         amount,
         timestamp,

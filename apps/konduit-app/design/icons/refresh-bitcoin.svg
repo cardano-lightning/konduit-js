@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="24"
+   height="24"
+   viewBox="0 0 24 24"
+   fill="none"
+   stroke="currentColor"
+   stroke-width="2"
+   stroke-linecap="round"
+   stroke-linejoin="round"
+   class="lucide lucide-refresh-cw-icon lucide-refresh-cw"
+   version="1.1"
+   id="svg4"
+   sodipodi:docname="refresh-bitcoin.svg"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs4" />
+  <sodipodi:namedview
+     id="namedview4"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="18.222731"
+     inkscape:cx="-9.987526"
+     inkscape:cy="3.4297823"
+     inkscape:window-width="3440"
+     inkscape:window-height="1440"
+     inkscape:window-x="1920"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg4" />
+  <path
+     d="m 3,12 a 9,9 0 0 1 9,-9 9.75,9.75 0 0 1 6.74,2.74 L 21,8"
+     id="path1"
+     style="stroke-width:1;stroke-dasharray:none" />
+  <path
+     d="M 21,4.2072834 V 8 h -3.90247"
+     id="path2"
+     style="stroke-width:1;stroke-dasharray:none"
+     sodipodi:nodetypes="ccc" />
+  <path
+     d="M 21,12 A 9,9 0 0 1 12,21 9.75,9.75 0 0 1 5.26,18.26 L 3,16"
+     id="path3"
+     style="stroke-width:1;stroke-dasharray:none" />
+  <path
+     d="M 6.9024696,16 H 3 v 3.90247"
+     id="path4"
+     style="stroke-width:1;stroke-dasharray:none"
+     sodipodi:nodetypes="ccc" />
+  <path
+     d="m 12.652968,15.775451 c 2.704001,-0.02577 2.668415,-3.811128 -0.03569,-3.785895 m 0.03569,3.785895 -3.2438853,0.03052 m 3.2444173,-0.03064 0.01045,1.081795 m -0.04614,-4.867689 c 2.704101,-0.02523 2.668416,-3.8111275 -0.03611,-3.7852634 m 0.03611,3.7852634 -2.163588,0.02091 m 2.127375,-3.8067006 -3.2448481,0.031256 m 3.2444161,-0.030628 -0.0099,-1.081891 m -2.071536,9.7552336 -0.09218,-9.7348451"
+     id="path1-8"
+     style="stroke-width:1;stroke-dasharray:none" />
+</svg>

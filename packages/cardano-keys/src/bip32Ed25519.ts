@@ -23,8 +23,8 @@ export namespace Ed25519XPrv {
     if (raw.length !== 96) return err(`Expected 96 bytes, got ${raw.length}`);
     const kl = raw.subarray(0, 32);
     const isValidScalar =
-      (kl[0] & 0b0000_0111) === 0 && // Lowest 3 bits cleared
-      (kl[31] & 0b1110_0000) === 0b0100_0000 // highest 3 bits cleared BUT bit 254 == 1
+      (kl[0]! & 0b0000_0111) === 0 && // Lowest 3 bits cleared
+      (kl[31]! & 0b1110_0000) === 0b0100_0000 // highest 3 bits cleared BUT bit 254 == 1
     ;
     if (!isValidScalar) return err("Invalid Ed25519-BIP32 scalar: bits do not match required clamping pattern");
     return ok(raw as Ed25519XPrv);
@@ -45,13 +45,13 @@ export namespace Ed25519XPrv {
   // it the root chain code
   export function fromMasterSecret(secret: Ed25519MasterSecret): Result<Ed25519XPrv, string> {
     const material = sodium.crypto_hash_sha512(secret, "uint8array") as Uint8Array;
-    const isThridHighestBitClear = (material[31] & 0b0010_0000) == 0
+    const isThridHighestBitClear = (material[31]! & 0b0010_0000) == 0
     if(!isThridHighestBitClear) {
       return err("Invalid master secret: third highest bit of last byte of kL must be zero");
     }
-    material[0] &= 0b1111_1000;  // Clear lowest 3 bits
-    material[31] &= 0b0011_1111; // Clear 2 highest bits
-    material[31] |= 0b0100_0000; // Set bit 254
+    material[0]! &= 0b1111_1000;  // Clear lowest 3 bits
+    material[31]! &= 0b0011_1111; // Clear 2 highest bits
+    material[31]! |= 0b0100_0000; // Set bit 254
 
     const chainCode = sodium.crypto_hash_sha256(uint8Array.concat([new Uint8Array([0x01]), secret]), "uint8array") as Uint8Array;
     return fromBytes(uint8Array.concat([material, chainCode]));
@@ -129,12 +129,12 @@ const add28Mul8 = (x: Uint8Array, y: Uint8Array): Uint8Array => {
   const out = new Uint8Array(32).fill(0);
 
   for (let i = 0; i < 28; i++) {
-    const r = x[i] + (y[i] << 3) + carry;
+    const r = x[i]! + (y[i]! << 3) + carry;
     out[i] = r & 0xff;
     carry = (r >> 8) & 0xff; // Explicit mask for safety
   }
   for (let i = 28; i < 32; i++) {
-    const r = x[i] + carry;
+    const r = x[i]! + carry;
     out[i] = r & 0xff;
     carry = (r >> 8) & 0xff;
   }
@@ -154,7 +154,7 @@ const add256bits = (x: Uint8Array, y: Uint8Array): Uint8Array => {
   const out = new Uint8Array(32).fill(0);
 
   for (let i = 0; i < 32; i++) {
-    const r = x[i] + y[i] + carry;
+    const r = x[i]! + y[i]! + carry;
     out[i] = r & 0xff;
     carry = (r >> 8) & 0xff;
   }

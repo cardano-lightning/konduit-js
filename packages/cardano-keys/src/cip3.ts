@@ -55,9 +55,9 @@ export const deriveEd25519XPrv = async (
   // ```rust
   // pub fn normalize_bytes_force3rd(mut bytes: [u8; XPRV_SIZE]) -> Self {
   // ```
-  material[0] &= 0b1111_1000;  // Clear lowest 3 bits
-  material[31] &= 0b0001_1111; // Clear 3 highest bits
-  material[31] |= 0b0100_0000; // Set bit 254
+  material[0]! &= 0b1111_1000;  // Clear lowest 3 bits
+  material[31]! &= 0b0001_1111; // Clear 3 highest bits
+  material[31]! |= 0b0100_0000; // Set bit 254
 
   return Ed25519XPrv.fromBytes(material).match(
     (xprv) => xprv,

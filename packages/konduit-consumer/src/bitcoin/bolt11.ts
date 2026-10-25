@@ -1,10 +1,10 @@
 import type { Network } from "@konduit/bln/network";
 import type { Tagged } from "type-fest";
 import { Result, err, ok } from "neverthrow";
-import { type JsonCodec, type JsonError } from "@konduit/codec/json/codecs";
+import { json2StringCodec, type JsonCodec, type JsonError } from "@konduit/codec/json/codecs";
 import type { Millisatoshi } from "./asset";
 import { bigInt2MillisatoshiCodec } from "./asset";
-import { POSIXSeconds } from "../time/absolute";
+import { POSIXMilliseconds, POSIXSeconds, ValidDate } from "../time/absolute";
 import { Seconds } from "../time/duration";
 import { NonNegativeInt } from "@konduit/codec/integers/smallish";
 import * as codec from "@konduit/codec";
@@ -14,8 +14,11 @@ import { uint8Array2Secp256k1CompressedPublicKeyCodec, uint8Array2Secp256k1Signa
 import type { DecodedInvoice } from "@konduit/bln/invoice";
 import type { Codec } from "@konduit/codec";
 import { sha256, type Sha256Hash } from "../crypto/hashes";
-import type { CborCodec } from "@konduit/codec/cbor/codecs/sync";
+import { mkTaggedBytesCborCodec, type CborCodec } from "@konduit/codec/cbor/codecs/sync";
 import { randomBytes } from "@noble/hashes/utils.js";
+import * as invoice from "@konduit/bln/invoice";
+import type { Json } from "@konduit/codec/json";
+import type { InvoiceString } from "@konduit/bln/invoice/bolt11";
 
 export type InvoiceTimestamp = Tagged<POSIXSeconds, "InvoiceTimestamp">;
 export type InvoiceExpiry = Tagged<Seconds, "InvoiceExpiry">;
@@ -35,8 +38,6 @@ export const json2PayeePubKeyCodec: JsonCodec<PayeePubKey> = codec.pipe(
   uint8Array2PayeePubKeyCodec,
 );
 
-export type InvoiceString = Tagged<string, "InvoiceString">;
-
 export type HtlcSecret = Tagged<Uint8Array, "HtlcSecret">;
 export namespace HtlcSecret {
   export const LENGTH = 32;
@@ -46,7 +47,7 @@ export namespace HtlcSecret {
     }
     return ok(bytes as HtlcSecret);
   }
-  export const fromRandomBytes = async () => {
+  export const fromRandomBytes = () => {
     const bytes = randomBytes(LENGTH);
     return bytes as HtlcSecret;
   }
@@ -54,7 +55,7 @@ export namespace HtlcSecret {
 
 export const uint8Array2HtlcSecretCodec: Codec<Uint8Array, HtlcSecret, JsonError> = mkTaggedUint8ArrayCodec<HtlcSecret>("HtlcSecret", (arr: Uint8Array) => arr.length === HtlcSecret.LENGTH);
 export const json2HtlcSecretCodec: JsonCodec<HtlcSecret> = uint8Array.mkTaggedJsonCodec("HtlcSecret", (arr) => arr.length === HtlcSecret.LENGTH);
-export const cbor2HtlcSecretCodec: CborCodec<HtlcSecret> = uint8Array.mkTaggedCborCodec("HtlcSecret", (arr) => arr.length === HtlcSecret.LENGTH);
+export const cbor2HtlcSecretCodec: CborCodec<HtlcSecret> = mkTaggedBytesCborCodec("HtlcSecret", (arr) => arr.length === HtlcSecret.LENGTH);
 
 export type HtlcLock = Tagged<Sha256Hash, "HtlcLock">;
 export namespace HtlcLock {
@@ -65,15 +66,15 @@ export namespace HtlcLock {
     }
     return ok(bytes as HtlcLock);
   }
-  export const fromSecret = async (secret: HtlcSecret): Promise<HtlcLock> => {
-    const res = await sha256(secret);
+  export const fromSecret = (secret: HtlcSecret): HtlcLock => {
+    const res = sha256(secret);
     return res as HtlcLock;
   }
 }
 
 export const uint8Array2HtlcLockCodec: Codec<Uint8Array, HtlcLock, JsonError> = mkTaggedUint8ArrayCodec<HtlcLock>("HtlcLock", (arr: Uint8Array) => arr.length === HtlcLock.LENGTH);
 export const json2HtlcLockCodec: JsonCodec<HtlcLock> = uint8Array.mkTaggedJsonCodec("HtlcLock", (arr) => arr.length === HtlcLock.LENGTH);
-export const cbor2HtlcLockCodec: CborCodec<HtlcLock> = uint8Array.mkTaggedCborCodec("HtlcLock", (arr) => arr.length === HtlcLock.LENGTH);
+export const cbor2HtlcLockCodec: CborCodec<HtlcLock> = mkTaggedBytesCborCodec("HtlcLock", (arr) => arr.length === HtlcLock.LENGTH);
 
 
 export type Invoice = {
@@ -95,6 +96,16 @@ export type Invoice = {
   readonly timestamp: InvoiceTimestamp;
 };
 
+export namespace Invoice {
+  export const expirationDate = (invoice: Invoice): Result<ValidDate, string> | null => {
+    if(invoice.expiry === null) return null;
+    return POSIXSeconds.addSeconds(invoice.timestamp, invoice.expiry).map(posixSeconds =>
+      ValidDate.fromPOSIXMilliseconds(POSIXMilliseconds.fromPOSIXSeconds(posixSeconds))
+    );
+  }
+}
+
+// TODO: move to the `codec` if it is generally useful (we have there `jsonCodecs.nullable`).
 export const nullable = <I, O>(codec: Codec<I, O, JsonError>): Codec<I | undefined | null, O | null, JsonError> => {
   return {
     deserialise: (input: I | undefined | null): Result<O | null, JsonError> => {
@@ -135,7 +146,7 @@ export const decodedInvoice2InvoiceDeserialiser = (decoded: DecodedInvoice): Res
         payee,
         paymentHash,
         paymentSecret: secret,
-        raw: raw as InvoiceString, // We just validated this string here
+        raw,
         signature,
         timestamp
       } as Invoice;
@@ -147,3 +158,17 @@ export const decodedInvoice2InvoiceDeserialiser = (decoded: DecodedInvoice): Res
   );
 }
 
+export const string2InvoiceCodec: Codec<string, Invoice, JsonError> = {
+  deserialise: (invoiceString: string): Result<Invoice, JsonError> =>
+    invoice.parse(invoiceString)
+      .mapErr((error) => error as Json)
+      .andThen((invoice) =>
+        decodedInvoice2InvoiceDeserialiser(invoice)
+      ),
+  serialise: (o: Invoice) => o.raw
+};
+
+export const json2InvoiceCodec: JsonCodec<Invoice> = codec.pipe(
+  json2StringCodec,
+  string2InvoiceCodec,
+);

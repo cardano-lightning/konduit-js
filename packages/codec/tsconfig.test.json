@@ -4,7 +4,8 @@
     "noEmit": true,
     "moduleResolution": "bundler",
     "module": "ES2020",
-    "rootDir": "."
+    "rootDir": ".",
+    "strict": true
   },
   "extends": "./tsconfig.json",
   "include": ["src/**/*", "test/**/*", "vite-env.d.ts"]

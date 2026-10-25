@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Tagged } from 'type-fest';
 import * as uint8Array from '../src/uint8Array';
-import { type Json, parse, stringify } from '../src/json';
+import { parse, stringify } from '../src/json';
 import type { JsonCodec } from '../src/json/codecs';
 import { unwrapErr, unwrapErrWithSubstring, unwrapOk } from './assertions';
 
@@ -23,7 +23,7 @@ describe('Uint8Array codec', () => {
     });
 
     it('should decode empty hex string', () => {
-      const json = "" as Json;
+      const json = "";
       const result = uint8Array.jsonCodec.deserialise(json);
       const arr = unwrapOk(result);
       expect(arr.length).toBe(0);
@@ -36,14 +36,14 @@ describe('Uint8Array codec', () => {
     });
 
     it('should decode multiple bytes', () => {
-      const json = "0123456789abcdef" as Json;
+      const json = "0123456789abcdef";
       const result = uint8Array.jsonCodec.deserialise(json);
       const arr = unwrapOk(result);
       expect(arr).toEqual(new Uint8Array([0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef]));
     });
 
     it('should handle uppercase hex', () => {
-      const json = "ABCDEF" as Json;
+      const json = "ABCDEF";
       const result = uint8Array.jsonCodec.deserialise(json);
       const arr = unwrapOk(result);
       expect(arr).toStrictEqual(new Uint8Array([0xab, 0xcd, 0xef]));
@@ -60,17 +60,17 @@ describe('Uint8Array codec', () => {
 
   describe('error cases', () => {
     it('should fail on odd length hex string', () => {
-      const json = "abc" as Json;
+      const json = "abc";
       unwrapErr(uint8Array.jsonCodec.deserialise(json));
     });
 
     it('should fail on invalid hex characters', () => {
-      const json = "abcg" as Json;
+      const json = "abcg";
       unwrapErrWithSubstring(uint8Array.jsonCodec.deserialise(json), 'Invalid character');
     });
 
     it('should fail on non-string input', () => {
-      const json = 123n as Json;
+      const json = 123n;
       const result = uint8Array.jsonCodec.deserialise(json);
       unwrapErr(result);
     });

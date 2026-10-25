@@ -1,0 +1,43 @@
+{
+  "dependencies": {
+    "neverthrow": "^8.2.0",
+    "type-fest": "^5.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.4",
+    "vite-plugin-dts": "^4.5.4",
+    "vite-plugin-top-level-await": "^1.6.0",
+    "vite-plugin-wasm": "^3.5.0",
+    "vitest": "^4.0.16"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./exec": {
+      "types": "./dist/exec.d.ts",
+      "default": "./dist/exec.js"
+    },
+    "./cardano": {
+      "types": "./dist/cardano.d.ts",
+      "default": "./dist/cardano.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "main": "dist/index.js",
+  "module": "dist/index.es.js",
+  "name": "@konduit/cardano-cli",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --build",
+    "test": "vitest"
+  },
+  "type": "module",
+  "version": "0.0.0"
+}

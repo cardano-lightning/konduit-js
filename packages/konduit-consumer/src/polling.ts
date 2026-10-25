@@ -107,6 +107,30 @@ export class PollingInfo<T> {
       }
     );
   }
+
+  public mapValue<U>(f: (value: T) => U): PollingInfo<U> {
+    if (this.lastFetch) {
+      if ("value" in this.lastFetch) {
+        return new PollingInfo({
+          value: f(this.lastFetch.value),
+          fetchedAt: this.lastFetch.fetchedAt,
+        });
+      } else if ("previousSuccessfulFetch" in this.lastFetch) {
+        const previousSuccessfulFetch = this.lastFetch.previousSuccessfulFetch
+          ? {
+              value: f(this.lastFetch.previousSuccessfulFetch.value),
+              fetchedAt: this.lastFetch.previousSuccessfulFetch.fetchedAt,
+            }
+          : null;
+        return new PollingInfo({
+          error: this.lastFetch.error,
+          fetchedAt: this.lastFetch.fetchedAt,
+          previousSuccessfulFetch,
+        });
+      }
+    }
+    return new PollingInfo<U>(null);
+  }
 }
 
 export const mkJson2PollingInfoCodec = <T>(json2ResultCodec: JsonCodec<T>): JsonCodec<PollingInfo<T>> => {

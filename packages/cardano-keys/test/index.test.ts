@@ -7,6 +7,7 @@ import { readmeExample as readmeExample1 } from './readme-example-1';
 import { readmeExample as readmeExample2 } from './readme-example-2';
 import { deriveEd25519XPrv, Mnemonic } from "../src/index";
 import { Ed25519PublicKey, type Ed25519Signature, unsafeUnwrap } from '../src/rfc8032';
+import type { MnemonicContent } from '../src/bip39';
 
 type DerivationPath = { type: "custom", indices: DerivationIdx[] } | { type: "cip1852", walletIdx: WalletIndex, role: KeyRole, keyIdx: KeyIndex };
 
@@ -59,8 +60,9 @@ const deserialiseDerivationPath = (obj: any): DerivationPath => {
 }
 
 const deserialiseTestVector = (obj: any): TestVector => {
+  const mnemonicContent: MnemonicContent = { mnemonicWords: obj.mnemonic, wordlist: english.wordlist };
   return {
-    mnemonic: { mnemonicWords: obj.mnemonic, wordlist: english.wordlist } as Mnemonic,
+    mnemonic: (mnemonicContent as Mnemonic),
     derivationPath: deserialiseDerivationPath(obj.derivationPath),
     rootXprv: deserialiseUint8Array(obj.rootXprv) as Ed25519XPrv,
     addrXprv: deserialiseUint8Array(obj.addrXprv) as Ed25519XPrv,
@@ -116,8 +118,8 @@ describe('Cardano key derivation', () => {
     }
   });
 
-  it('should run first README example successfully', async () => {
-    await readmeExample1();
+  it('should run first README example successfully', () => {
+    readmeExample1();
   });
 
   it('should run second README example successfully', async () => {

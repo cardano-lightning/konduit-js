@@ -1,5 +1,4 @@
 import { Result } from 'neverthrow';
-import { onString } from '../src/json';
 import type { JsonError } from '../src/json/codecs';
 import { type Assertion, expect } from 'vitest';
 
@@ -28,9 +27,13 @@ const unwrapErrWith = <T, E>(result: Result<T, E>, onErr: (error: E) => boolean)
 
 export const unwrapErrWithSubstring = <T>(result: Result<T, JsonError>, substring: string): JsonError => {
   return unwrapErrWith(result, (error) => {
-    return onString((_) => false)((errStr: string) => {
-      return errStr.includes(substring);
-    })(error);
+    if(typeof error === "string") {
+      return error.includes(substring);
+    }
+    if(Array.isArray(error)) {
+      return error.some((err) => typeof err === "string" && err.includes(substring));
+    }
+    return false;
   });
 }
 

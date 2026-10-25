@@ -9,7 +9,7 @@ export default defineConfig({
     target: "esnext",
     lib: {
       entry: resolve(__dirname, "src/index.ts"),
-      name: "Bln",
+      name: "konduit-consumer",
       formats: ["es", "umd"],
       fileName: (format) => `index.${format}.js`,
     },

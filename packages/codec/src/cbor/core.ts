@@ -245,8 +245,13 @@ class CborNull {
 export const cborNull = new CborNull();
 export const isCborNull = (value: any): value is CborNull => value instanceof CborNull;
 
-/** Represents a CBOR data item. */
+export type CborTaggedValue = { tag: CborTag; value: Cbor };
 
+export const isCborTaggedValue = (cbor: Cbor): cbor is CborTaggedValue => {
+  return typeof cbor === "object" && cbor !== null && "tag" in cbor && "value" in cbor;
+}
+
+// AST representation of the CBOR data
 export type Cbor =
   | CborNull
   | CborUndefined
@@ -262,4 +267,18 @@ export type Cbor =
   | Indefinite<Cbor[]>
   | Map<Cbor, Cbor>
   | Indefinite<Map<Cbor, Cbor>>
-  | { tag: CborTag; value: Cbor }
+  | CborTaggedValue;
+
+/** Debugging helper that briefly describes a CBOR AST node. */
+export const briefCbor = (value: Cbor): string => {
+  if (typeof value === "bigint") return `int(${value})`;
+  if (value instanceof Uint8Array) return `bytes(${value.length})`;
+  if (isCborTaggedValue(value)) return `tag ${value.tag}`;
+  if (Array.isArray(value)) return `array(${value.length})`;
+  if (isIndefiniteArray(value)) return `array(${value.items.length})`;
+  if (value instanceof Map) return `map(${value.size})`;
+  if (isIndefiniteMap(value)) return `map(${value.items.size})`;
+  if (isCborNull(value)) return "null";
+  if (isCborUndefined(value)) return "undefined";
+  return typeof value;
+};

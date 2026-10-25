@@ -24,7 +24,7 @@ describe('altCodecs - Generalized N-way Alternative Codec', () => {
     });
 
     it('should decode second alternative', () => {
-      const result = stringOrNumberCodec.deserialise(42n);
+      const result = stringOrNumberCodec.deserialise(42);
       const decoded = unwrapOk(result);
       expect(decoded).toBe(42);
     });
@@ -36,7 +36,7 @@ describe('altCodecs - Generalized N-way Alternative Codec', () => {
 
     it('should serialize correctly', () => {
       expect(stringOrNumberCodec.serialise("test")).toBe("test");
-      expect(stringOrNumberCodec.serialise(123)).toBe(123n);
+      expect(stringOrNumberCodec.serialise(123)).toBe(123);
     });
   });
 
@@ -56,7 +56,7 @@ describe('altCodecs - Generalized N-way Alternative Codec', () => {
     });
 
     it('should decode second alternative', () => {
-      const decoded = unwrapOk(stringOrNumberOrBoolCodec.deserialise(42n));
+      const decoded = unwrapOk(stringOrNumberOrBoolCodec.deserialise(42));
       expect(decoded).toBe(42);
     });
 
@@ -71,7 +71,7 @@ describe('altCodecs - Generalized N-way Alternative Codec', () => {
 
     it('should serialize all types correctly', () => {
       expect(stringOrNumberOrBoolCodec.serialise("test")).toBe("test");
-      expect(stringOrNumberOrBoolCodec.serialise(99)).toBe(99n);
+      expect(stringOrNumberOrBoolCodec.serialise(99)).toBe(99);
       expect(stringOrNumberOrBoolCodec.serialise(false)).toBe(false);
     });
   });
@@ -89,14 +89,14 @@ describe('altCodecs - Generalized N-way Alternative Codec', () => {
 
     it('should decode all four alternatives', () => {
       expect(unwrapOk(fourWayCodec.deserialise("text"))).toBe("text");
-      expect(unwrapOk(fourWayCodec.deserialise(100n))).toBe(100);
+      expect(unwrapOk(fourWayCodec.deserialise(100))).toBe(100);
       expect(unwrapOk(fourWayCodec.deserialise(false))).toBe(false);
       expect(unwrapOk(fourWayCodec.deserialise(null))).toBe(null);
     });
 
     it('should serialize all types correctly', () => {
       expect(fourWayCodec.serialise("abc")).toBe("abc");
-      expect(fourWayCodec.serialise(50)).toBe(50n);
+      expect(fourWayCodec.serialise(50)).toBe(50);
       expect(fourWayCodec.serialise(true)).toBe(true);
       expect(fourWayCodec.serialise(null)).toBe(null);
     });

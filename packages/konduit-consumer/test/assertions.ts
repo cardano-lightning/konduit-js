@@ -58,8 +58,8 @@ export const expectToStrictEqual = <T>(a: T, b: T): void => {
   return expect(a).toStrictEqual(b);
 }
 
-export const expectNotNull = <T>(value: T | null): T => {
-  if (value === null) {
+export const expectNotNull = <T>(value: T | null | undefined): T => {
+  if (value === null || value === undefined) {
     throw new Error("Expected value to be not null, but it was null");
   }
   return value;

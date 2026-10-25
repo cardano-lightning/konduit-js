@@ -294,16 +294,17 @@ describe("deserialiseCbor (primitive types)", () => {
       throw new Error("Expected an indefinite array");
     }
     const arr = cbor.items;
+    expect(arr).toHaveLength(3);
     expect(arr[0]).toBe(1n);
 
-    const innerArr = arr[1];
+    const innerArr = arr[1]!;
     if(!isIndefiniteArray(innerArr)) {
       throw new Error("Expected an indefinite array");
     }
     expect(innerArr.items[0]).toBe(2n);
     expect(innerArr.items[1]).toBe(3n);
 
-    const innerMap = arr[2];
+    const innerMap = arr[2]!;
     if(!isIndefiniteMap(innerMap)) {
       throw new Error("Expected an indefinite map");
     }

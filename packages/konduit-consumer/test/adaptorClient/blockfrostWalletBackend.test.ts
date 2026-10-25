@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { mkBlockfrostClient } from "../../src/adaptorClient";
+import { mkBlockfrostClient } from "../../src/blockfrostClient";
 import { expectNotNull, expectOk } from "../assertions";
-import { NetworkMagicNumber } from "../../src/cardano/addressses";
+import { NetworkMagicNumber } from "../../src/cardano";
 import { Ed25519RootPrivateKey, WalletIndex, KeyRole, KeyIndex } from "@konduit/cardano-keys";
 import { HexString } from "@konduit/codec/hexString";
 import * as hexString from "@konduit/codec/hexString";
