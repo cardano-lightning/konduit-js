@@ -8,15 +8,15 @@ import {
   mkGetStaticEndpoint,
   ResponseDeserialiser,
   type HttpEndpointError,
-} from "../http";
-import { ValidDate } from "../time/absolute";
+} from "../http.js";
+import { ValidDate } from "../time/absolute.js";
 import {
   type CurrencyUnit,
   type Fx,
   ExchangeRate,
-} from "./core";
+} from "./core.js";
 import { NonNegativeDecimal, PositiveDecimal } from "@konduit/codec/decimals";
-import { unwrapOrPanic } from "../neverthrow";
+import { unwrapOrPanic } from "../neverthrow.js";
 
 export type AdaPairTicker =
   | "ADAAUD"

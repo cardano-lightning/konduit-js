@@ -1,10 +1,10 @@
 /* eslint-disable no-bitwise */
 /* eslint-disable unicorn/number-literal-case */
-import { CborInitialByte, CborMajorType, CborTag } from './core';
-import * as float16 from '../Float16';
-import { HexString } from '../hexString';
-import * as hexString from '../hexString';
-import * as u8a from '../uint8Array';
+import { CborInitialByte, CborMajorType, CborTag } from './core.js';
+import * as float16 from '../Float16.js';
+import { HexString } from '../hexString.js';
+import * as hexString from '../hexString.js';
+import * as u8a from '../uint8Array.js';
 
 // Constants
 const MINUS_ONE = BigInt(-1);

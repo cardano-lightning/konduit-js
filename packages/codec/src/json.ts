@@ -1,7 +1,7 @@
 import _JSONBig from 'json-bigint';
 import type { Tagged } from 'type-fest';
 import { err, ok, type Result } from 'neverthrow';
-import { stringifyThrowable, unsafeUnwrap } from './neverthrow';
+import { stringifyThrowable, unsafeUnwrap } from './neverthrow.js';
 
 const JSONBig = _JSONBig({ useNativeBigInt: true, alwaysParseAsBig: false });
 

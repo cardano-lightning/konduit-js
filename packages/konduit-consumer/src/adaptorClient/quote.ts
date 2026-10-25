@@ -1,12 +1,12 @@
 import type { JsonCodec } from "@konduit/codec/json/codecs";
 import * as codec from "@konduit/codec";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
-import { json2MillisatoshiCodec, type Millisatoshi } from "../bitcoin/asset";
-import { json2PayeePubKeyCodec, type PayeePubKey } from "../bitcoin/bolt11";
+import { json2MillisatoshiCodec, type Millisatoshi } from "../bitcoin/asset.js";
+import { json2PayeePubKeyCodec, type PayeePubKey } from "../bitcoin/bolt11.js";
 import type { Json } from "@konduit/codec/json";
-import { json2IndexCodec, type Index } from "../channel/squash";
-import { Lovelace } from "../cardano";
-import { json2MillisecondsCodec, type Milliseconds } from "../time/duration";
+import { json2IndexCodec, type Index } from "../channel/squash.js";
+import { Lovelace } from "../cardano.js";
+import { json2MillisecondsCodec, type Milliseconds } from "../time/duration.js";
 import type { InvoiceString } from "@konduit/bln/invoice/bolt11";
 
 // We use the naming convention from the server

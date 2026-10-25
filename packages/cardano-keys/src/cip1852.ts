@@ -1,9 +1,9 @@
 import type { Tagged } from "type-fest";
 import { err, ok, type Result } from "neverthrow";
-import { derivePrivate, derivePublic, Ed25519XPrv, extractExpandedSecret, HardenedIdx, NonHardenedIdx, type DerivationIdx, type Ed25519XPub, type SmallInt } from "./bip32Ed25519";
-import { deriveEd25519XPrv } from "./cip3";
-import { Mnemonic } from "./bip39";
-import { Ed25519SigningKey, unsafeUnwrap } from "./rfc8032";
+import { derivePrivate, derivePublic, Ed25519XPrv, extractExpandedSecret, HardenedIdx, NonHardenedIdx, type DerivationIdx, type Ed25519XPub, type SmallInt } from "./bip32Ed25519.js";
+import { deriveEd25519XPrv } from "./cip3.js";
+import { Mnemonic } from "./bip39.js";
+import { Ed25519SigningKey, unsafeUnwrap } from "./rfc8032.js";
 
 export function derivePrivatePath(
   parent: Ed25519XPrv,

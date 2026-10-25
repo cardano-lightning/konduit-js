@@ -1,13 +1,13 @@
 import * as codec from "@konduit/codec";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
-import { json2Ed25519SignatureCodec } from "../cardano/keys";
-import { json2LockedChequeBodyCodec, type LockedChequeBody } from "../channel/squash";
+import { json2Ed25519SignatureCodec } from "../cardano/keys.js";
+import { json2LockedChequeBodyCodec, type LockedChequeBody } from "../channel/squash.js";
 import { json2StringCodec, type JsonCodec, type JsonError } from "@konduit/codec/json/codecs";
 import type { Ed25519Signature } from "@konduit/cardano-keys";
-import { decodedInvoice2InvoiceDeserialiser, type Invoice } from "../bitcoin/bolt11";
+import { decodedInvoice2InvoiceDeserialiser, type Invoice } from "../bitcoin/bolt11.js";
 import { bolt11 } from "@konduit/bln";
-import { mkJson2SquashResponseCodec, type SquashResponse } from "./squash";
-import type { ChannelTag, ConsumerEd25519VerificationKey } from "../channel/core";
+import { mkJson2SquashResponseCodec, type SquashResponse } from "./squash.js";
+import type { ChannelTag, ConsumerEd25519VerificationKey } from "../channel/core.js";
 
 export type PayBody = {
   chequeBody: LockedChequeBody;

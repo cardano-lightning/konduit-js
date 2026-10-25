@@ -1,10 +1,10 @@
-import type { Codec } from "../../codec";
-import { pipe } from "../../codec";
+import type { Codec } from "../../codec.js";
+import { pipe } from "../../codec.js";
 import { err, ok, Result } from "neverthrow";
-import type { QueryValue } from "../ast";
-import type { JsonError } from "../../json/codecs";
-import { stringify } from "../../json";
-import { Int, number2IntCodec } from "../../integers/smallish";
+import type { QueryValue } from "../ast.js";
+import type { JsonError } from "../../json/codecs.js";
+import { stringify } from "../../json.js";
+import { Int, number2IntCodec } from "../../integers/smallish.js";
 
 export type QueryValueCodec<T> = Codec<QueryValue, T, JsonError>
 

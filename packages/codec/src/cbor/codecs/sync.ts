@@ -1,7 +1,7 @@
 import { err, ok, Result } from "neverthrow";
 import type { Tagged } from "type-fest";
-import type { Cbor } from "../core";
-import * as uint8Array from "../../uint8Array";
+import type { Cbor } from "../core.js";
+import * as uint8Array from "../../uint8Array.js";
 import {
   Indefinite,
   isCborNull,
@@ -9,14 +9,14 @@ import {
   isCborUndefined,
   isIndefiniteArray,
   isIndefiniteMap,
-} from "../core";
-import { CborTag, CborSimpleValue, cborUndefined, cborNull } from "../core";
-import { CborReader, CborReaderState } from "../CborReader";
-import { CborWriter } from "../CborWriter";
-import type { Codec, Deserialiser, ExtractCodecInput, Serialiser, UnionOfCodecsOutputs } from "../../codec";
-import * as codec from "../../codec";
-import type { JsonCodec, JsonError } from "../../json/codecs";
-import { isJson, stringify, type Json } from "../../json";
+} from "../core.js";
+import { CborTag, CborSimpleValue, cborUndefined, cborNull } from "../core.js";
+import { CborReader, CborReaderState } from "../CborReader.js";
+import { CborWriter } from "../CborWriter.js";
+import type { Codec, Deserialiser, ExtractCodecInput, Serialiser, UnionOfCodecsOutputs } from "../../codec.js";
+import * as codec from "../../codec.js";
+import type { JsonCodec, JsonError } from "../../json/codecs.js";
+import { isJson, stringify, type Json } from "../../json.js";
 
 export type CborCodec<O> = Codec<Cbor, O, JsonError>;
 

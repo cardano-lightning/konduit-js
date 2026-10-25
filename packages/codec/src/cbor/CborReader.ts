@@ -1,11 +1,11 @@
-import { CborAdditionalInfo, CborInitialByte, CborMajorType, CborSimpleValue, CborTag } from './core'
-import type { Float16 } from "../Float16";
-import * as float16 from "../Float16";
+import { CborAdditionalInfo, CborInitialByte, CborMajorType, CborSimpleValue, CborTag } from './core.js'
+import type { Float16 } from "../Float16.js";
+import * as float16 from "../Float16.js";
 import type { Result } from "neverthrow";
 import { ok, err } from "neverthrow";
-import type { JsonError } from '../json/codecs';
-import { unsafeUnwrap } from '../neverthrow';
-import * as u8a from "../uint8Array";
+import type { JsonError } from '../json/codecs.js';
+import { unsafeUnwrap } from '../neverthrow.js';
+import * as u8a from "../uint8Array.js";
 
 const _okNull = ok(null);
 

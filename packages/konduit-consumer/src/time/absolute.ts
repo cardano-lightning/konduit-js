@@ -4,7 +4,7 @@ import { NonNegativeInt, type Int } from "@konduit/codec/integers/smallish";
 import { type Codec, compose } from "@konduit/codec";
 import { json2BigIntCodec, json2StringCodec, type JsonCodec, type JsonError } from "@konduit/codec/json/codecs";
 import * as codec from "@konduit/codec";
-import type { Milliseconds, Seconds } from "./duration";
+import type { Milliseconds, Seconds } from "./duration.js";
 import { mkOrdForScalar } from "@konduit/codec/tagged";
 import type { NonNegativeBigInt } from "@konduit/codec/integers/big";
 

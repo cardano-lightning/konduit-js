@@ -1,11 +1,11 @@
 import * as codec from "@konduit/codec";
 import type { Result } from "neverthrow";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
-import { json2SecondsCodec, Seconds } from "../time/duration";
+import { json2SecondsCodec, Seconds } from "../time/duration.js";
 import type { Ed25519VerificationKey } from "@konduit/cardano-keys";
-import { Address, Lovelace, ScriptHash } from "../cardano";
+import { Address, Lovelace, ScriptHash } from "../cardano.js";
 import { NonNegativeInt } from "@konduit/codec/integers/smallish";
-import { json2Ed25519VerificationKeyCodec } from "../cardano";
+import { json2Ed25519VerificationKeyCodec } from "../cardano.js";
 import type { Json } from "@konduit/codec/json";
 import type { Tagged } from "type-fest";
 

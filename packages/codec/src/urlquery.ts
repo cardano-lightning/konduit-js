@@ -1,1 +1,1 @@
-export type { UrlQuery, QueryValue } from "./urlquery/ast";
+export type { UrlQuery, QueryValue } from "./urlquery/ast.js";

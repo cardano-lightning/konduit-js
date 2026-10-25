@@ -1,25 +1,25 @@
 import type { Tagged } from "type-fest";
 import { ok, type Result } from "neverthrow";
 import { Ed25519VerificationKey } from "@konduit/cardano-keys";
-import { json2TxOutRefCodec, TxCborBytes, TxHash, unsafeTxCborBytes, type TxInfo } from "../cardano";
-import { POSIXMilliseconds, ValidDate } from "../time/absolute";
-import { ChannelTag,  KeyTag, type ConsumerEd25519VerificationKey } from "./core";
-import type { AdaptorEd25519VerificationKey } from "../adaptorClient/adaptorInfo";
-import { json2AdaptorEd25519VerificationKeyCodec } from "../adaptorClient/adaptorInfo";
-import { Days, Hours, json2SecondsCodec, Milliseconds, Minutes, Seconds } from "../time/duration";
-import { Lovelace } from "../cardano";
+import { json2TxOutRefCodec, TxCborBytes, TxHash, unsafeTxCborBytes, type TxInfo } from "../cardano.js";
+import { POSIXMilliseconds, ValidDate } from "../time/absolute.js";
+import { ChannelTag,  KeyTag, type ConsumerEd25519VerificationKey } from "./core.js";
+import type { AdaptorEd25519VerificationKey } from "../adaptorClient/adaptorInfo.js";
+import { json2AdaptorEd25519VerificationKeyCodec } from "../adaptorClient/adaptorInfo.js";
+import { Days, Hours, json2SecondsCodec, Milliseconds, Minutes, Seconds } from "../time/duration.js";
+import { Lovelace } from "../cardano.js";
 import type { JsonCodec } from "@konduit/codec/json/codecs";
 import * as codec from "@konduit/codec";
 import * as uint8Array from "@konduit/codec/uint8Array";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
-import { json2Ed25519VerificationKeyCodec } from "../cardano/keys";
-import { json2ValidDateCodec } from "../time/absolute";
-import { TxIx, type BlockNo, type TxOutRef } from "../cardano";
-import { json2BlockNoCodec } from "../cardano/ledger";
+import { json2Ed25519VerificationKeyCodec } from "../cardano/keys.js";
+import { json2ValidDateCodec } from "../time/absolute.js";
+import { TxIx, type BlockNo, type TxOutRef } from "../cardano.js";
+import { json2BlockNoCodec } from "../cardano/ledger.js";
 import { NonNegativeBigInt } from "@konduit/codec/integers/big";
 import type { ZeroToNine } from "@konduit/codec/integers/smallish";
-import { unwrapOrPanic } from "../neverthrow";
-import { mkJson2PollingInfoCodec, PollingInfo } from "../polling";
+import { unwrapOrPanic } from "../neverthrow.js";
+import { mkJson2PollingInfoCodec, PollingInfo } from "../polling.js";
 
 
 // We use four categories of tx maturity to optimize a bit the syncing

@@ -1,20 +1,20 @@
 import type { Tagged } from "type-fest";
 import type { Result } from "neverthrow";
 import { ok, err } from "neverthrow";
-import { cbor2Ed25519SignatureCodec, json2Ed25519SignatureCodec, Lovelace } from "../cardano";
+import { cbor2Ed25519SignatureCodec, json2Ed25519SignatureCodec, Lovelace } from "../cardano.js";
 import { bigInt2NonNegativeBigIntCodec, NonNegativeBigInt } from "@konduit/codec/integers/big";
 import * as cbor from "@konduit/codec/cbor/codecs/sync";
 import * as codec from "@konduit/codec";
-import { POSIXMilliseconds, ValidDate } from "../time/absolute";
+import { POSIXMilliseconds, ValidDate } from "../time/absolute.js";
 import { json2BigIntCodec } from "@konduit/codec/json/codecs";
 import type { JsonCodec, JsonError } from "@konduit/codec/json/codecs";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import type { Ed25519Signature, Ed25519SigningKey, Ed25519VerificationKey } from "@konduit/cardano-keys";
-import { type ConsumerEd25519VerificationKey, ChannelTag } from "./core";
+import { type ConsumerEd25519VerificationKey, ChannelTag } from "./core.js";
 import * as uint8Array from "@konduit/codec/uint8Array";
 import { altCborCodecs, uint8Array2CborCodec, type CborCodec } from "@konduit/codec/cbor/codecs/sync";
 import type { Cbor } from "@konduit/codec/cbor/core";
-import { cbor2HtlcLockCodec, HtlcLock, HtlcSecret, json2HtlcSecretCodec } from "../bitcoin/bolt11";
+import { cbor2HtlcLockCodec, HtlcLock, HtlcSecret, json2HtlcSecretCodec } from "../bitcoin/bolt11.js";
 import { mkOrdForScalar } from "@konduit/codec/tagged";
 
 export type Index = Tagged<NonNegativeBigInt, "Index">;

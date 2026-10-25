@@ -5,12 +5,12 @@ import type { Tagged } from "type-fest";
 import { json2PositiveIntCodec, NonNegativeInt, PositiveInt } from "@konduit/codec/integers/smallish";
 import * as codec from "@konduit/codec";
 import { mkOrdForScalar, mkOrdForUint8Array } from "@konduit/codec/tagged";
-import { Milliseconds, Seconds } from "../time/duration";
-import { POSIXMilliseconds } from "../time/absolute";
+import { Milliseconds, Seconds } from "../time/duration.js";
+import { POSIXMilliseconds } from "../time/absolute.js";
 import { NonNegativeBigInt, PositiveBigInt } from "@konduit/codec/integers/big";
 import type { Codec } from "@konduit/codec";
 import type { HexString } from "@konduit/codec/hexString";
-import { mkHexString2HashCodec } from "./keys";
+import { mkHexString2HashCodec } from "./keys.js";
 import { mkTaggedBytesCborCodec } from "@konduit/codec/cbor/codecs/sync";
 
 export type BlockNo = Tagged<NonNegativeBigInt, "BlockNo">;

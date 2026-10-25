@@ -1,6 +1,6 @@
 import { err, ok, type Result } from "neverthrow";
-import type { DecodedInvoice } from "./bolt11";
-import * as bolt11 from "./bolt11";
+import type { DecodedInvoice } from "./bolt11.js";
+import * as bolt11 from "./bolt11.js";
 import * as bip21 from "bip21";
 
 // A slightly modified version of the bip21 options to support decoded lighting invoices

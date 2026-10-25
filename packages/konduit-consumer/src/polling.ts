@@ -2,7 +2,7 @@ import type { JsonCodec, JsonError } from "@konduit/codec/json/codecs";
 import type { Result } from "neverthrow";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import * as codec from "@konduit/codec";
-import { json2ValidDateCodec, ValidDate } from "./time/absolute";
+import { json2ValidDateCodec, ValidDate } from "./time/absolute.js";
 import { mkIdentityCodec } from "@konduit/codec";
 
 export type SuccessfulFetch<T> = {

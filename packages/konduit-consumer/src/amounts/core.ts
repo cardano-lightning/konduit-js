@@ -1,6 +1,6 @@
-import { Ada, Lovelace } from "../cardano";
-import { Millisatoshi, type Satoshi } from '../bitcoin';
-import { EuroMillicent, BritishMillipenny, UsMillicent, UsCent } from "../fx/fiat";
+import { Ada, Lovelace } from "../cardano.js";
+import { Millisatoshi, type Satoshi } from '../bitcoin.js';
+import { EuroMillicent, BritishMillipenny, UsMillicent, UsCent } from "../fx/fiat.js";
 import { Result, ok, err } from "neverthrow";
 
 export type Sign = "positive" | "negative";

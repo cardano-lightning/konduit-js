@@ -1,7 +1,7 @@
 import { pbkdf2 } from "@noble/hashes/pbkdf2.js";
 import { sha512 } from "@noble/hashes/sha2.js";
-import { Ed25519XPrv } from "./bip32Ed25519";
-import { Mnemonic, mnemonicToEntropy } from "./bip39";
+import { Ed25519XPrv } from "./bip32Ed25519.js";
+import { Mnemonic, mnemonicToEntropy } from "./bip39.js";
 
 const subtle = globalThis.crypto?.subtle;
 

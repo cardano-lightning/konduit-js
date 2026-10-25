@@ -1,15 +1,15 @@
 import { err, ok, type Result } from 'neverthrow';
-import type { JsonCodec, JsonError } from '../json/codecs';
-import { json2BigIntCodec, json2BigIntThroughStringCodec } from '../json/codecs';
+import type { JsonCodec, JsonError } from '../json/codecs.js';
+import { json2BigIntCodec, json2BigIntThroughStringCodec } from '../json/codecs.js';
 import type { Tagged } from 'type-fest';
-import type { Codec } from '../codec';
-import * as codec from '../codec';
-import type { Small, SmallPositive, ZeroToNine, OneToNine } from './smallish';
-import type { Json } from '../json';
-import { mkOrdForScalar } from '../tagged';
-import { cbor2IntCodec, type CborCodec } from '../cbor/codecs/sync';
-import type { NonNegativeDecimal, PositiveDecimal } from '../decimals';
-import { unwrapOrPanic } from '../neverthrow';
+import type { Codec } from '../codec.js';
+import * as codec from '../codec.js';
+import type { Small, SmallPositive, ZeroToNine, OneToNine } from './smallish.js';
+import type { Json } from '../json.js';
+import { mkOrdForScalar } from '../tagged.js';
+import { cbor2IntCodec, type CborCodec } from '../cbor/codecs/sync.js';
+import type { NonNegativeDecimal, PositiveDecimal } from '../decimals.js';
+import { unwrapOrPanic } from '../neverthrow.js';
 
 // Positive BigInt (> 0n)
 export type PositiveBigInt = Tagged<bigint, "PositiveBigInt">;

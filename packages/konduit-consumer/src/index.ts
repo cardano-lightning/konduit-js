@@ -1,1 +1,1 @@
-export * from './consumer/core';
+export * from './consumer/core.js';

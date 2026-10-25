@@ -1,5 +1,5 @@
 import { Result, ok, err } from "neverthrow";
-import type { Codec, Serialiser } from "../codec";
+import type { Codec, Serialiser } from "../codec.js";
 
 export type AsyncDeserialiser<I, O, E> = (i: I) => Promise<Result<O, E>>;
 

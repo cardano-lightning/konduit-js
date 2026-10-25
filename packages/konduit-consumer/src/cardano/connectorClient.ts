@@ -1,13 +1,13 @@
 import * as uint8Array from "@konduit/codec/uint8Array";
 import { err, ok, Result } from "neverthrow";
-import type { HttpEndpointError } from "../http";
+import type { HttpEndpointError } from "../http.js";
 import {
   mkGetEndpoint,
   mkPostEndpoint,
   mkGetStaticEndpoint,
   RequestSerialiser,
   ResponseDeserialiser,
-} from "../http";
+} from "../http.js";
 import * as codec from "@konduit/codec";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import {
@@ -24,8 +24,8 @@ import {
   PositiveCoin,
   TxCborBytes,
   TxHash,
-} from "../cardano";
-import { BlockDepth, PlutusVersion, PublicNetwork, SlotNo } from "./ledger";
+} from "../cardano.js";
+import { BlockDepth, PlutusVersion, PublicNetwork, SlotNo } from "./ledger.js";
 import {
   ScriptHash,
   TransactionUnspentOutput,
@@ -36,11 +36,11 @@ import {
   type TxOutInfo,
   DatumOption,
   ReferenceScript,
-} from "./tx";
+} from "./tx.js";
 import { HexString } from "@konduit/codec/hexString";
 import { PositiveBigInt } from "@konduit/codec/integers/big";
-import { POSIXMilliseconds } from "../time/absolute";
-import { Value, AssetId, AssetName, ValueEntry } from "./assets";
+import { POSIXMilliseconds } from "../time/absolute.js";
+import { Value, AssetId, AssetName, ValueEntry } from "./assets.js";
 import type { JsonError } from "@konduit/codec/json/codecs";
 import type { Codec } from "@konduit/codec";
 

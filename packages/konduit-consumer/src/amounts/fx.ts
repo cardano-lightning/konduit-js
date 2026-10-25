@@ -10,11 +10,11 @@ import {
   usCent2UsMillicent,
   bitcoin2Satoshi,
   satoshi2Millisatoshi,
-} from "../fx/core";
-import { AdaAmount, AnyAmount, BitcoinAmount, CryptoAmount } from "./core";
+} from "../fx/core.js";
+import { AdaAmount, AnyAmount, BitcoinAmount, CryptoAmount } from "./core.js";
 import { ok, Result } from "neverthrow";
-import { FiatAmount, UsDollarAmount, EuroAmount, BritishPoundAmount } from "./core";
-import { EuroMillicent, BritishMillipenny, UsMillicent } from "../fx/fiat";
+import { FiatAmount, UsDollarAmount, EuroAmount, BritishPoundAmount } from "./core.js";
+import { EuroMillicent, BritishMillipenny, UsMillicent } from "../fx/fiat.js";
 import { NonNegativeBigInt } from "@konduit/codec/integers/big";
 
 export namespace AmountFx {

@@ -12,7 +12,7 @@ import { json2IntCodec, NonNegativeInt, type Int, type OneToNine, type Small, ty
 import { cbor2PositiveBigIntCodec, json2PositiveBigIntCodec, type NonNegativeBigInt, type PositiveBigInt } from "@konduit/codec/integers/big";
 import { mkOrdForScalar, mkOrdForTuple, mkOrdForUint8Array, type Ord } from "@konduit/codec/tagged";
 import { altCborCodecs, cbor2IntCodec, mkTaggedBytesCborCodec, type CborCodec } from "@konduit/codec/cbor/codecs/sync";
-import { ScriptHash } from "./addressses";
+import { ScriptHash } from "./addressses.js";
 import type { HexString } from "@konduit/codec/hexString";
 import type { Codec } from "@konduit/codec";
 import type { Cbor } from "@konduit/codec/cbor/core";

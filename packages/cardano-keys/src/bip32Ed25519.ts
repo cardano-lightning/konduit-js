@@ -2,10 +2,10 @@
 // Derivation code ported from @cardano-sdk/crypto (MPL-2.0 license)
 // These perform 256-bit additions with constant-time properties (fixed loops, no branches).
 import sodium from 'libsodium-wrappers-sumo';
-import * as uint8Array from './uint8Array';
+import * as uint8Array from './uint8Array.js';
 import type { Tagged } from 'type-fest';
 import { err, ok, type Result } from 'neverthrow';
-import type { Ed25519ExpandedSecret, Ed25519PublicKey } from './rfc8032';
+import type { Ed25519ExpandedSecret, Ed25519PublicKey } from './rfc8032.js';
 
 // 32 bytes - the original 32 bytes master secret (before expansion)
 export type Ed25519MasterSecret = Tagged<Uint8Array, "Ed25519MasterSecret">;

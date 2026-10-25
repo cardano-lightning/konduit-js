@@ -3,11 +3,11 @@ import * as wasm from "../wasm/konduit_wasm.js";
 import { Ed25519PrivateKey } from "@konduit/cardano-keys/rfc8032";
 import * as codec from "@konduit/codec";
 import { err, ok, Result } from "neverthrow";
-import { Lovelace, PublicNetwork, TransactionUnspentOutput, TxCborBytes, TxHash } from "./cardano";
-import type { Seconds } from "./time/duration";
-import { ChannelTag } from "./channel/core";
-import type { ConsumerEd25519VerificationKey } from "./channel/core";
-import type { AdaptorEd25519VerificationKey } from "./adaptorClient/adaptorInfo";
+import { Lovelace, PublicNetwork, TransactionUnspentOutput, TxCborBytes, TxHash } from "./cardano.js";
+import type { Seconds } from "./time/duration.js";
+import { ChannelTag } from "./channel/core.js";
+import type { ConsumerEd25519VerificationKey } from "./channel/core.js";
+import type { AdaptorEd25519VerificationKey } from "./adaptorClient/adaptorInfo.js";
 import { uint8Array2CborCodec } from "@konduit/codec/cbor/codecs/sync";
 
 export const MIN_ADA_BUFFER: Lovelace = wasm.min_ada_buffer() as Lovelace;

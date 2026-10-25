@@ -6,8 +6,8 @@
 import type { Tagged } from "type-fest";
 import type { Result } from "neverthrow";
 import { ok, err } from "neverthrow";
-import type { Codec } from "./codec";
-import * as uint8Array from "./uint8Array";
+import type { Codec } from "./codec.js";
+import * as uint8Array from "./uint8Array.js";
 
 // TODO: This should be migrated to `[Byte, Byte]` representation.
 // We don't have Byte yet so it is what it is.

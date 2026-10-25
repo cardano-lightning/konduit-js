@@ -5,7 +5,7 @@ import type { Ed25519PublicKey, Ed25519VerificationKey } from "@konduit/cardano-
 import * as uint8Array from "@konduit/cardano-keys/uint8Array";
 import * as hexString from "@konduit/codec/hexString";
 import * as codec from "@konduit/codec";
-import { mkHexString2HashCodec } from "./keys";
+import { mkHexString2HashCodec } from "./keys.js";
 import type { HexString } from "@konduit/codec/hexString";
 import { json2StringCodec, type JsonError, type JsonCodec } from "@konduit/codec/json/codecs";
 import { blake2b } from "@noble/hashes/blake2.js";
@@ -13,7 +13,7 @@ import { stringify, type Json } from "@konduit/codec/json";
 import type { Iso } from "@konduit/codec";
 import { mkOrdForUint8Array } from "@konduit/codec/tagged";
 import { cbor2ByteStringCodec, mkTaggedBytesCborCodec, type CborCodec } from "@konduit/codec/cbor/codecs/sync";
-import { NetworkMagicNumber, PublicNetwork } from "./ledger";
+import { NetworkMagicNumber, PublicNetwork } from "./ledger.js";
 
 export type ScriptHash = Tagged<Uint8Array, "ScriptHash">;
 export namespace ScriptHash {

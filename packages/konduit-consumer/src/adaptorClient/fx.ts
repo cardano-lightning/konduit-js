@@ -3,9 +3,9 @@ import * as codec from "@konduit/codec";
 import type { Result } from "neverthrow";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import type { JsonCodec } from "@konduit/codec/json/codecs";
-import { POSIXMilliseconds } from "../time/absolute";
-import { Millisatoshi } from "../bitcoin";
-import { Lovelace } from "../cardano";
+import { POSIXMilliseconds } from "../time/absolute.js";
+import { Millisatoshi } from "../bitcoin.js";
+import { Lovelace } from "../cardano.js";
 
 // This is fx info exposed by the adaptor. It is not complient with our Fx API.
 export type AdaptorFx = {

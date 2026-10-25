@@ -1,8 +1,8 @@
 import { err, ok, Result } from "neverthrow";
-import type { Json } from "../json";
-import { onObject, nullJson, stringify } from "../json";
-import { type JsonError } from "./codecs";
-import type { AsyncCodec } from "../codec/async";
+import type { Json } from "../json.js";
+import { onObject, nullJson, stringify } from "../json.js";
+import { type JsonError } from "./codecs.js";
+import type { AsyncCodec } from "../codec/async.js";
 
 // I found `ResultAsync` from neverthrow to be limiting in terms of composing multiple async results together.
 export type JsonAsyncDeserialiser<O> = (i: Json) => Promise<Result<O, JsonError>>;

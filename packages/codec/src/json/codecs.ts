@@ -1,8 +1,8 @@
 import { err, ok, type Result } from "neverthrow";
-import type { Json } from "../json";
-import { onBigInt, onBoolean, onArray, onObject, onNull, nullJson, onString, stringify, onNumber } from "../json";
-import * as json from "../json";
-import { altCodecs, mkIdentityCodec, pipe, type Codec, type Deserialiser, type ExtractCodecInput, type Serialiser, type UnionOfCodecsOutputs } from "../codec";
+import type { Json } from "../json.js";
+import { onBigInt, onBoolean, onArray, onObject, onNull, nullJson, onString, stringify, onNumber } from "../json.js";
+import * as json from "../json.js";
+import { altCodecs, mkIdentityCodec, pipe, type Codec, type Deserialiser, type ExtractCodecInput, type Serialiser, type UnionOfCodecsOutputs } from "../codec.js";
 
 // We actually represent parsing errors as JSON too :-P
 export type JsonError = Json;

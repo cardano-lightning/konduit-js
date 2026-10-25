@@ -1,10 +1,10 @@
-import * as hexString from "./hexString";
-import type { HexString } from "./hexString";
-import type { JsonCodec, JsonError } from "./json/codecs";
-import { lmap, pipe, rmap, type Codec } from "./codec";
+import * as hexString from "./hexString.js";
+import type { HexString } from "./hexString.js";
+import type { JsonCodec, JsonError } from "./json/codecs.js";
+import { lmap, pipe, rmap, type Codec } from "./codec.js";
 import { err, ok, Result } from "neverthrow";
-import * as base64String from "./base64String";
-import type { Json } from "./json";
+import * as base64String from "./base64String.js";
+import type { Json } from "./json.js";
 
 // Uint8Array to Tagged Uint8Array Codec with validation. The tag is optional and only used for error messages.
 export const mkTaggedUint8ArrayCodec = <T>(tag: string, validate: (arr: Uint8Array) => boolean): Codec<Uint8Array, T, JsonError> => {

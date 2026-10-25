@@ -1,7 +1,7 @@
 import { err, ok, type Result } from "neverthrow";
 import type { Tagged } from 'type-fest';
-import type { JsonCodec, JsonError } from "./json/codecs";
-import type { Codec } from "./codec";
+import type { JsonCodec, JsonError } from "./json/codecs.js";
+import type { Codec } from "./codec.js";
 
 // String which is a valid hex representation
 export type HexString = Tagged<string, "HexString">;

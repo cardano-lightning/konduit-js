@@ -12,10 +12,9 @@ import type { JsonError } from '@konduit/codec/json/codecs';
 import type { Json } from "@konduit/codec/json";
 import type { Invoice } from "@konduit/konduit-consumer/bitcoin/bolt11";
 import { mkConnectorClient, type ConnectorClient } from "@konduit/konduit-consumer/cardano/connectorClient";
-import { okAsyncPromise, promiseToAsync, toPromise } from "@konduit/konduit-consumer/neverthrow";
+import { promiseToAsync, toPromise } from "@konduit/konduit-consumer/neverthrow";
 import type { PublicNetwork } from "@konduit/konduit-consumer/cardano";
 import type { HttpEndpointError } from "@konduit/konduit-consumer/http";
-import type { Mnemonic } from "@konduit/cardano-keys";
 
 export type AppPhase = "loading" | "launching" | "running";
 
@@ -149,7 +148,10 @@ export const createKonduitConsumer = async (): Promise<Result<AppKonduitConsumer
   }
   return toPromise(
     promiseToAsync(cardanoConnector.value.network())
-      .andThen((publicNetwork: PublicNetwork) => okAsyncPromise<{ consumer: AppKonduitConsumer, mnemonic: Mnemonic }, HttpEndpointError>(KonduitConsumer.createUsingConnector(cardanoConnector.value.baseUrl, publicNetwork)))
+      .andThen((publicNetwork: PublicNetwork) => promiseToAsync(
+        KonduitConsumer.createUsingConnector(cardanoConnector.value.baseUrl, publicNetwork)
+          .then((result) => ok(result)),
+      ))
       .map((res) => {
         const { consumer, mnemonic: _mnemonic } = res;
         _setupKonduitConsumer(consumer);

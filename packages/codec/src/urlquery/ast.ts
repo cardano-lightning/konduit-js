@@ -1,6 +1,6 @@
 import { ok, err } from "neverthrow";
-import type { Codec } from "../codec";
-import type { JsonError } from "../json/codecs";
+import type { Codec } from "../codec.js";
+import type { JsonError } from "../json/codecs.js";
 
 export type QueryValue = string | string[]
 

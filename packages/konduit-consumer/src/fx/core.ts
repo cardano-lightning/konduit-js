@@ -2,7 +2,7 @@ import * as codec from "@konduit/codec";
 import { Decimal } from "decimal.js";
 import { Result } from "neverthrow";
 import { NonNegativeDecimal, PositiveDecimal } from "@konduit/codec/decimals";
-import { ValidDate } from "../time/absolute";
+import { ValidDate } from "../time/absolute.js";
 import {
   Euro,
   EuroCent,
@@ -14,11 +14,11 @@ import {
   BritishMillipenny,
   BritishPound,
   type FiatCurrencyUnit,
-} from "./fiat";
-import { Lovelace, type Ada } from "../cardano/assets";
-import { Millisatoshi, type Satoshi, type Bitcoin } from "../bitcoin/asset";
+} from "./fiat.js";
+import { Lovelace, type Ada } from "../cardano/assets.js";
+import { Millisatoshi, type Satoshi, type Bitcoin } from "../bitcoin/asset.js";
 import type { Tagged } from "type-fest";
-import { unwrapOrPanic } from "../neverthrow";
+import { unwrapOrPanic } from "../neverthrow.js";
 
 export type BTCUnit = Bitcoin | Millisatoshi | Satoshi;
 export type ADAUnit = Ada | Lovelace;

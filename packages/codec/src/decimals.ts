@@ -1,17 +1,17 @@
-import Decimal from 'decimal.js';
+import { Decimal } from 'decimal.js';
 import { err, ok, type Result } from 'neverthrow';
 import type { Tagged } from 'type-fest';
 
-import type { Codec } from './codec';
-import * as codec from './codec';
-import type { Json } from './json';
+import type { Codec } from './codec.js';
+import * as codec from './codec.js';
+import type { Json } from './json.js';
 import {
   json2StringCodec,
   type JsonCodec,
   type JsonError,
-} from './json/codecs';
-import { type Ord } from './tagged';
-import type { OneToNine, ZeroToNine } from './integers/smallish';
+} from './json/codecs.js';
+import { type Ord } from './tagged.js';
+import type { OneToNine, ZeroToNine } from './integers/smallish.js';
 
 type ZeroToNineOrSeparator = ZeroToNine | '.';
 

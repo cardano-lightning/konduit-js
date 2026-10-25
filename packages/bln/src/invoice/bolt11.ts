@@ -1,8 +1,8 @@
 import { bech32, utf8 } from "@scure/base";
-import { SHORT_LOOKUP, type Network, type NetworkShort } from "../network";
-import { convert, type WordParser } from "./words";
-import * as uint8Array from "../uint8Array";
-import { recoverPubkey } from "../secp";
+import { SHORT_LOOKUP, type Network, type NetworkShort } from "../network.js";
+import { convert, type WordParser } from "./words.js";
+import * as uint8Array from "../uint8Array.js";
+import { recoverPubkey } from "../secp.js";
 import { Result, ok, err } from "neverthrow";
 import { Tagged } from "type-fest";
 

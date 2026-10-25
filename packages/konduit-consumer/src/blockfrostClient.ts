@@ -6,7 +6,7 @@ import {
   RequestSerialiser,
   ResponseDeserialiser,
   type HttpEndpointError,
-} from "./http";
+} from "./http.js";
 import {
   Address,
   address2AddressBech32Iso,
@@ -16,10 +16,10 @@ import {
   NetworkMagicNumber,
   TxIx,
   Value,
-} from "./cardano";
+} from "./cardano.js";
 import * as codec from "@konduit/codec";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
-import { TxHash, Lovelace, TxCborBytes } from "./cardano";
+import { TxHash, Lovelace, TxCborBytes } from "./cardano.js";
 import { Ed25519VerificationKey } from "@konduit/cardano-keys";
 import {
   json2BigIntThroughStringCodec,
@@ -29,12 +29,12 @@ import {
   type JsonCodec,
 } from "@konduit/codec/json/codecs";
 import type { JsonDeserialiser } from "@konduit/codec/json/codecs";
-export type { SquashResponse } from "./adaptorClient/squash";
+export type { SquashResponse } from "./adaptorClient/squash.js";
 import { bigInt2PositiveBigIntCodec, PositiveBigInt } from "@konduit/codec/integers/big";
-import { DatumHash, DatumOption, InlineDatum, PlutusData, ScriptHash, TransactionUnspentOutput, TxInput } from "./cardano/tx";
+import { DatumHash, DatumOption, InlineDatum, PlutusData, ScriptHash, TransactionUnspentOutput, TxInput } from "./cardano/tx.js";
 import {
   json2ValueCodec,
-} from "./cardano/connectorClient";
+} from "./cardano/connectorClient.js";
 import { json2CborCodec } from "@konduit/codec/cbor/codecs/sync";
 import type { Cbor } from "@konduit/codec/cbor/core";
 

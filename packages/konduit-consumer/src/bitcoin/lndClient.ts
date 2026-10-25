@@ -1,11 +1,11 @@
 import { Result } from "neverthrow";
-import type { HttpEndpointError } from "../http";
+import type { HttpEndpointError } from "../http.js";
 import {
   mkGetEndpoint,
   mkPostEndpoint,
   RequestSerialiser,
   ResponseDeserialiser,
-} from "../http";
+} from "../http.js";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import {
   json2StringCodec,
@@ -17,7 +17,7 @@ import {
 import {
   json2MillisatoshiCodec,
   type Millisatoshi,
-} from "./asset";
+} from "./asset.js";
 import * as codec from "@konduit/codec";
 import * as uint8Array from "@konduit/codec/uint8Array";
 import { string2NumberCodec } from "@konduit/codec/urlquery/codecs/sync";
@@ -29,10 +29,10 @@ import { json2NonNegativeBigIntCodec, json2NonNegativeBigIntThroughStringCodec, 
 import {
   decodedInvoice2InvoiceDeserialiser,
   type Invoice,
-} from "./bolt11";
+} from "./bolt11.js";
 import { bolt11 } from "@konduit/bln";
 import type { Json } from "@konduit/codec/json";
-import { string2UrlQueryCodec, type UrlQuery } from "../../../codec/dist/urlquery/ast";
+import { string2UrlQueryCodec, type UrlQuery } from "@konduit/codec/urlquery/ast";
 import { HexString } from "@konduit/codec/hexString";
 
 export type LndConfig = {

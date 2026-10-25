@@ -1,8 +1,8 @@
 import sodium from 'libsodium-wrappers-sumo';
-import * as uint8Array from './uint8Array';
+import * as uint8Array from './uint8Array.js';
 import type { Tagged } from "type-fest";
-import type { Mnemonic } from "./bip39";
-import * as bip39 from "./bip39";
+import type { Mnemonic } from "./bip39.js";
+import * as bip39 from "./bip39.js";
 import { err, ok, Result } from 'neverthrow';
 
 // RFC 8032 calls a private key the 32 bytes used to derive

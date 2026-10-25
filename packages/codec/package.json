@@ -77,8 +77,12 @@
       "default": "./dist/tagged.js"
     },
     "./urlquery": {
-      "types": "./dist/urlquery/index.d.ts",
-      "default": "./dist/urlquery/index.js"
+      "types": "./dist/urlquery.d.ts",
+      "default": "./dist/urlquery.js"
+    },
+    "./urlquery/ast": {
+      "types": "./dist/urlquery/ast.d.ts",
+      "default": "./dist/urlquery/ast.js"
     },
     "./urlquery/codecs/sync": {
       "types": "./dist/urlquery/codecs/sync.d.ts",

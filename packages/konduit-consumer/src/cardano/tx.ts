@@ -1,13 +1,13 @@
 import type * as typeFest from "type-fest";
 import { sha256 } from "@noble/hashes/sha2.js";
-export * from "./addressses";
+export * from "./addressses.js";
 import { err, ok } from "neverthrow";
 import * as codec from "@konduit/codec";
-import { mkHexString2HashCodec } from "./keys";
+import { mkHexString2HashCodec } from "./keys.js";
 import type { HexString } from "@konduit/codec/hexString";
 import * as hexString from "@konduit/codec/hexString";
 import type { Json } from "@konduit/codec/json";
-import { TransactionReadyForSigning } from "../../wasm/konduit_wasm";
+import type { TransactionReadyForSigning } from "../../wasm/konduit_wasm.js";
 import type { Tagged } from "type-fest";
 import { Result } from "neverthrow";
 import * as uint8Array from "@konduit/codec/uint8Array";
@@ -16,11 +16,11 @@ import * as cborCodecs from "@konduit/codec/cbor/codecs/sync";
 import type { JsonError, JsonCodec } from "@konduit/codec/json/codecs";
 import { NonNegativeInt, type ZeroToNine } from "@konduit/codec/integers/smallish";
 import { altCborCodecs, cbor2EmbededCborCodec, json2CborCodec, mkTaggedBytesCborCodec, type CborCodec } from "@konduit/codec/cbor/codecs/sync";
-import { Address, ScriptHash } from "./addressses";
+import { Address, ScriptHash } from "./addressses.js";
 import type { Cbor } from "@konduit/codec/cbor/core";
-import { Value } from "./assets";
+import { Value } from "./assets.js";
 import { mkOrdForScalar, mkOrdForUint8Array } from "@konduit/codec/tagged";
-import type { PlutusVersion } from "./ledger";
+import type { PlutusVersion } from "./ledger.js";
 import { unwrapOrPanic } from "@konduit/codec/neverthrow";
 
 // We do not provide validation for TxCborBytes and TxBodyCborBytes here. Please use it when you can trust the source of the CBOR.

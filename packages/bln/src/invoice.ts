@@ -1,8 +1,8 @@
-import type { DecodedInvoice } from "./invoice/bolt11";
+import type { DecodedInvoice } from "./invoice/bolt11.js";
 import { err, ok, type Result } from "neverthrow";
-import * as bolt11 from "./invoice/bolt11";
-import * as bip21 from "./invoice/bip21";
-export type { DecodedInvoice } from "./invoice/bolt11";
+import * as bolt11 from "./invoice/bolt11.js";
+import * as bip21 from "./invoice/bip21.js";
+export type { DecodedInvoice } from "./invoice/bolt11.js";
 
 export type InvoiceError = bip21.ParseError | bolt11.ParseURIError | { message: string };
 

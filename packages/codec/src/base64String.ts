@@ -1,7 +1,7 @@
 import { err, ok, type Result } from "neverthrow";
 import type { Tagged } from 'type-fest';
-import type { Json } from "./json";
-import type { JsonCodec } from "./json/codecs";
+import type { Json } from "./json.js";
+import type { JsonCodec } from "./json/codecs.js";
 
 // String which is a valid base64 representation
 export type Base64String = Tagged<string, "Base64String">;

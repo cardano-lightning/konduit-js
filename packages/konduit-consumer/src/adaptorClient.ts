@@ -1,37 +1,37 @@
 import type { Tagged } from "type-fest";
 import { Result } from "neverthrow";
 import { ok } from "neverthrow";
-import { AdaptorInfo, json2AdaptorInfoCodec } from "./adaptorClient/adaptorInfo";
-import type { HttpEndpointError } from "./http";
+import { AdaptorInfo, json2AdaptorInfoCodec } from "./adaptorClient/adaptorInfo.js";
+import type { HttpEndpointError } from "./http.js";
 import {
   mkGetStaticEndpoint,
   mkPostEndpoint,
   RequestSerialiser,
   ResponseDeserialiser,
-} from "./http";
-import { hexString2KeyTagCodec, KeyTag, type ChannelTag } from "./channel/core";
-import type { LockedCheque, Squash } from "./channel/squash";
-import { cbor2SquashCodec } from "./channel/squash";
-import type { ConsumerEd25519VerificationKey } from "./channel/core";
+} from "./http.js";
+import { hexString2KeyTagCodec, KeyTag, type ChannelTag } from "./channel/core.js";
+import type { LockedCheque, Squash } from "./channel/squash.js";
+import { cbor2SquashCodec } from "./channel/squash.js";
+import type { ConsumerEd25519VerificationKey } from "./channel/core.js";
 import * as codec from "@konduit/codec";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
 import { json2StringCodec, type JsonCodec } from "@konduit/codec/json/codecs";
-import { json2QuoteBodySerialiser, json2QuoteCodec, type Quote, type QuoteBody } from "./adaptorClient/quote";
-import { mkJson2SquashResponseCodec, type SquashResponse } from "./adaptorClient/squash";
+import { json2QuoteBodySerialiser, json2QuoteCodec, type Quote, type QuoteBody } from "./adaptorClient/quote.js";
+import { mkJson2SquashResponseCodec, type SquashResponse } from "./adaptorClient/squash.js";
 import {
   json2PayBodyCodec,
   mkJson2PayResponseCodec,
   type PayBody,
   type PayResponse,
-} from "./adaptorClient/pay";
-import type { Invoice } from "./bitcoin/bolt11";
-import { AdaptorFx } from "./adaptorClient/fx";
+} from "./adaptorClient/pay.js";
+import type { Invoice } from "./bitcoin/bolt11.js";
+import { AdaptorFx } from "./adaptorClient/fx.js";
 
-export { Quote } from "./adaptorClient/quote";
-export type { QuoteBody } from "./adaptorClient/quote";
-export type { SquashResponse } from "./adaptorClient/squash";
+export { Quote } from "./adaptorClient/quote.js";
+export type { QuoteBody } from "./adaptorClient/quote.js";
+export type { SquashResponse } from "./adaptorClient/squash.js";
 
-export { AdaptorInfo } from "./adaptorClient/adaptorInfo";
+export { AdaptorInfo } from "./adaptorClient/adaptorInfo.js";
 
 export type AdaptorUrl = Tagged<string, "AdaptorUrl">;
 

@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": true,
+    "moduleResolution": "bundler",
+    "module": "ES2020",
+    "rootDir": ".",
+    "strict": true
+  },
+  "extends": "../../tsconfig.json",
+  "include": ["src/**/*", "test/**/*"]
+}
