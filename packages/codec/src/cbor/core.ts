@@ -268,3 +268,17 @@ export type Cbor =
   | Map<Cbor, Cbor>
   | Indefinite<Map<Cbor, Cbor>>
   | CborTaggedValue;
+
+/** Debugging helper that briefly describes a CBOR AST node. */
+export const briefCbor = (value: Cbor): string => {
+  if (typeof value === "bigint") return `int(${value})`;
+  if (value instanceof Uint8Array) return `bytes(${value.length})`;
+  if (isCborTaggedValue(value)) return `tag ${value.tag}`;
+  if (Array.isArray(value)) return `array(${value.length})`;
+  if (isIndefiniteArray(value)) return `array(${value.items.length})`;
+  if (value instanceof Map) return `map(${value.size})`;
+  if (isIndefiniteMap(value)) return `map(${value.items.size})`;
+  if (isCborNull(value)) return "null";
+  if (isCborUndefined(value)) return "undefined";
+  return typeof value;
+};

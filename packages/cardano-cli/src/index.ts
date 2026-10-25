@@ -12,9 +12,9 @@ import * as codec from '@konduit/codec';
 import * as jsonCodecs from '@konduit/codec/json/codecs';
 import * as uint8Array from "@konduit/codec/uint8Array";
 import { type JsonDeserialiser } from '@konduit/codec/json/codecs';
-import type { Json } from '@konduit/codec/json';
+import { stringify, type Json } from '@konduit/codec/json';
 import type { JsonError } from '@konduit/codec/json/codecs';
-import { fromSafePromiseResultFn, unwrapOrPanicWith, toAsync } from '@konduit/konduit-consumer/neverthrow';
+import { fromSafePromiseResultFn, toAsync } from '@konduit/konduit-consumer/neverthrow';
 import type { Milliseconds } from '@konduit/konduit-consumer/time/duration';
 import type { Tagged } from 'type-fest';
 import {
@@ -144,6 +144,28 @@ export type TxOut = {
 };
 
 export namespace TxOut {
+  /**
+   * `referenceScript` comes in two shapes:
+   *
+   *   - a hex string — cardano-cli < 10 printed the script bytes directly,
+   *   - a JSON object — cardano-cli >= 10 prints
+   *     `{"script": {"cborHex": "…"}, "description": "…", "type": "PlutusScriptV3"}`.
+   *
+   * We normalise both to the script's cbor hex.
+   */
+  export const referenceScriptDeserialiser: jsonCodecs.JsonDeserialiser<string | null> = (json) => {
+    if (json === null) return ok(null);
+    if (typeof json === "string") return ok(json);
+    if (typeof json === "object" && !Array.isArray(json)) {
+      const script = (json as Record<string, unknown>).script;
+      if (typeof script === "object" && script !== null && !Array.isArray(script)) {
+        const cborHex = (script as Record<string, unknown>).cborHex;
+        if (typeof cborHex === "string") return ok(cborHex);
+      }
+    }
+    return err(`Expected a reference script (hex string or script object), got: ${stringify(json)}`);
+  };
+
   export const jsonDeserialiser: JsonDeserialiser<TxOut> = (() => {
     const optStr = jsonCodecs.nullableDeserialiser(jsonCodecs.json2StringCodec.deserialise);
     return jsonCodecs.objectOfDeserialiser({
@@ -155,7 +177,7 @@ export namespace TxOut {
       datumhash: optStr,
       inlineDatum: optStr,
       inlineDatumRaw: optStr,
-      referenceScript: optStr,
+      referenceScript: referenceScriptDeserialiser,
       value: json2ValueDeserialiser,
     });
   })();
@@ -206,6 +228,23 @@ export type Tip = {
   syncProgress: number;
 };
 
+/**
+ * `cardano-cli` prints `syncProgress` as a *string* (e.g. `"24.42"`), but
+ * other tools print it as a number. Accept both.
+ */
+const json2NumberLikeCodec: jsonCodecs.JsonCodec<number> = {
+  deserialise: (json: Json): Result<number, JsonError> => {
+    if (typeof json === "number") return ok(json);
+    if (typeof json === "string") {
+      const parsed = Number(json);
+      if (Number.isNaN(parsed)) return err(`Invalid number string: ${json}`);
+      return ok(parsed);
+    }
+    return err(`Expected number but got: ${stringify(json)}`);
+  },
+  serialise: (value: number) => value,
+};
+
 export namespace Tip {
   export const jsonDeserialiser: JsonDeserialiser<Tip> = jsonCodecs.objectOfDeserialiser({
     block: PositiveBigInt.jsonCodec.deserialise,
@@ -215,29 +254,9 @@ export namespace Tip {
     slot: PositiveBigInt.jsonCodec.deserialise,
     slotInEpoch: PositiveBigInt.jsonCodec.deserialise,
     slotsToEpochEnd: PositiveBigInt.jsonCodec.deserialise,
-    syncProgress: jsonCodecs.json2NumberCodec.deserialise,
+    syncProgress: json2NumberLikeCodec.deserialise,
   });
 }
-
-export const getTip = (debug: boolean = false): Tip => {
-  const tip: Tip = unwrapOrPanicWith(
-    execCardanoCliJsonTyped(
-      [
-        "query", "tip",
-        ["--testnet-magic", 1097911063],
-        "--output-json",
-      ],
-      Tip.jsonDeserialiser,
-      debug,
-    ),
-    (e) => `Failed to query tip: ${JSON.stringify(e)}`,
-  );
-  const syncProgress = typeof tip.syncProgress === 'string' ? parseFloat(tip.syncProgress) : tip.syncProgress;
-  if (syncProgress < 1) {
-    throw new Error(`Node is not fully synchronized (${syncProgress}%)`);
-  }
-  return tip;
-};
 
 const setNetworkArg = (args: CliArgs, networkMagicNumber?: NetworkMagicNumber): void => {
   if (networkMagicNumber) {
@@ -248,6 +267,46 @@ const setNetworkArg = (args: CliArgs, networkMagicNumber?: NetworkMagicNumber): 
     }
   }
 }
+
+/** The magic number `getTip` used before it learned to take a network. */
+const PREVIEWNET_MAGIC: NetworkMagicNumber = NetworkMagicNumber.fromPositiveBigInt(
+  PositiveBigInt.fromDigits(1, 0, 9, 7, 9, 1, 1, 0, 6, 3),
+);
+
+export type TipError =
+  | { type: "TipQueryFailed"; error: CommandError | JsonError }
+  | { type: "NodeNotSynchronised"; syncProgress: number };
+
+/**
+ * Query the tip of the chain.
+ *
+ * Fails with {@link TipError} instead of throwing: a node that is not
+ * synchronised (or not reachable at all) is an ordinary, expected outcome
+ * for a caller that polls the chain, not a programming error.
+ */
+export const getTip = (
+  debug: boolean = false,
+  networkMagicNumber?: NetworkMagicNumber,
+): Result<Tip, TipError> => {
+  const args: CliArgs = [
+    "query", "tip",
+    "--output-json",
+  ];
+  setNetworkArg(args, networkMagicNumber ?? PREVIEWNET_MAGIC);
+  return execCardanoCliJsonTyped(
+    args,
+    Tip.jsonDeserialiser,
+    debug,
+  )
+    .mapErr((error): TipError => ({ type: "TipQueryFailed", error }))
+    .andThen((tip): Result<Tip, TipError> => {
+      const syncProgress = typeof tip.syncProgress === 'string' ? parseFloat(tip.syncProgress) : tip.syncProgress;
+      if (syncProgress < 1) {
+        return err<never, TipError>({ type: "NodeNotSynchronised", syncProgress });
+      }
+      return ok(tip);
+    });
+};
 
 export const queryUtxosByAddress = (address: AddressBech32, networkMagicNumber?: NetworkMagicNumber, debug: boolean = false): Result<UtxoMap, CommandError | JsonError> => {
   const args: CliArgs = [
@@ -263,35 +322,83 @@ export const queryUtxosByAddress = (address: AddressBech32, networkMagicNumber?:
   );
 };
 
+export type TxIdParseError = {
+  type: "TxIdParseError";
+  reason: "notHexOrJson" | "notJsonObject" | "missingTxHashField" | "invalidTxHash";
+  /** The (truncated) output we could not interpret. */
+  output: string;
+};
+
+const truncateOutput = (output: string, maxLength: number = 200): string =>
+  output.length <= maxLength ? output : `${output.slice(0, maxLength)}…`;
+
+/**
+ * Parse the stdout of `cardano-cli conway transaction txid`.
+ *
+ * `cardano-cli` prints the **bare hex** transaction id in text mode (the
+ * default) — that is what every version with the command does, from
+ * 8.13.0.0 up to and including 11.x. Since 10.3.0.0 the command also accepts
+ * `--output-json`, in which case it prints `{"txhash": "<hex>"}`.
+ *
+ * We deliberately do *not* pass `--output-json`: cardano-cli versions older
+ * than 10.3.0.0 reject unknown options, so the flag would break them. This
+ * parser therefore accepts both shapes.
+ */
+export const txIdFromTxIdOutput = (raw: string): Result<TxIdHex, TxIdParseError> => {
+  const trimmed = raw.trim();
+
+  // Bare hex — the default text output of every cardano-cli that has the command.
+  const bare = TxIdHex.fromString(trimmed);
+  if (bare.isOk()) return ok(bare.value);
+
+  // JSON envelope — cardano-cli >= 10.3.0.0 with `--output-json`.
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    return err({ type: "TxIdParseError", reason: "notHexOrJson", output: truncateOutput(trimmed) });
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return err({ type: "TxIdParseError", reason: "notJsonObject", output: truncateOutput(trimmed) });
+  }
+  const txHash = (parsed as Record<string, unknown>).txhash;
+  if (typeof txHash !== "string") {
+    return err({ type: "TxIdParseError", reason: "missingTxHashField", output: truncateOutput(trimmed) });
+  }
+  const fromJson = TxIdHex.fromString(txHash);
+  if (fromJson.isErr()) {
+    return err({ type: "TxIdParseError", reason: "invalidTxHash", output: truncateOutput(trimmed) });
+  }
+  return ok(fromJson.value);
+};
+
 export const getTxIdFromTxFile = (
   txFilePath: Path,
   debug = false
-): Result<TxIdHex, CommandError | JsonError> => {
-  return execCardanoCliJsonTyped(
+): Result<TxIdHex, CommandError | TxIdParseError> => {
+  return execCardanoCli(
     [
       "conway", "transaction", "txid",
       ["--tx-file", txFilePath],
     ],
-    jsonCodecs.objectOf({ txhash: TxIdHex.jsonCodec, }).deserialise,
-    debug
-  ).map(obj => obj.txhash);
+    debug,
+  ).andThen(txIdFromTxIdOutput);
 };
 
 export const getTxIdFromTxBodyFile = (
   txBodyFilePath: Path,
   debug = false
-): Result<TxIdHex, CommandError | JsonError> => {
-  return execCardanoCliJsonTyped(
+): Result<TxIdHex, CommandError | TxIdParseError> => {
+  return execCardanoCli(
     [
       "conway", "transaction", "txid",
       ["--tx-body-file", txBodyFilePath],
     ],
-    TxIdHex.jsonCodec.deserialise,
-    debug
-  );
+    debug,
+  ).andThen(txIdFromTxIdOutput);
 };
 
-export const getTxId = (txHex: TxHex, tmpDir: Path | null = null): Result<TxIdHex, CommandError | JsonError> => {
+export const getTxId = (txHex: TxHex, tmpDir: Path | null = null): Result<TxIdHex, CommandError | TxIdParseError> => {
   const rootTmpDir = tmpDir || `${nodeOs.tmpdir()}`;
   const txTmpDir = `${rootTmpDir}/txid-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
   nodeFs.mkdirSync(txTmpDir, { recursive: true });
@@ -311,7 +418,7 @@ export type TimeoutError = {
   timeout: Milliseconds;
 };
 
-export type WaitForUtxoError = CommandError | string | TimeoutError | JsonError;
+export type WaitForUtxoError = CommandError | JsonError | TimeoutError | TxIdParseError;
 
 export const waitForUtxo: (
   txOutRef: TxOutRefHex,
@@ -544,13 +651,28 @@ export const submitTx = (
   });
 }
 
+export type InsufficientFundsError = {
+  type: "InsufficientFunds";
+  requiredLovelace: bigint;
+  availableLovelace: bigint;
+};
+
+/**
+ * Select enough UTxOs (largest first) to cover `amountLovelace`.
+ *
+ * Returns {@link InsufficientFundsError} when the wallet cannot cover the
+ * amount — the caller decides whether that is fatal.
+ */
 export const selectUtxos = (
   amountLovelace: number,
   utxoMap: UtxoMap,
-): {
-  selectedUtxos: UtxoMap;
-  totalLovelace: number;
-} => {
+): Result<
+  {
+    selectedUtxos: UtxoMap;
+    totalLovelace: number;
+  },
+  InsufficientFundsError
+> => {
   const amountLovelaceBig = BigInt(amountLovelace);
   const sortedUtxos = [...utxoMap.entries()].sort(
     ([_aKey, a], [_bKey, b]) => {
@@ -571,11 +693,13 @@ export const selectUtxos = (
     }
   }
   if (totalLovelaceBig < amountLovelaceBig) {
-    throw new Error(
-      `Insufficient funds: required ${amountLovelace}, available ${totalLovelaceBig.toString()}`,
-    );
+    return err({
+      type: "InsufficientFunds",
+      requiredLovelace: amountLovelaceBig,
+      availableLovelace: totalLovelaceBig,
+    });
   }
-  return { selectedUtxos, totalLovelace: Number(totalLovelaceBig) };
+  return ok({ selectedUtxos, totalLovelace: Number(totalLovelaceBig) });
 };
 
 const MAX_TRANSFER_RECIPIENTS = 60;
@@ -584,6 +708,21 @@ export type Recipient = {
   address: AddressBech32
 };
 
+export type TransferFundsError =
+  | { type: "TooManyRecipients"; max: number; requested: number }
+  | InsufficientFundsError
+  | { type: "UtxoQueryFailed"; error: CommandError | JsonError }
+  | { type: "CommandFailed"; step: "build" | "sign"; error: CommandError }
+  | { type: "SubmitFailed"; error: WaitForUtxoError };
+
+/**
+ * Move `recipients` out of the wallet at `walletAddress`.
+ *
+ * The transaction is only submitted once it has been built *and* signed, and
+ * every failure is reported through {@link TransferFundsError} — including
+ * *which* step failed. The returned transaction id is the one the node
+ * confirmed, so a successful result always means the funds moved.
+ */
 export async function transferFunds(
   walletAddress: AddressBech32,
   walletSkeyFile: Path,
@@ -591,11 +730,14 @@ export async function transferFunds(
   tmpDir: Path | null = null,
   networkMagicNumber?: NetworkMagicNumber,
   debug = false,
-): Promise<Result<TxIdHex, CommandError | JsonError>> {
-  if (recipients.length > MAX_TRANSFER_RECIPIENTS)
-    throw new Error(
-      `transferFunds supports up to ${MAX_TRANSFER_RECIPIENTS} UTxOs. Requested: ${recipients.length}`,
-    );
+): Promise<Result<TxIdHex, TransferFundsError>> {
+  if (recipients.length > MAX_TRANSFER_RECIPIENTS) {
+    return err({
+      type: "TooManyRecipients",
+      max: MAX_TRANSFER_RECIPIENTS,
+      requested: recipients.length,
+    });
+  }
 
   let walletTmpDir: Path;
   if (tmpDir) {
@@ -623,33 +765,39 @@ export async function transferFunds(
   setNetworkArg(queryArgs, networkMagicNumber);
   appendSocketPathArg(queryArgs);
 
-  const initialUtxoMap: UtxoMap = unwrapOrPanicWith(
-    execCardanoCliJsonTyped(
-      queryArgs,
-      UtxoMap.jsonDeserialiser,
-      debug,
-    ),
-    (e) => `Failed to query utxo by address ${walletAddress}: ${JSON.stringify(e)}`,
+  const initialUtxoMap = await execCardanoCliJsonTyped(
+    queryArgs,
+    UtxoMap.jsonDeserialiser,
+    debug,
   );
+  if (initialUtxoMap.isErr()) {
+    return err({ type: "UtxoQueryFailed", error: initialUtxoMap.error });
+  }
 
   const totalSplit = recipients.reduce((sum, r) => sum + r.amount, 0);
-  const selectedUtxos = selectUtxos(totalSplit, initialUtxoMap);
+  const selectedUtxos = selectUtxos(totalSplit, initialUtxoMap.value);
+  if (selectedUtxos.isErr()) {
+    return err(selectedUtxos.error);
+  }
 
   const unsigedTxFile = `${walletTmpDir}/split.body.json`;
   const buildArgs: CliArgs = [
     "conway", "transaction", "build",
-    ...Array.from(selectedUtxos.selectedUtxos.keys()).map((txOutRef) => ["--tx-in", txOutRef] as CliArg),
+    ...Array.from(selectedUtxos.value.selectedUtxos.keys()).map((txOutRef) => ["--tx-in", txOutRef] as CliArg),
     ...recipients.map((recipient) => ["--tx-out", `${recipient.address}+${recipient.amount}`] as CliArg),
     ["--change-address", walletAddress],
     ["--out-file", unsigedTxFile],
   ];
   setNetworkArg(buildArgs, networkMagicNumber);
   appendSocketPathArg(buildArgs);
-  execCardanoCli(buildArgs, debug);
+  const build = execCardanoCli(buildArgs, debug);
+  if (build.isErr()) {
+    return err({ type: "CommandFailed", step: "build", error: build.error });
+  }
 
   const signedTxFile = `${walletTmpDir}/split.tx.json`;
 
-  execCardanoCli(
+  const sign = execCardanoCli(
     [
       "conway", "transaction", "sign",
       ["--signing-key-file", walletSkeyFile],
@@ -658,12 +806,21 @@ export async function transferFunds(
     ],
     debug,
   );
+  if (sign.isErr()) {
+    return err({ type: "CommandFailed", step: "sign", error: sign.error });
+  }
 
   if(debug) console.log(`[cardanoCli] transferFunds: built unsigned tx, recipients=${recipients.length} totalLovelace=${totalSplit}`);
-  await submitTxFromEnvelopeFile(signedTxFile, debug);
-  const txId = getTxIdFromTxFile(signedTxFile, debug);
-  return txId;
+  const submitted = await submitTxFromEnvelopeFile(signedTxFile, debug);
+  if (submitted.isErr()) {
+    return err({ type: "SubmitFailed", error: submitted.error });
+  }
+  return ok(submitted.value);
 }
+
+export type CreateWalletError =
+  | { type: "CommandFailed"; step: "key-gen" | "address-build"; error: CommandError }
+  | { type: "AddressParseFailed"; address: string; error: JsonError };
 
 // | Generate a fresh payment-only wallet on the given network and return its
 // address plus the path to its signing key. The wallet files are written under
@@ -673,7 +830,7 @@ export const createWallet = (
   networkMagicNumber: NetworkMagicNumber,
   tmpDir: Path | null = null,
   debug = false,
-): Result<Wallet, CommandError | JsonError> => {
+): Result<Wallet, CreateWalletError> => {
   const walletTmpDir =
     tmpDir ?? `${nodeOs.tmpdir()}/wallet-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
   nodeFs.mkdirSync(walletTmpDir, { recursive: true });
@@ -689,23 +846,24 @@ export const createWallet = (
       ["--signing-key-file", skeyFile],
     ],
     debug,
-  ).andThen(() => {
-    const buildArgs: CliArgs = [
-      "conway", "address", "build",
-      ["--payment-verification-key-file", vkeyFile],
-      ["--out-file", addrFile],
-    ];
-    setNetworkArg(buildArgs, networkMagicNumber);
+  )
+    .mapErr((error): CreateWalletError => ({ type: "CommandFailed", step: "key-gen", error }))
+    .andThen(() => {
+      const buildArgs: CliArgs = [
+        "conway", "address", "build",
+        ["--payment-verification-key-file", vkeyFile],
+        ["--out-file", addrFile],
+      ];
+      setNetworkArg(buildArgs, networkMagicNumber);
 
-    return execCardanoCli(buildArgs, debug);
-  }).map(() => {
-    const addrStr = nodeFs.readFileSync(addrFile, "utf8").trim();
-    const addr = unwrapOrPanicWith(
-      AddressBech32.fromString(addrStr),
-      (e) => `Failed to parse wallet address ${addrStr}: ${e}`,
-    );
-
-    return { addr, skeyFile: skeyFile as TaggedPath };
-  });
+      return execCardanoCli(buildArgs, debug)
+        .mapErr((error): CreateWalletError => ({ type: "CommandFailed", step: "address-build", error }));
+    })
+    .andThen(() => {
+      const addrStr = nodeFs.readFileSync(addrFile, "utf8").trim();
+      return AddressBech32.fromString(addrStr)
+        .mapErr((error): CreateWalletError => ({ type: "AddressParseFailed", address: addrStr, error }))
+        .map((addr): Wallet => ({ addr, skeyFile: skeyFile as TaggedPath }));
+    });
 };
 

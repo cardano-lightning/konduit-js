@@ -4,11 +4,17 @@ import { randomBytes } from "@noble/hashes/utils.js";
 import { mkTaggedHexStringCodec, mkTaggedJsonCodec } from "@konduit/codec/uint8Array";
 import type { JsonCodec } from "@konduit/codec/json/codecs";
 import { mkOrdForUint8Array } from "@konduit/codec/tagged";
+import {
+  mkTaggedBytesCborCodec,
+  type CborCodec,
+} from "@konduit/codec/cbor/codecs/sync";
 
 export type ConsumerEd25519VerificationKey = Tagged<Ed25519VerificationKey, "ConsumerEd25519VerificationKey">;
 
 export type ChannelTag = Tagged<Uint8Array, "ChannelTag">;
 export namespace ChannelTag {
+  export const MIN_LENGTH = 4;
+  export const MAX_LENGTH = 32;
   export const fromRandomBytes = async () => {
     const bytes = randomBytes(32);
     return bytes as ChannelTag;
@@ -16,7 +22,11 @@ export namespace ChannelTag {
   export const fromKeyTag = (keyTag: KeyTag): ChannelTag => {
     return keyTag.slice(28) as ChannelTag;
   }
-  export const jsonCodec: JsonCodec<ChannelTag> = mkTaggedJsonCodec("ChannelTag", (arr) => arr.length >= 4);
+  export const jsonCodec: JsonCodec<ChannelTag> = mkTaggedJsonCodec("ChannelTag", (arr) => arr.length >= MIN_LENGTH);
+  export const cborCodec: CborCodec<ChannelTag> = mkTaggedBytesCborCodec<ChannelTag>(
+    "ChannelTag",
+    (arr) => arr.length >= MIN_LENGTH && arr.length <= MAX_LENGTH,
+  );
   export const ord = mkOrdForUint8Array<ChannelTag>();
 }
 

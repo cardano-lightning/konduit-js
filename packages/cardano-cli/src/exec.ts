@@ -35,7 +35,9 @@ export function runCommand(command: string, debug: boolean = false): Result<stri
     console.debug(`Running command: ${command}`);
   }
   try {
-    return ok(execSync(command).toString().trim());
+    // stderr is captured (not inherited) so that a failing command does not
+    // spray its output over the caller's console — the error carries it.
+    return ok(execSync(command, { stdio: ["ignore", "pipe", "pipe"] }).toString().trim());
   } catch (e: any) {
     return CommandError.fromExecError(e).match(
       cmdErr => err(cmdErr),

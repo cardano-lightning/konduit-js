@@ -22,7 +22,11 @@ export const json2Ed25519PublicKeyCodec: JsonCodec<Ed25519PublicKey> = codec.pip
   hexString2Ed25519PublicKeyCodec,
 );
 export const json2Ed25519VerificationKeyCodec = codec.rmap(json2Ed25519PublicKeyCodec, (key) => new Ed25519VerificationKey(key), (vkey) => vkey.key);
-export const cbor2Ed25519VerificationKeyCodec = mkTaggedBytesCborCodec<Ed25519VerificationKey>("Ed25519VerificationKey", (arr) => arr.length === 32);
+export const cbor2Ed25519VerificationKeyCodec = codec.rmap(
+  mkTaggedBytesCborCodec<Ed25519PublicKey>("Ed25519PublicKey", (arr) => arr.length === Ed25519VerificationKey.LENGTH),
+  (key) => new Ed25519VerificationKey(key),
+  (vkey) => vkey.key,
+);
 
 export const hexString2Ed25519SignatureCodec: Codec<HexString, Ed25519Signature, JsonError> = uint8ArrayCodec.mkTaggedHexStringCodec<Ed25519Signature>(
   "Ed25519Signature",

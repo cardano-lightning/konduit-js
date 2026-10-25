@@ -8,7 +8,7 @@ import { json2L1ChannelCodec, L1Channel } from "./channel/l1Channel";
 import type { OpenTx } from "./channel/l1Channel";
 import { type ConsumerEd25519VerificationKey } from "./channel/core";
 import * as jsonCodecs from "@konduit/codec/json/codecs";
-import { LockedCheque, json2LockedChequeCodec, json2SquashCodec, Squash, VerifiedLockedCheque, VerifiedSquash, UnlockedCheque, VerifiedUnlockedCheque, json2UnlockedChequeCodec, Index, LockedChequeBody, UnlockedChequeBody, SquashBody, AnyCheque, json2SquashBodyCodec } from "./channel/squash";
+import { LockedCheque, json2LockedChequeCodec, json2SquashCodec, Squash, VerifiedLockedCheque, VerifiedSquash, UnlockedCheque, VerifiedUnlockedCheque, json2UnlockedChequeCodec, Index, cbor2IndexCodec, LockedChequeBody, UnlockedChequeBody, SquashBody, AnyCheque, json2SquashBodyCodec } from "./channel/squash";
 import { json2AbortedErrorCodec, json2DeserialisationErrorCodec, json2HttpErrorCodec, json2NetworkErrorCodec, type AbortedError, type HttpEndpointError, type HttpError, type NetworkError } from "./http";
 import { mkJson2PollingInfoCodec, PollingInfo } from "./polling";
 import { mkJson2SquashResponseCodec } from "./adaptorClient/squash";
@@ -28,6 +28,7 @@ import { stringify } from "@konduit/codec/json";
 
 export * from "./channel/l1Channel";
 export * from "./channel/core";
+export { Index, cbor2IndexCodec };
 
 export type SquashingInfo = PollingInfo<{ squash: Squash; response: SquashResponse }>;
 export const SquashingInfo = PollingInfo;
